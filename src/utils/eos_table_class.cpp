@@ -276,11 +276,13 @@ EosTable::EosTable(ParameterInput *pin) :
     ReadHDF5Table(eos_fn, this, pin);
   } else if (eos_file_type.compare("ascii") == 0) { // ASCII/text table
     ReadAsciiTable(eos_fn, this, pin);
+  } else if (eos_file_type.compare("helm") == 0) { // ASCII/text table
+    ReadHelmTable(eos_fn, this, pin);
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in EosTable::EosTable" << std::endl
         << "EOS table of type '" << eos_file_type << "' not recognized."  << std::endl
-        << "Options are 'ascii', 'binary', and 'hdf5'." << std::endl;
+        << "Options are 'ascii', 'binary', 'hdf5', and 'helm'." << std::endl;
     ATHENA_ERROR(msg);
   }
 }
