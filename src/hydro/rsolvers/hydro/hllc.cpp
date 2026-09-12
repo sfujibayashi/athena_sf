@@ -122,22 +122,27 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
 
     Real ql, qr;
     if (GENERAL_EOS) {
+      if (pmid <= wli[IPR]) {
+        ql = 1.0;
+      } else {
 #if EOS_SCALAR_INPUT_ENABLED
-      Real gl = pmy_block->peos->AsqFromRhoP(rhol, pmid, rli) * rhol / pmid;
-      Real gr = pmy_block->peos->AsqFromRhoP(rhor, pmid, rri) * rhor / pmid;
+        Real gl = pmy_block->peos->AsqFromRhoP(rhol, pmid, rli) * rhol / pmid;
 #else
-      Real gl = pmy_block->peos->AsqFromRhoP(rhol, pmid) * rhol / pmid;
-      Real gr = pmy_block->peos->AsqFromRhoP(rhor, pmid) * rhor / pmid;
+        Real gl = pmy_block->peos->AsqFromRhoP(rhol, pmid) * rhol / pmid;
 #endif
-      ql = (pmid <= wli[IPR]) ? 1.0 :
-           std::sqrt(1.0 + (gl + 1) / (2 * gl) * (pmid / wli[IPR]-1.0));
-      qr = (pmid <= wri[IPR]) ? 1.0 :
-           std::sqrt(1.0 + (gr + 1) / (2 * gr) * (pmid / wri[IPR]-1.0));
-    } else {
-      ql = (pmid <= wli[IPR]) ? 1.0 :
-           std::sqrt(1.0 + (gamma + 1) / (2 * gamma) * (pmid / wli[IPR]-1.0));
-      qr = (pmid <= wri[IPR]) ? 1.0 :
-           std::sqrt(1.0 + (gamma + 1) / (2 * gamma) * (pmid / wri[IPR]-1.0));
+        ql = std::sqrt(1.0 + (gl + 1.0)/(2.0*gl) * (pmid/wli[IPR] - 1.0));
+      }
+      
+      if (pmid <= wri[IPR]) {
+        qr = 1.0;
+      } else {
+#if EOS_SCALAR_INPUT_ENABLED
+        Real gr = pmy_block->peos->AsqFromRhoP(rhor, pmid, rri) * rhor / pmid;
+#else
+        Real gr = pmy_block->peos->AsqFromRhoP(rhor, pmid) * rhor / pmid;
+#endif
+        qr = std::sqrt(1.0 + (gr + 1.0)/(2.0*gr) * (pmid/wri[IPR] - 1.0));
+      }
     }
 
     //--- Step 4.  Compute the max/min wave speeds based on L/R
