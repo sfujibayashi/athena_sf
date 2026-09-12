@@ -93,6 +93,26 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
           pmb->precon->PiecewiseParabolicX1(k, j, is-1, ie+1, w, bcc, wl_, wr_);
       }
 
+#if HELMHOLTZ_EOS_ENABLED
+      if (NSCALARS > 0) {
+        AthenaArray<Real> &r = pmb->pscalars->r;
+        
+        if (order == 1) {
+          pmb->precon->DonorCellX1(
+              k, j, is-1, ie+1, r, rl_, rr_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX1(
+              k, j, is-1, ie+1, r, rl_, rr_);
+        } else {
+          std::stringstream msg;
+          msg << "### FATAL ERROR in Hydro::CalculateFluxes" << std::endl
+              << "Helmholtz EOS currently supports reconstruction order <= 2."
+              << std::endl;
+          ATHENA_ERROR(msg);
+        }
+      }
+#endif
+
       pmb->pcoord->CenterWidth1(k, j, is, ie+1, dxw_);
 #if !MAGNETIC_FIELDS_ENABLED  // Hydro:
       RiemannSolver(k, j, is, ie+1, IVX, wl_, wr_, x1flux, dxw_);
