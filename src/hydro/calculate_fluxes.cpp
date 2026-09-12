@@ -372,6 +372,23 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
         else
           pmb->precon->PiecewiseParabolicX3(ks-1, j, il, iu, w, bcc, wl_, wr_);
       }
+#if EOS_SCALAR_INPUT_ENABLED
+      AthenaArray<Real> &r = pmb->pscalars->r;
+
+      if (order == 1) {
+        pmb->precon->DonorCellX3(
+            ks-1, j, il, iu, r, rl_, rr_);
+      } else if (order == 2) {
+        pmb->precon->PiecewiseLinearX3(
+            ks-1, j, il, iu, r, rl_, rr_);
+      } else {
+        std::stringstream msg;
+        msg << "### FATAL ERROR in Hydro::CalculateFluxes" << std::endl
+            << "EOS scalar input currently supports reconstruction order <= 2."
+            << std::endl;
+        ATHENA_ERROR(msg);
+      }
+#endif
       for (int k=ks; k<=ke+1; ++k) {
         // reconstruct L/R states at k
         if (order == 1) {
@@ -388,10 +405,23 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
           else
             pmb->precon->PiecewiseParabolicX3(k, j, il, iu, w, bcc, wlb_, wr_);
         }
-
+#if EOS_SCALAR_INPUT_ENABLED
+        if (order == 1) {
+          pmb->precon->DonorCellX3(
+              k, j, il, iu, r, rlb_, rr_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX3(
+              k, j, il, iu, r, rlb_, rr_);
+        }
+#endif
+        
         pmb->pcoord->CenterWidth3(k, j, il, iu, dxw_);
 #if !MAGNETIC_FIELDS_ENABLED  // Hydro:
+#if EOS_SCALAR_INPUT_ENABLED
+        RiemannSolver(k, j, il, iu, IVZ, wl_, wr_, x3flux, dxw_, &rl_, &rr_);
+#else
         RiemannSolver(k, j, il, iu, IVZ, wl_, wr_, x3flux, dxw_);
+#endif
 #else  // MHD:
         // flx(IBY) = (v3*b1 - v1*b3) = -EMFY
         // flx(IBZ) = (v3*b2 - v2*b3) =  EMFX
@@ -408,6 +438,9 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
 
         // swap the arrays for the next step
         wl_.SwapAthenaArray(wlb_);
+#if EOS_SCALAR_INPUT_ENABLED
+        rl_.SwapAthenaArray(rlb_);
+#endif
       }
     }
     if (order == 4) {
