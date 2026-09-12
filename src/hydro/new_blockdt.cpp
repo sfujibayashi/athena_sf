@@ -111,7 +111,15 @@ void Hydro::NewBlockTimeStep() {
               speed = std::max(cspeed,(std::abs(wi[IVZ]) + cf));
               dt3(i) /= (speed);
             } else {
+#if EOS_SCALAR_INPUT_ENABLED
+              Real r_cell[(NSCALARS > 0) ? NSCALARS : 1];
+              for (int n=0; n<NSCALARS; ++n) {
+                r_cell[n] = pmb->pscalars->r(n,k,j,i);
+              }
+              Real cs = std::sqrt(pmb->peos->AsqFromRhoP(wi[IDN], wi[IPR], r_cell));
+#else
               Real cs = pmb->peos->SoundSpeed(wi);
+#endif
               Real speed1 = std::max(cspeed, (std::abs(wi[IVX]) + cs));
               Real speed2 = std::max(cspeed, (std::abs(wi[IVY]) + cs));
               Real speed3 = std::max(cspeed, (std::abs(wi[IVZ]) + cs));
