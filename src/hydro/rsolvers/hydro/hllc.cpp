@@ -33,7 +33,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
                           const int ivx, AthenaArray<Real> &wl,
                           AthenaArray<Real> &wr, AthenaArray<Real> &flx,
                           const AthenaArray<Real> &dxw
-#if HELMHOLTZ_EOS_ENABLED
+#if EOS_SCALAR_INPUT_ENABLED
                           , AthenaArray<Real> *rl, AthenaArray<Real> *rr
 #endif
   ) {
@@ -66,14 +66,14 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     wri[IVZ]=wr(ivz,i);
     wri[IPR]=wr(IPR,i);
 
-#if HELMHOLTZ_EOS_ENABLED
+#if EOS_SCALAR_INPUT_ENABLED
     Real rli[(NSCALARS > 0) ? NSCALARS : 1];
     Real rri[(NSCALARS > 0) ? NSCALARS : 1];
 
     if (rl == nullptr || rr == nullptr) {
       std::stringstream msg;
       msg << "### FATAL ERROR in Hydro::RiemannSolver" << std::endl
-          << "Scalar face states are required for Helmholtz EOS."
+          << "Scalar face states are required for this EOS."
           << std::endl;
       ATHENA_ERROR(msg);
     }
@@ -87,7 +87,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     //--- Step 2.  Compute middle state estimates with PVRS (Toro 10.5.2)
 
     Real al, ar, el, er;
-#if HELMHOLTZ_EOS_ENABLED
+#if EOS_SCALAR_INPUT_ENABLED
     Real cl = std::sqrt(pmy_block->peos->AsqFromRhoP(wli[IDN], wli[IPR], rli));
     Real cr = std::sqrt(pmy_block->peos->AsqFromRhoP(wri[IDN], wri[IPR], rri));
 #else
@@ -95,7 +95,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     Real cr = pmy_block->peos->SoundSpeed(wri);
 #endif
     if (GENERAL_EOS) {
-#if HELMHOLTZ_EOS_ENABLED
+#if EOS_SCALAR_INPUT_ENABLED
       el = pmy_block->peos->EgasFromRhoP(wli[IDN], wli[IPR], rli) + 
         0.5*wli[IDN]*(SQR(wli[IVX]) + SQR(wli[IVY]) + SQR(wli[IVZ]));
       er = pmy_block->peos->EgasFromRhoP(wri[IDN], wri[IPR], rri) + 
@@ -121,7 +121,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
 
     Real ql, qr;
     if (GENERAL_EOS) {
-#if HELMHOLTZ_EOS_ENABLED
+#if EOS_SCALAR_INPUT_ENABLED
       Real gl = pmy_block->peos->AsqFromRhoP(rhol, pmid, rli) * rhol / pmid;
       Real gr = pmy_block->peos->AsqFromRhoP(rhor, pmid, rri) * rhor / pmid;
 #else

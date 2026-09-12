@@ -49,6 +49,9 @@
 // use Helmholtz EOS?
 #define HELMHOLTZ_EOS_ENABLED @HELMHOLTZ_EOS_ENABLED@
 
+// use one or more scalars as inputs of the EOS.
+#define EOS_SCALAR_INPUT_ENABLED @EOS_SCALAR_INPUT_ENABLED@
+
 // non-barotropic equation of state (i.e. P not simply a func of rho)? default=1 (true)
 #define NON_BAROTROPIC_EOS @NON_BAROTROPIC_EOS@
 

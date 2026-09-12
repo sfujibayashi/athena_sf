@@ -474,6 +474,9 @@ else:
 definitions['MASS_EXCESS_ENERGY_ENABLED'] = \
     '1' if args['eos'] == 'general/helmholtz_mass' else '0'
 
+definitions['EOS_SCALAR_INPUT_ENABLED'] = \
+    '1' if args['eos'] == 'general/helmholtz_mass' else '0'
+
 definitions['HELMHOLTZ_EOS_ENABLED'] = \
     '1' if args['eos'] == 'general/helmholtz_mass' else '0'
 

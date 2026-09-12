@@ -105,7 +105,7 @@ Hydro::Hydro(MeshBlock *pmb, ParameterInput *pin) :
   wl_.NewAthenaArray(NWAVE, nc1);
   wr_.NewAthenaArray(NWAVE, nc1);
   wlb_.NewAthenaArray(NWAVE, nc1);
-#if HELMHOLTZ_EOS_ENABLED
+#if EOS_SCALAR_INPUT_ENABLED
   if (NSCALARS > 0) {
     rl_.NewAthenaArray(NSCALARS, nc1);
     rr_.NewAthenaArray(NSCALARS, nc1);

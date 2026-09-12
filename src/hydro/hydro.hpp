@@ -78,7 +78,7 @@ class Hydro {
       const int ivx,
       AthenaArray<Real> &wl, AthenaArray<Real> &wr, AthenaArray<Real> &flx,
       const AthenaArray<Real> &dxw
-#if HELMHOLTZ_EOS_ENABLED
+#if EOS_SCALAR_INPUT_ENABLED
       , AthenaArray<Real> *rl = nullptr, AthenaArray<Real> *rr = nullptr
 #endif
       );
@@ -89,7 +89,7 @@ class Hydro {
       AthenaArray<Real> &wl, AthenaArray<Real> &wr, AthenaArray<Real> &flx,
       AthenaArray<Real> &ey, AthenaArray<Real> &ez,
       AthenaArray<Real> &wct, const AthenaArray<Real> &dxw
-#if HELMHOLTZ_EOS_ENABLED
+#if EOS_SCALAR_INPUT_ENABLED
       , AthenaArray<Real> *rl = nullptr, AthenaArray<Real> *rr = nullptr
 #endif
       );
@@ -106,7 +106,7 @@ class Hydro {
   AthenaArray<Real> cell_volume_;
   // 2D
   AthenaArray<Real> wl_, wr_, wlb_;
-#if HELMHOLTZ_EOS_ENABLED
+#if EOS_SCALAR_INPUT_ENABLED
   AthenaArray<Real> rl_, rr_, rlb_;
 #endif
   AthenaArray<Real> dflx_;
