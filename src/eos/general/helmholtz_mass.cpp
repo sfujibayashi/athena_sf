@@ -1481,7 +1481,7 @@ void EquationOfState::InitEosConstants(ParameterInput *pin) {
   
   if (pin->DoesParameterExist("hydro", "helm_mexc_index")) {
     i_mexc = pin->GetInteger("hydro", "helm_mexc_index");
-    
+    scalar_floor_disabled_[i_mexc] = true;
     if (i_mexc < 0 || i_mexc >= NSCALARS) {
       std::stringstream msg;
       msg << "### FATAL ERROR in EquationOfState::InitEosConstants" << std::endl

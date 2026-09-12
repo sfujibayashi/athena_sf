@@ -206,6 +206,7 @@ class EquationOfState {
   AthenaArray<Real> normal_bb_;          // normal-frame fields, used in relativistic MHD
   AthenaArray<Real> normal_tt_;          // normal-frame M.B, used in relativistic MHD
   void InitEosConstants(ParameterInput *pin);
+  bool scalar_floor_disabled_[(NSCALARS > 0) ? NSCALARS : 1]{};
 };
 
 #endif // EOS_EOS_HPP_

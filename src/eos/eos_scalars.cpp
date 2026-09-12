@@ -44,7 +44,9 @@ void EquationOfState::PassiveScalarConservedToPrimitive(
           Real& r_n  = r(n,k,j,i);
           // apply passive scalars floor to conserved variable first, then transform:
           // (multi-D fluxes may have caused it to drop below floor)
-          s_n = (s_n < scalar_floor_ * d) ?  scalar_floor_ * d : s_n;
+          if (!scalar_floor_disabled_[n]) {
+            s_n = (s_n < scalar_floor_ * d) ? scalar_floor_ * d : s_n;
+          }
           r_n = s_n/d;
           // TODO(felker): continue to monitor the acceptability of this absolute 0. floor
           // (may create very large global conservation violations, e.g. the first few
@@ -162,7 +164,7 @@ void EquationOfState::ApplyPassiveScalarFloors(AthenaArray<Real> &r, int n, int 
                                                int i) {
   // TODO(felker): process user-input "hydro/sfloor" in each EquationOfState ctor
   // 8x .cpp files + more in general/. Is there a better way to avoid code duplication?
-
+  if (scalar_floor_disabled_[n]) return;
   // currently, assumes same floor is applied to all NSCALARS species
   // TODO(felker): generalize this to allow separate floors per species
   Real& r_n  = r(n,i);
@@ -182,9 +184,9 @@ void EquationOfState::ApplyPassiveScalarPrimitiveConservedFloors(
   const Real di = 1.0/w_d;
   Real& s_n  = s(n,k,j,i);
   Real& r_n  = r(n,k,j,i);
-
-  s_n = (s_n < scalar_floor_*w_d) ?  scalar_floor_*w_d : s_n;
-
+  if (!scalar_floor_disabled_[n]) {
+    s_n = (s_n < scalar_floor_*w_d) ?  scalar_floor_*w_d : s_n;
+  }
   // this next line, when applied indiscriminately, erases the accuracy gains performed in
   // the 4th order stencils, since <r> != <s>*<1/di>, in general
   r_n = s_n*di;
