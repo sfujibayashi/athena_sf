@@ -98,6 +98,9 @@ class Hydro {
   AthenaArray<Real> cell_volume_;
   // 2D
   AthenaArray<Real> wl_, wr_, wlb_;
+#if HELMHOLTZ_EOS_ENABLED
+  AthenaArray<Real> rl_, rr_, rlb_;
+#endif
   AthenaArray<Real> dflx_;
   AthenaArray<Real> bb_normal_;    // normal magnetic field, for (SR/GR)MHD
   AthenaArray<Real> lambdas_p_l_;  // most positive wavespeeds in left state
