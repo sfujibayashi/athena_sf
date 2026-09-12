@@ -37,6 +37,18 @@ class EquationOfState {
   void ConservedToPrimitive(
       AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &b,
       AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
+      AthenaArray<Real> &s, const AthenaArray<Real> &r_old,
+      Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
+
+  void PrimitiveToConserved(
+      const AthenaArray<Real> &prim, const AthenaArray<Real> &bc,
+      AthenaArray<Real> &cons, const AthenaArray<Real> &r,
+      Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
+
+  // overload the two-input C2P, P2C
+  void ConservedToPrimitive(
+      AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &b,
+      AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
       Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
   void PrimitiveToConserved(const AthenaArray<Real> &prim, const AthenaArray<Real> &bc,
                             AthenaArray<Real> &cons, Coordinates *pco,
