@@ -132,6 +132,10 @@ void EquationOfState::ConservedToPrimitive(
         }
         
         w_p = PresFromRhoEg(u_d, egas, s_cell);
+        // PresFromRhoEg may update EOS-dependent scalars, e.g. temperature
+        for (int n=0; n<NSCALARS; ++n) {
+          s(n,k,j,i) = s_cell[n];
+        }
       }
     }
   }
