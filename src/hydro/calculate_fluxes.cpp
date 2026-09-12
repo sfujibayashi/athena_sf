@@ -221,21 +221,6 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
         else
           pmb->precon->PiecewiseParabolicX2(k, js-1, il, iu, w, bcc, wl_, wr_);
       }
-#if EOS_SCALAR_INPUT_ENABLED
-      AthenaArray<Real> &r = pmb->pscalars->r;
-
-      if (order == 1) {
-        pmb->precon->DonorCellX2(k, js-1, il, iu, r, rl_, rr_);
-      } else if (order == 2) {
-        pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, r, rl_, rr_);
-      } else {
-        std::stringstream msg;
-        msg << "### FATAL ERROR in Hydro::CalculateFluxes" << std::endl
-            << "EOS scalar input currently supports reconstruction order <= 2."
-            << std::endl;
-        ATHENA_ERROR(msg);
-      }
-#endif
       for (int j=js; j<=je+1; ++j) {
         // reconstruct L/R states at j
         if (order == 1) {
@@ -252,7 +237,21 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
           else
             pmb->precon->PiecewiseParabolicX2(k, j, il, iu, w, bcc, wlb_, wr_);
         }
-
+#if EOS_SCALAR_INPUT_ENABLED
+        AthenaArray<Real> &r = pmb->pscalars->r;
+        
+        if (order == 1) {
+          pmb->precon->DonorCellX2(k, js-1, il, iu, r, rl_, rr_);
+        } else if (order == 2) {
+          pmb->precon->PiecewiseLinearX2(k, js-1, il, iu, r, rl_, rr_);
+        } else {
+          std::stringstream msg;
+          msg << "### FATAL ERROR in Hydro::CalculateFluxes" << std::endl
+              << "EOS scalar input currently supports reconstruction order <= 2."
+              << std::endl;
+          ATHENA_ERROR(msg);
+        }
+#endif
         pmb->pcoord->CenterWidth2(k, j, il, iu, dxw_);
 #if !MAGNETIC_FIELDS_ENABLED  // Hydro:
 #if EOS_SCALAR_INPUT_ENABLED
