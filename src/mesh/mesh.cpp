@@ -1830,9 +1830,17 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           if (pbval->nblevel[0][1][1] != -1) kl -= NGHOST;
           if (pbval->nblevel[2][1][1] != -1) ku += NGHOST;
         }
+#if EOS_SCALAR_INPUT_ENABLED && NSCALARS > 0
+        pmb->peos->ConservedToPrimitive(ph->u, ph->w1, pf->b,
+                                        ph->w, pf->bcc,
+                                        ps->s, ps->r,
+                                        pmb->pcoord,
+                                        il, iu, jl, ju, kl, ku);
+#else
         pmb->peos->ConservedToPrimitive(ph->u, ph->w1, pf->b,
                                         ph->w, pf->bcc, pmb->pcoord,
                                         il, iu, jl, ju, kl, ku);
+#endif
         if (NSCALARS > 0) {
           // r1/r_old for GR is currently unused:
           pmb->peos->PassiveScalarConservedToPrimitive(ps->s, ph->u, ps->r, ps->r,
