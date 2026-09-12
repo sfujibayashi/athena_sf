@@ -2218,9 +2218,18 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
     // Newton-Raphson solver in GR EOS uses the following abscissae:
     // stage=1: W at t^n and
     // stage=2: W at t^{n+1/2} (VL2) or t^{n+1} (RK2)
+#if HELMHOLTZ_EOS_ENABLED && NSCALARS > 0
     pmb->peos->ConservedToPrimitive(ph->u, ph->w, pf->b,
-                                    ph->w1, pf->bcc, pmb->pcoord,
+                                    ph->w1, pf->bcc,
+                                    ps->s, ps->r,
+                                    pmb->pcoord,
                                     il, iu, jl, ju, kl, ku);
+#else
+    pmb->peos->ConservedToPrimitive(ph->u, ph->w, pf->b,
+                                    ph->w1, pf->bcc,
+                                    pmb->pcoord,
+                                    il, iu, jl, ju, kl, ku);
+#endif
     if (pmb->porb->orbital_advection_defined) {
       pmb->porb->ResetOrbitalSystemConversionFlag();
     }
