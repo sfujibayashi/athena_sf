@@ -276,7 +276,7 @@ EosTable::EosTable(ParameterInput *pin) :
     ReadHDF5Table(eos_fn, this, pin);
   } else if (eos_file_type.compare("ascii") == 0) { // ASCII/text table
     ReadAsciiTable(eos_fn, this, pin);
-  } else if (eos_file_type.compare("helm") == 0) { // ASCII/text table
+  } else if (eos_file_type.compare("helm") == 0) { // Helmholtz table
     ReadHelmTable(eos_fn, this, pin);
   } else {
     std::stringstream msg;
