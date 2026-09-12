@@ -32,7 +32,11 @@
 void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
                           const int ivx, AthenaArray<Real> &wl,
                           AthenaArray<Real> &wr, AthenaArray<Real> &flx,
-                          const AthenaArray<Real> &dxw) {
+                          const AthenaArray<Real> &dxw
+#if HELMHOLTZ_EOS_ENABLED
+                          , AthenaArray<Real> *rl, AthenaArray<Real> *rr
+#endif
+  ) {
   int ivy = IVX + ((ivx-IVX)+1)%3;
   int ivz = IVX + ((ivx-IVX)+2)%3;
   Real wli[(NHYDRO)],wri[(NHYDRO)];
@@ -62,16 +66,46 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     wri[IVZ]=wr(ivz,i);
     wri[IPR]=wr(IPR,i);
 
+#if HELMHOLTZ_EOS_ENABLED
+    Real rli[(NSCALARS > 0) ? NSCALARS : 1];
+    Real rri[(NSCALARS > 0) ? NSCALARS : 1];
+
+    if (rl == nullptr || rr == nullptr) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in Hydro::RiemannSolver" << std::endl
+          << "Scalar face states are required for Helmholtz EOS."
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    for (int n=0; n<NSCALARS; ++n) {
+      rli[n] = (*rl)(n,i);
+      rri[n] = (*rr)(n,i);
+    }
+#endif
+
     //--- Step 2.  Compute middle state estimates with PVRS (Toro 10.5.2)
 
     Real al, ar, el, er;
+#if HELMHOLTZ_EOS_ENABLED
+    Real cl = std::sqrt(pmy_block->peos->AsqFromRhoP(wli[IDN], wli[IPR], rli));
+    Real cr = std::sqrt(pmy_block->peos->AsqFromRhoP(wri[IDN], wri[IPR], rri));
+#else
     Real cl = pmy_block->peos->SoundSpeed(wli);
     Real cr = pmy_block->peos->SoundSpeed(wri);
+#endif
     if (GENERAL_EOS) {
+#if HELMHOLTZ_EOS_ENABLED
+      el = pmy_block->peos->EgasFromRhoP(wli[IDN], wli[IPR], rli) + 
+        0.5*wli[IDN]*(SQR(wli[IVX]) + SQR(wli[IVY]) + SQR(wli[IVZ]));
+      er = pmy_block->peos->EgasFromRhoP(wri[IDN], wri[IPR], rri) + 
+        0.5*wri[IDN]*(SQR(wri[IVX]) + SQR(wri[IVY]) + SQR(wri[IVZ]));
+#else
       el = pmy_block->peos->EgasFromRhoP(wli[IDN], wli[IPR]) +
-           0.5*wli[IDN]*(SQR(wli[IVX]) + SQR(wli[IVY]) + SQR(wli[IVZ]));
+        0.5*wli[IDN]*(SQR(wli[IVX]) + SQR(wli[IVY]) + SQR(wli[IVZ]));
       er = pmy_block->peos->EgasFromRhoP(wri[IDN], wri[IPR]) +
-           0.5*wri[IDN]*(SQR(wri[IVX]) + SQR(wri[IVY]) + SQR(wri[IVZ]));
+        0.5*wri[IDN]*(SQR(wri[IVX]) + SQR(wri[IVY]) + SQR(wri[IVZ]));
+#endif
     } else {
       el = wli[IPR]*igm1 + 0.5*wli[IDN]*(SQR(wli[IVX]) + SQR(wli[IVY]) + SQR(wli[IVZ]));
       er = wri[IPR]*igm1 + 0.5*wri[IDN]*(SQR(wri[IVX]) + SQR(wri[IVY]) + SQR(wri[IVZ]));
@@ -87,8 +121,13 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
 
     Real ql, qr;
     if (GENERAL_EOS) {
+#if HELMHOLTZ_EOS_ENABLED
+      Real gl = pmy_block->peos->AsqFromRhoP(rhol, pmid, rli) * rhol / pmid;
+      Real gr = pmy_block->peos->AsqFromRhoP(rhor, pmid, rri) * rhor / pmid;
+#else
       Real gl = pmy_block->peos->AsqFromRhoP(rhol, pmid) * rhol / pmid;
       Real gr = pmy_block->peos->AsqFromRhoP(rhor, pmid) * rhor / pmid;
+#endif
       ql = (pmid <= wli[IPR]) ? 1.0 :
            std::sqrt(1.0 + (gl + 1) / (2 * gl) * (pmid / wli[IPR]-1.0));
       qr = (pmid <= wri[IPR]) ? 1.0 :

@@ -115,7 +115,11 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
 
       pmb->pcoord->CenterWidth1(k, j, is, ie+1, dxw_);
 #if !MAGNETIC_FIELDS_ENABLED  // Hydro:
+#if HELMHOLTZ_EOS_ENABLED
+      RiemannSolver(k, j, is, ie+1, IVX, wl_, wr_, x1flux, dxw_, &rl_, &rr_);
+#else
       RiemannSolver(k, j, is, ie+1, IVX, wl_, wr_, x1flux, dxw_);
+#endif
 #else  // MHD:
       // x1flux(IBY) = (v1*b2 - v2*b1) = -EMFZ
       // x1flux(IBZ) = (v1*b3 - v3*b1) =  EMFY
