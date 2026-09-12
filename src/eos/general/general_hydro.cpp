@@ -65,6 +65,82 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
 }
 
 //----------------------------------------------------------------------------------------
+//! void EquationOfState::ConservedToPrimitive(
+//!     AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &b,
+//!     AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
+//!     AthenaArray<Real> &s, const AthenaArray<Real> &r_old,
+//!     Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku)
+//! \brief Converts conserved into primitive variables with scalar variables.
+void EquationOfState::ConservedToPrimitive(
+    AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &b,
+    AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
+    AthenaArray<Real> &s, const AthenaArray<Real> &r_old,
+    Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku){
+  for (int k=kl; k<=ku; ++k) {
+    for (int j=jl; j<=ju; ++j) {
+#pragma omp simd
+      for (int i=il; i<=iu; ++i) {
+        Real& u_d  = cons(IDN,k,j,i);
+        Real& u_m1 = cons(IM1,k,j,i);
+        Real& u_m2 = cons(IM2,k,j,i);
+        Real& u_m3 = cons(IM3,k,j,i);
+        Real& u_e  = cons(IEN,k,j,i);
+
+        Real& w_d  = prim(IDN,k,j,i);
+        Real& w_vx = prim(IVX,k,j,i);
+        Real& w_vy = prim(IVY,k,j,i);
+        Real& w_vz = prim(IVZ,k,j,i);
+        Real& w_p  = prim(IPR,k,j,i);
+
+        // apply density floor
+        if (u_d < density_floor_) {
+          u_d = density_floor_;
+          
+          // preserve primitive composition across the density floor
+          for (int n=0; n<NSCALARS; ++n) {
+            s(n,k,j,i) = r_old(n,k,j,i) * u_d;
+          }
+        }
+
+        w_d = u_d;
+
+        Real di = 1.0/u_d;
+        w_vx = u_m1*di;
+        w_vy = u_m2*di;
+        w_vz = u_m3*di;
+
+        Real ke = 0.5*di*(SQR(u_m1) + SQR(u_m2) + SQR(u_m3));
+
+        Real s_cell[(NSCALARS > 0) ? NSCALARS : 1];
+        for (int n=0; n<NSCALARS; ++n) {
+          s_cell[n] = s(n,k,j,i);
+        }
+        
+        
+#if MASS_EXCESS_ENERGY_ENABLED
+        Real e_mexc = MassExcEnergyDensity(u_d, s_cell);
+#else
+        Real e_mexc = 0.0;
+#endif
+        Real egas = u_e - ke;
+        
+        // energy_floor_ applies to the thermal/EOS part,
+        // excluding the nuclear mass-excess contribution
+        if (egas - e_mexc <= energy_floor_) {
+          egas = energy_floor_ + e_mexc;
+          u_e = egas + ke;
+        }
+        
+        w_p = PresFromRhoEg(u_d, egas, s_cell);
+      }
+    }
+  }
+
+  return;
+}
+
+
+//----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
 //!           const AthenaArray<Real> &prim_old, const FaceField &b,
 //!           AthenaArray<Real> &prim, AthenaArray<Real> &bcc, Coordinates *pco,
