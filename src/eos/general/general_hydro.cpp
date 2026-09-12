@@ -190,6 +190,57 @@ void EquationOfState::ConservedToPrimitive(
   return;
 }
 
+//----------------------------------------------------------------------------------------
+//! \fn void EquationOfState::PrimitiveToConserved(
+//! const AthenaArray<Real> &prim, const AthenaArray<Real> &bc,
+//! AthenaArray<Real> &cons, AthenaArray<Real> &r,
+//! Coordinates *pco,
+//! int il, int iu, int jl, int ju, int kl, int ku);
+//! \brief Converts primitive variables into conservative variables with scalars.
+void EquationOfState::PrimitiveToConserved(
+    const AthenaArray<Real> &prim, const AthenaArray<Real> &bc,
+    AthenaArray<Real> &cons, AthenaArray<Real> &r,
+    Coordinates *pco,
+    int il, int iu, int jl, int ju, int kl, int ku) {
+
+#pragma omp simd
+  for (int k=kl; k<=ku; ++k) {
+    for (int j=jl; j<=ju; ++j) {
+#pragma novector
+      for (int i=il; i<=iu; ++i) {
+        Real& u_d  = cons(IDN,k,j,i);
+        Real& u_m1 = cons(IM1,k,j,i);
+        Real& u_m2 = cons(IM2,k,j,i);
+        Real& u_m3 = cons(IM3,k,j,i);
+        Real& u_e  = cons(IEN,k,j,i);
+
+        const Real& w_d  = prim(IDN,k,j,i);
+        const Real& w_vx = prim(IVX,k,j,i);
+        const Real& w_vy = prim(IVY,k,j,i);
+        const Real& w_vz = prim(IVZ,k,j,i);
+        const Real& w_p  = prim(IPR,k,j,i);
+
+        u_d  = w_d;
+        u_m1 = w_vx*w_d;
+        u_m2 = w_vy*w_d;
+        u_m3 = w_vz*w_d;
+
+        Real r_cell[(NSCALARS > 0) ? NSCALARS : 1];
+        for (int n=0; n<NSCALARS; ++n) {
+          r_cell[n] = r(n,k,j,i);
+        }
+
+        u_e = EgasFromRhoP(u_d, w_p, r_cell)
+              + 0.5*w_d*(SQR(w_vx) + SQR(w_vy) + SQR(w_vz));
+
+        // EgasFromRhoP may update the temperature scalar
+        for (int n=0; n<NSCALARS; ++n) {
+          r(n,k,j,i) = r_cell[n];
+        }
+      }
+    }
+  }
+}
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
