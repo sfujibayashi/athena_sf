@@ -211,3 +211,41 @@ Real EquationOfState::GetGamma() {
   msg << "GetGamma is not defined for general EOS." << std::endl;
   ATHENA_ERROR(msg);
 }
+
+// overload EOS calls without tracers for backward compatibility
+
+Real EquationOfState::PresFromRhoEg(Real rho, Real egas) {
+  if (NSCALARS > 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in EquationOfState::PresFromRhoEg" << std::endl
+        << "When NSCALARS>0, scalars (s) must be passed as a 3rd argument"
+        << std::endl;
+    ATHENA_ERROR(msg);
+    return -1.0;
+  }
+  return PresFromRhoEg(rho, egas, nullptr);
+}
+
+Real EquationOfState::EgasFromRhoP(Real rho, Real pres) {
+  if (NSCALARS > 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in EquationOfState::EgasFromRhoP" << std::endl
+        << "When NSCALARS>0, scalars (r) must be passed as a 3rd argument"
+        << std::endl;
+    ATHENA_ERROR(msg);
+    return -1.0;
+  }
+  return EgasFromRhoP(rho, pres, nullptr);
+}
+
+Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
+  if (NSCALARS > 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in EquationOfState::AsqFromRhoP" << std::endl
+        << "When NSCALARS>0, scalars (r) must be passed as a 3rd argument"
+        << std::endl;
+    ATHENA_ERROR(msg);
+    return -1.0;
+  }
+  return AsqFromRhoP(rho, pres, nullptr);
+}

@@ -142,9 +142,24 @@ class EquationOfState {
 #endif  // !MAGNETIC_FIELDS_ENABLED (GR)
 #endif  // #else (#if !RELATIVISTIC_DYNAMICS, #elif !GENERAL_RELATIVITY)
 
+
+  Real PresFromRhoEg(Real rho, Real egas, Real* s);
+  Real EgasFromRhoP(Real rho, Real pres, Real* r);
+  Real AsqFromRhoP(Real rho, Real pres, const Real* r);
+
+  // overloads without composition
   Real PresFromRhoEg(Real rho, Real egas);
   Real EgasFromRhoP(Real rho, Real pres);
   Real AsqFromRhoP(Real rho, Real pres);
+
+  // Helmholtz-specific utilities
+  Real TempFromRhoEg(Real rho, Real egas, Real* s);
+  
+  void HelmLookupRhoT(Real rho, Real temp, Real ye, Real abar,
+                      AthenaArray<Real> &out);
+  
+  Real MassExcEnergyDensity(Real rho, const Real* s);
+  
   Real GetIsoSoundSpeed() const {return iso_sound_speed_;}
   Real GetDensityFloor() const {return density_floor_;}
   Real GetPressureFloor() const {return pressure_floor_;}
