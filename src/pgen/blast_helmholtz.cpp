@@ -111,29 +111,6 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
 }
 
 void MeshBlock::UserWorkInLoop(void) {
-
-  for(int k=ks; k<=ke; k++) {
-    for(int j=js; j<=je; j++) {
-      for(int i=is; i<=ie; i++) {
-	Real rho = phydro->u(IDN,k,j,i);
-	Real temp= pscalars->r(helm::i_temp,k,j,i);
-	Real ye  = pscalars->r(helm::i_ye,k,j,i);
-	Real ytot= pscalars->r(helm::i_ytot,k,j,i);
-        Real abar= 1.0/ytot;
-#if HELMHOLTZ_EOS_ENABLED
-	AthenaArray<Real> out;
-	out.NewAthenaArray(8);
-	peos->HelmLookupRhoT(rho, temp, ye, abar, out);
-	Real entr = out(7);
-#else
-        Real entr = phydro->w(IPR,k,j,i)/std::pow(phydro->w(IDN,k,j,i),gamma_gas);
-#endif
-	//printf("%12.4e %12.4e %12.4e %12.4e %12.4e %12.4e %12.4e %12.4e\n",rho,temp,ye,abar,entr,out(0),out(2),out(5));
-	user_out_var(uov::i_entr,k,j,i) = entr;
-	user_out_var(uov::i_temp,k,j,i) = temp;
-      }
-    }
-  }
   
   Real v1_max = 0.0;
   int i_vmax = -1;
@@ -227,10 +204,32 @@ void MeshBlock::UserWorkInLoop(void) {
 
 }
 
-// void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
+void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
   
+  for(int k=ks; k<=ke; k++) {
+    for(int j=js; j<=je; j++) {
+      for(int i=is; i<=ie; i++) {
+	Real rho = phydro->u(IDN,k,j,i);
+	Real temp= pscalars->r(helm::i_temp,k,j,i);
+	Real ye  = pscalars->r(helm::i_ye,k,j,i);
+	Real ytot= pscalars->r(helm::i_ytot,k,j,i);
+        Real abar= 1.0/ytot;
+#if HELMHOLTZ_EOS_ENABLED
+	AthenaArray<Real> out;
+	out.NewAthenaArray(8);
+	peos->HelmLookupRhoT(rho, temp, ye, abar, out);
+	Real entr = out(7);
+#else
+        Real entr = phydro->w(IPR,k,j,i)/std::pow(phydro->w(IDN,k,j,i),gamma_gas);
+#endif
+	//printf("%12.4e %12.4e %12.4e %12.4e %12.4e %12.4e %12.4e %12.4e\n",rho,temp,ye,abar,entr,out(0),out(2),out(5));
+	user_out_var(uov::i_entr,k,j,i) = entr;
+	user_out_var(uov::i_temp,k,j,i) = temp;
+      }
+    }
+  }
 
-// }
+}
 
 
 //========================================================================================
