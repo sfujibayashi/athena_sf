@@ -411,7 +411,9 @@ if args['eos'][:8] == 'general/':
     if args['s'] or args['g']:
         raise SystemExit('### CONFIGURE ERROR: '
                          + 'General EOS is incompatible with relativity')
-    if args['flux'] not in ['hlle', 'hllc', 'hlld']:
+
+    if (args['flux'] not in ['hllc', 'hlld']
+            and not (args['flux'] == 'hlle' and not args['b'])):
         raise SystemExit('### CONFIGURE ERROR: '
                          + 'General EOS is incompatible with flux ' + args['flux'])
 
