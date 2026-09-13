@@ -24,6 +24,7 @@
 // C++ headers
 #include <algorithm>  // max(), min()
 #include <cmath>      // sqrt()
+#include <sstream>
 
 // Athena++ headers
 #include "../../../athena.hpp"
