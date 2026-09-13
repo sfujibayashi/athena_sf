@@ -113,17 +113,6 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
 
       al = std::min(wli[IVX] - cl, wri[IVX] - cr);
       ar = std::max(wli[IVX] + cl, wri[IVX] + cr);
-    }
-
-    if  (GENERAL_EOS) {
-      el = pmy_block->peos->EgasFromRhoP(wli[IDN], wli[IPR]) +
-           0.5*wli[IDN]*(SQR(wli[IVX]) + SQR(wli[IVY]) + SQR(wli[IVZ]));
-      er = pmy_block->peos->EgasFromRhoP(wri[IDN], wri[IPR]) +
-           0.5*wri[IDN]*(SQR(wri[IVX]) + SQR(wri[IVY]) + SQR(wri[IVZ]));
-      cl = pmy_block->peos->SoundSpeed(wli);
-      cr = pmy_block->peos->SoundSpeed(wri);
-      al = std::min(wli[IVX] - cl, wri[IVX] - cr);
-      ar = std::max(wli[IVX] + cl, wri[IVX] + cr);
     } else {
       //--- Step 2.  Compute Roe-averaged state
       Real sqrtdl = std::sqrt(wli[IDN]);
