@@ -136,6 +136,9 @@ void MeshBlock::UserWorkInLoop(void) {
   }
   
   Real v1_max = 0.0;
+  int i_vmax = -1;
+  Real rho_vmax = 0.0;
+  Real mom_vmax = 0.0;
   Real cs2_max = 0.0;
   for(int k=ks; k<=ke; k++) {
     for(int j=js; j<=je; j++) {
@@ -156,15 +159,19 @@ void MeshBlock::UserWorkInLoop(void) {
         if (cs2_max < asq){
           cs2_max=asq;
         }
-        Real v1 = phydro->u(IM1,k,j,i) / phydro->u(IDN,k,j,i);
+        Real mom = phydro->u(IM1,k,j,i);
+        Real v1 = mom/rho;
         if (v1_max < std::abs(v1)){
           v1_max = std::abs(v1);
+          i_vmax = i;
+          rho_vmax = rho;
+          mom_vmax = mom;
         }
       }
     }
   }
-  printf("v1max, cs2max = %12.4e %12.4e\n",v1_max, cs2_max);
-
+  printf("v1max=%12.4e i=%d rho=%12.4e mom=%12.4e cs2max=%12.4e\n",
+         v1_max, i_vmax, rho_vmax, mom_vmax, cs2_max);
 
   bool isok;
   isok = true;

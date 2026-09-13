@@ -38,7 +38,11 @@
 void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
                           const int ivx, AthenaArray<Real> &wl,
                           AthenaArray<Real> &wr, AthenaArray<Real> &flx,
-                          const AthenaArray<Real> &dxw) {
+                          const AthenaArray<Real> &dxw
+#if EOS_SCALAR_INPUT_ENABLED
+                          , AthenaArray<Real> *rl, AthenaArray<Real> *rr
+#endif
+                          ) {
   int ivy = IVX + ((ivx-IVX)+1)%3;
   int ivz = IVX + ((ivx-IVX)+2)%3;
   Real wli[(NHYDRO)],wri[(NHYDRO)],wroe[(NHYDRO)];
@@ -68,7 +72,48 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     wri[IVZ]=wr(ivz,i);
     if (NON_BAROTROPIC_EOS) wri[IPR]=wr(IPR,i);
 
+#if EOS_SCALAR_INPUT_ENABLED
+    Real rli[(NSCALARS > 0) ? NSCALARS : 1];
+    Real rri[(NSCALARS > 0) ? NSCALARS : 1];
+
+    if (rl == nullptr || rr == nullptr) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in Hydro::RiemannSolver" << std::endl
+          << "Scalar face states are required for this EOS."
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    for (int n=0; n<NSCALARS; ++n) {
+      rli[n] = (*rl)(n,i);
+      rri[n] = (*rr)(n,i);
+    }
+#endif
+    
     Real el,er,cl,cr,al,ar;
+    if (GENERAL_EOS) {
+#if EOS_SCALAR_INPUT_ENABLED
+      el = pmy_block->peos->EgasFromRhoP(wli[IDN], wli[IPR], rli)
+        + 0.5*wli[IDN]*(SQR(wli[IVX]) + SQR(wli[IVY]) + SQR(wli[IVZ]));
+      er = pmy_block->peos->EgasFromRhoP(wri[IDN], wri[IPR], rri)
+        + 0.5*wri[IDN]*(SQR(wri[IVX]) + SQR(wri[IVY]) + SQR(wri[IVZ]));
+
+      cl = std::sqrt(pmy_block->peos->AsqFromRhoP(wli[IDN], wli[IPR], rli));
+      cr = std::sqrt(pmy_block->peos->AsqFromRhoP(wri[IDN], wri[IPR], rri));
+#else
+      el = pmy_block->peos->EgasFromRhoP(wli[IDN], wli[IPR])
+        + 0.5*wli[IDN]*(SQR(wli[IVX]) + SQR(wli[IVY]) + SQR(wli[IVZ]));
+      er = pmy_block->peos->EgasFromRhoP(wri[IDN], wri[IPR])
+        + 0.5*wri[IDN]*(SQR(wri[IVX]) + SQR(wri[IVY]) + SQR(wri[IVZ]));
+
+      cl = pmy_block->peos->SoundSpeed(wli);
+      cr = pmy_block->peos->SoundSpeed(wri);
+#endif
+
+      al = std::min(wli[IVX] - cl, wri[IVX] - cr);
+      ar = std::max(wli[IVX] + cl, wri[IVX] + cr);
+    }
+
     if  (GENERAL_EOS) {
       el = pmy_block->peos->EgasFromRhoP(wli[IDN], wli[IPR]) +
            0.5*wli[IDN]*(SQR(wli[IVX]) + SQR(wli[IVY]) + SQR(wli[IVZ]));
@@ -112,7 +157,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
       al = std::min((wroe[IVX] - a),(wli[IVX] - cl));
       ar = std::max((wroe[IVX] + a),(wri[IVX] + cr));
     }
-
+    
     Real bp = ar > 0.0 ? ar : 0.0;
     Real bm = al < 0.0 ? al : 0.0;
 
