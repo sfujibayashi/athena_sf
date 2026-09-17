@@ -82,10 +82,7 @@ class EosTable {
   Real logTMin, logTMax;
   Real YeMin, YeMax;
 
-  int nRho, nEgas, nVar;
   int nTemp, nYe;
-
-  AthenaArray<Real> EosRatios;
 };
 
 
