@@ -50,12 +50,16 @@ class InterpTable3D {
   InterpTable3D(int nvar, int nx3, int nx2, int nx1);
 
   void SetSize(int nvar, int nx3, int nx2, int nx1);
-
   Real interpolate(int var, Real x3, Real x2, Real x1);
-
   int nvar();
-
   AthenaArray<Real> data;
+  void SetX1lim(Real x1min, Real x1max);
+  void SetX2lim(Real x2min, Real x2max);
+  void SetX3lim(Real x3min, Real x3max);
+  void GetX1lim(Real &x1min, Real &x1max);
+  void GetX2lim(Real &x2min, Real &x2max);
+  void GetX3lim(Real &x3min, Real &x3max);
+  void GetSize(int &nvar, int &nx3, int &nx2, int &nx1);
 
  private:
   int nvar_;
