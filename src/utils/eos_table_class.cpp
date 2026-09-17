@@ -223,13 +223,13 @@ void ReadCompOSEHDF5Table(std::string fn, EosTable *peos_table) {
         Real q7  = peos_table->table3d.data(1, in, iy, it);
         Real cs2 = peos_table->table3d.data(2, in, iy, it);
         
-        peos_table->table3d.data(0, in, iy, it)
+        peos_table->table3d.data(ECLOGP, in, iy, it)
           = std::log10(q1 * nb(in));
         
-        peos_table->table3d.data(1, in, iy, it)
+        peos_table->table3d.data(ECLOGE, in, iy, it)
           = std::log10(mn * (q7 + 1.0) * nb(in));
         
-        peos_table->table3d.data(2, in, iy, it)
+        peos_table->table3d.data(ECCS, in, iy, it)
           = std::sqrt(cs2);
       }
     }
