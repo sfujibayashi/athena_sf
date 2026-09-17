@@ -157,7 +157,7 @@ void InterpTable3D::GetSize(int &nvar, int &nx3, int &nx2, int &nx1) {
 
 //! Tri-linear interpolation
 Real InterpTable3D::interpolate(int var, Real x3, Real x2, Real x1) {
-  Real x, y, xrl, yrl, out;
+  Real x, y, z, xrl, yrl, yrl, out;
   x = (x3 - x3min_) * x3norm_;
   y = (x2 - x2min_) * x2norm_;
   z = (x1 - x1min_) * x1norm_;
@@ -189,7 +189,7 @@ Real InterpTable3D::interpolate(int var, Real x3, Real x2, Real x1) {
   }
   zrl = 1 + zil - z;  // z residual
 
-  // Sample from the 4 nearest data points and weight appropriately
+  // Sample from the 8 nearest data points and weight appropriately
   // data is an attribute of the eos class
   out =        xrl  *   yrl *   zrl * data(var,xil  ,yil  ,zil  )
           +    xrl  *(1-yrl)*   zrl * data(var,xil  ,yil+1,zil  )
