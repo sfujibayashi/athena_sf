@@ -157,13 +157,13 @@ void InterpTable3D::GetSize(int &nvar, int &nx3, int &nx2, int &nx1) {
 
 //! Tri-linear interpolation
 Real InterpTable3D::interpolate(int var, Real x3, Real x2, Real x1) {
-  Real x, y, z, xrl, yrl, yrl, out;
+  Real x, y, z, xrl, yrl, zrl, out;
   x = (x3 - x3min_) * x3norm_;
   y = (x2 - x2min_) * x2norm_;
   z = (x1 - x1min_) * x1norm_;
   int xil = static_cast<int>(x); // lower x index
   int yil = static_cast<int>(y); // lower y index
-  int zil = static_cast<int>(z); // lower x index
+  int zil = static_cast<int>(z); // lower z index
   int nx = nx3_;
   int ny = nx2_;
   int nz = nx1_;
