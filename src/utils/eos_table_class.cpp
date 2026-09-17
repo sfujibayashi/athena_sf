@@ -178,7 +178,7 @@ void ReadCompOSEHDF5Table(std::string fn, EosTable *peos_table) {
   }
 #endif
 
-  HDF5Table3DLoader(fn.c_str(), &peos_table->table3d, 3, 
+  HDF5Table3DLoader(fn.c_str(), &peos_table->table3d, ECNVARS, 
                     compose_var_names, nullptr, nullptr, nullptr);
   
   peos_table->table3d.GetSize(peos_table->nVar,
