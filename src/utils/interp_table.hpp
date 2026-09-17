@@ -44,6 +44,29 @@ class InterpTable2D {
   Real x2norm_;
 };
 
+class InterpTable3D {
+ public:
+  InterpTable3D() = default;
+  InterpTable3D(int nvar, int nx3, int nx2, int nx1);
+
+  void SetSize(int nvar, int nx3, int nx2, int nx1);
+
+  Real interpolate(int var, Real x3, Real x2, Real x1);
+
+  int nvar();
+
+  AthenaArray<Real> data;
+
+ private:
+  int nvar_;
+  int nx1_, nx2_, nx3_;
+
+  Real x1min_, x1max_, x1norm_;
+  Real x2min_, x2max_, x2norm_;
+  Real x3min_, x3max_, x3norm_;
+};
+
+
 class EosTable {
  public:
   explicit EosTable(ParameterInput *pin);
@@ -54,6 +77,16 @@ class EosTable {
   Real rhoUnit, eUnit, hUnit;
   int nRho, nEgas, nVar;
   AthenaArray<Real> EosRatios;
+
+  InterpTable3D table3d;
+  Real logTMin, logTMax;
+  Real YeMin, YeMax;
+
+  int nRho, nEgas, nVar;
+  int nTemp, nYe;
+
+  AthenaArray<Real> EosRatios;
 };
+
 
 #endif //UTILS_INTERP_TABLE_HPP_
