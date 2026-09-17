@@ -83,7 +83,7 @@ class EosTable {
   AthenaArray<Real> EosRatios;
 
   InterpTable3D table3d;
-  Real logTMin, logTMax;
+  Real logTempMin, logTempMax;
   Real YeMin, YeMax;
 
   int nTemp, nYe;

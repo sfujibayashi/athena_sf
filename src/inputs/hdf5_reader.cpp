@@ -211,4 +211,89 @@ void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const int nvar
   }
   return;
 }
+
+
+//----------------------------------------------------------------------------------------
+//! \fn void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const int nvar,
+//!                    const char **var_names, char *x2lim_name, char *x1lim_name) {
+//! \brief Reads datasets from an HDF5 file into a InterpTable2D.
+
+void HDF5Table3DLoader(const char *filename, InterpTable3D* ptable, const int nvar,
+                     const char **var_names, const char *x3lim_name,
+                     const char *x2lim_name, const char *x1lim_name) {
+  hsize_t dims[3];
+  int tmp[3];
+  int count_file[3];
+  hid_t dataset, dspace;
+  hid_t property_list_file = H5Pcreate(H5P_FILE_ACCESS);
+  hid_t file = H5Fopen(filename, H5F_ACC_RDONLY, property_list_file);
+  for (int i = 0; i < nvar; ++i) {
+    dataset = H5Dopen(file, var_names[i], H5P_DEFAULT);
+    dspace = H5Dget_space(dataset);
+    int ndims = H5Sget_simple_extent_ndims(dspace);
+    if (ndims != 3) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in HDF5Table3DLoader" << std::endl
+          << "Rank of data field '" << var_names[i] << "' in file '" << filename
+          << "' must be 3. Rank is " << ndims << "." << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    H5Sget_simple_extent_dims(dspace, dims, NULL);
+    tmp[0] = static_cast<int>(dims[0]);
+    tmp[1] = static_cast<int>(dims[1]);
+    tmp[2] = static_cast<int>(dims[2]);
+    if (i == 0) {
+      count_file[0] = tmp[0];
+      count_file[1] = tmp[1];
+      count_file[2] = tmp[2];
+    } else if (count_file[0]!=tmp[0] || count_file[1]!=tmp[1] || count_file[2]!=tmp[2]) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in HDF5Table3DLoader" << std::endl
+          << "Inconsistent data field shape in file '" << filename << "'." << std::endl;
+      ATHENA_ERROR(msg);
+    }
+  }
+  H5Fclose(file);
+  ptable->SetSize(nvar, count_file[0], count_file[1], count_file[2]);
+  int start_file[2];
+  start_file[0] = 0;
+  start_file[1] = 0;
+  int start_mem[3];
+  start_mem[1] = 0;
+  start_mem[2] = 0;
+  int count_mem[3];
+  count_mem[0] = 1;
+  count_mem[1] = count_file[0];
+  count_mem[2] = count_file[1];
+  for (int i = 0; i < nvar; ++i) {
+    start_mem[0] = i;
+    HDF5ReadRealArray(filename, var_names[i], 2, start_file, count_file,
+                      3, start_mem, count_mem, ptable->data);
+  }
+  if (x3lim_name) {
+    AthenaArray<Real> lim;
+    lim.NewAthenaArray(2);
+    int zero[] = {0};
+    int two[] = {2};
+    HDF5ReadRealArray(filename, x3lim_name, 1, zero, two, 1, zero, two, lim);
+    ptable->SetX3lim(lim(0), lim(1));
+  }
+  if (x2lim_name) {
+    AthenaArray<Real> lim;
+    lim.NewAthenaArray(2);
+    int zero[] = {0};
+    int two[] = {2};
+    HDF5ReadRealArray(filename, x2lim_name, 1, zero, two, 1, zero, two, lim);
+    ptable->SetX2lim(lim(0), lim(1));
+  }
+  if (x1lim_name) {
+    AthenaArray<Real> lim;
+    lim.NewAthenaArray(2);
+    int zero[] = {0};
+    int two[] = {2};
+    HDF5ReadRealArray(filename, x1lim_name, 1, zero, two, 1, zero, two, lim);
+    ptable->SetX1lim(lim(0), lim(1));
+  }
+  return;
+}
 #endif  // HDF5OUTPUT

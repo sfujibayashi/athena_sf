@@ -35,4 +35,10 @@ void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const int nvar
                      const char *x2lim_name=NULL,
                      const char *x1lim_name=NULL);
 
+void HDF5Table3DLoader(const char *filename, InterpTable3D* ptable, const int nvar,
+                     const char **var_names,
+                     const char *x3lim_name=NULL,
+                     const char *x2lim_name=NULL,
+                     const char *x1lim_name=NULL);
+
 #endif  // INPUTS_HDF5_READER_HPP_
