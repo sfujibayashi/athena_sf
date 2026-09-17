@@ -8,4 +8,4 @@ enum ComposeTableVariables {
   ECNVARS = 3
 };
 
-#endif
+#endif // UTILS_COMPOSE_TABLE_HPP_
