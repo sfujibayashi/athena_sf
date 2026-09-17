@@ -130,11 +130,11 @@ void ReadHDF5Table3D(std::string fn, EosTable *peos_table, ParameterInput *pin) 
   std::string ye_lim_field =
       pin->GetOrAddString("hydro", "EOS_ye_lim_field", "YeLim");
   HDF5Table3DLoader(fn.c_str(), &peos_table->table3d, 3, var_names,
-                  temp_lim_field.c_str(), ye_lim_field.c_str(), dens_lim_field.c_str());
-  peos_table->table3d.GetSize(peos_table->nVar, peos_table->nTemp, peos_table->nYe, peos_table->nRho);
-  peos_table->table3d.GetX3lim(peos_table->logTempMin, peos_table->logTempMax);
+                    dens_lim_field.c_str(), ye_lim_field.c_str(), temp_lim_field.c_str());
+  peos_table->table3d.GetSize(peos_table->nVar, peos_table->nRho, peos_table->nYe, peos_table->nTemp);
+  peos_table->table3d.GetX3lim(peos_table->logRhoMin, peos_table->logRhoMax);
   peos_table->table3d.GetX2lim(peos_table->YeMin, peos_table->YeMax);
-  peos_table->table3d.GetX1lim(peos_table->logRhoMin, peos_table->logRhoMax);
+  peos_table->table3d.GetX1lim(peos_table->logTempMin, peos_table->logTempMax);
   peos_table->EosRatios.NewAthenaArray(peos_table->nVar);
   if (read_ratios) {
     std::string ratio_field=pin->GetOrAddString("hydro", "EOS_ratio_field", "ratios");
