@@ -34,7 +34,6 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 
   Real rho_unit = pin->GetOrAddReal("hydro", "eos_rho_unit", 1.0);
   Real egas_unit = pin->GetOrAddReal("hydro", "eos_egas_unit", 1.0);
-  Real vsqr_unit = egas_unit / rho_unit;
 
   // Code density -> physical density -> nb [fm^-3]
   Real rho_cgs = rho0 * rho_unit;
@@ -44,10 +43,8 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
   Real log_t = std::log10(temp0);
 
   Real r_cell[(NSCALARS > 0) ? NSCALARS : 1] = {};
-  Real s_cell[(NSCALARS > 0) ? NSCALARS : 1] = {};
 
   r_cell[0] = ye0;
-  s_cell[0] = rho0 * ye0;
 
   // Direct lookup from the loaded table
   Real log_p =
@@ -69,7 +66,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
         for (int i = pmb->is; i <= pmb->ie; ++i) {
           Real rho = pmb->phydro->u(IDN,k,j,i);
           Real ye  = pmb->pscalars->s(0,k,j,i) / rho;
-          Real etot = pmb->phydro->u(IEN,k,j,i);
+          Real egas = pmb->phydro->u(IEN,k,j,i);
           
           max_rho_err = std::max(
               max_rho_err, std::abs((rho - rho0) / rho0));
@@ -78,7 +75,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
               max_ye_err, std::abs((ye - ye0) / ye0));
 
           max_e_err = std::max(
-              max_e_err, std::abs((etot - egas0) / egas0));
+              max_e_err, std::abs((egas - egas0) / egas0));
         }
       }
     }
