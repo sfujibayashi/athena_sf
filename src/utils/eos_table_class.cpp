@@ -110,50 +110,50 @@ void ReadHDF5Table(std::string fn, EosTable *peos_table, ParameterInput *pin) {
   }
 }
 
-//----------------------------------------------------------------------------------------
-//! \fn void ReadHDF5Table3D(std::string fn, EosTable *peos_table, ParameterInput *pin)
-//! \brief Read data from HDF5 EOS table and initialize interpolated table.
+// //----------------------------------------------------------------------------------------
+// //! \fn void ReadHDF5Table3D(std::string fn, EosTable *peos_table, ParameterInput *pin)
+// //! \brief Read data from HDF5 EOS table and initialize interpolated table.
 
-void ReadHDF5Table3D(std::string fn, EosTable *peos_table, ParameterInput *pin) {
-#ifndef HDF5OUTPUT
-  {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in EosTable::EosTable, ReadHDF5Table3D" << std::endl
-        << "HDF5 EOS table specified, but HDF5 flag is not enabled."  << std::endl;
-    ATHENA_ERROR(msg);
-  }
-#endif
-  bool read_ratios = pin->GetOrAddBoolean("hydro", "eos_read_ratios", true);
-  std::string dens_lim_field =
-      pin->GetOrAddString("hydro", "EOS_dens_lim_field", "LogDensLim");
-  std::string temp_lim_field =
-      pin->GetOrAddString("hydro", "EOS_temp_lim_field", "LogTempLim");
-  std::string ye_lim_field =
-      pin->GetOrAddString("hydro", "EOS_ye_lim_field", "YeLim");
-  HDF5Table3DLoader(fn.c_str(), &peos_table->table3d, 3, var_names,
-                    dens_lim_field.c_str(), ye_lim_field.c_str(), temp_lim_field.c_str());
-  peos_table->table3d.GetSize(peos_table->nVar, peos_table->nRho, peos_table->nYe, peos_table->nTemp);
-  peos_table->table3d.GetX3lim(peos_table->logRhoMin, peos_table->logRhoMax);
-  peos_table->table3d.GetX2lim(peos_table->YeMin, peos_table->YeMax);
-  peos_table->table3d.GetX1lim(peos_table->logTempMin, peos_table->logTempMax);
-  peos_table->EosRatios.NewAthenaArray(peos_table->nVar);
-  if (read_ratios) {
-    std::string ratio_field=pin->GetOrAddString("hydro", "EOS_ratio_field", "ratios");
-    int zero[] = {0};
-    int pnVar[] = {peos_table->nVar};
-    HDF5ReadRealArray(fn.c_str(), ratio_field.c_str(), 1, zero, pnVar,
-                      1, zero, pnVar, peos_table->EosRatios);
-    if (peos_table->EosRatios(0) <= 0) {
-      std::stringstream msg;
-      msg << "### FATAL ERROR in EosTable::EosTable, ReadHDF5Table3D" << std::endl
-          << "Invalid ratio. " << fn.c_str() << ", " << ratio_field << ", "
-          << peos_table->EosRatios(0) << std::endl;
-      ATHENA_ERROR(msg);
-    }
-  } else {
-    for (int i=0; i<peos_table->nVar; ++i) peos_table->EosRatios(i) = 1.0;
-  }
-}
+// void ReadHDF5Table3D(std::string fn, EosTable *peos_table, ParameterInput *pin) {
+// #ifndef HDF5OUTPUT
+//   {
+//     std::stringstream msg;
+//     msg << "### FATAL ERROR in EosTable::EosTable, ReadHDF5Table3D" << std::endl
+//         << "HDF5 EOS table specified, but HDF5 flag is not enabled."  << std::endl;
+//     ATHENA_ERROR(msg);
+//   }
+// #endif
+//   bool read_ratios = pin->GetOrAddBoolean("hydro", "eos_read_ratios", true);
+//   std::string dens_lim_field =
+//       pin->GetOrAddString("hydro", "EOS_dens_lim_field", "LogDensLim");
+//   std::string temp_lim_field =
+//       pin->GetOrAddString("hydro", "EOS_temp_lim_field", "LogTempLim");
+//   std::string ye_lim_field =
+//       pin->GetOrAddString("hydro", "EOS_ye_lim_field", "YeLim");
+//   HDF5Table3DLoader(fn.c_str(), &peos_table->table3d, 3, var_names,
+//                     dens_lim_field.c_str(), ye_lim_field.c_str(), temp_lim_field.c_str());
+//   peos_table->table3d.GetSize(peos_table->nVar, peos_table->nRho, peos_table->nYe, peos_table->nTemp);
+//   peos_table->table3d.GetX3lim(peos_table->logRhoMin, peos_table->logRhoMax);
+//   peos_table->table3d.GetX2lim(peos_table->YeMin, peos_table->YeMax);
+//   peos_table->table3d.GetX1lim(peos_table->logTempMin, peos_table->logTempMax);
+//   peos_table->EosRatios.NewAthenaArray(peos_table->nVar);
+//   if (read_ratios) {
+//     std::string ratio_field=pin->GetOrAddString("hydro", "EOS_ratio_field", "ratios");
+//     int zero[] = {0};
+//     int pnVar[] = {peos_table->nVar};
+//     HDF5ReadRealArray(fn.c_str(), ratio_field.c_str(), 1, zero, pnVar,
+//                       1, zero, pnVar, peos_table->EosRatios);
+//     if (peos_table->EosRatios(0) <= 0) {
+//       std::stringstream msg;
+//       msg << "### FATAL ERROR in EosTable::EosTable, ReadHDF5Table3D" << std::endl
+//           << "Invalid ratio. " << fn.c_str() << ", " << ratio_field << ", "
+//           << peos_table->EosRatios(0) << std::endl;
+//       ATHENA_ERROR(msg);
+//     }
+//   } else {
+//     for (int i=0; i<peos_table->nVar; ++i) peos_table->EosRatios(i) = 1.0;
+//   }
+// }
 
 
 //----------------------------------------------------------------------------------------
@@ -177,6 +177,34 @@ void ReadCompOSEHDF5Table(std::string fn, EosTable *peos_table) {
                               peos_table->nRho,
                               peos_table->nYe,
                               peos_table->nTemp);
+  
+  AthenaArray<Real> nb, yq, temp;
+  nb.NewAthenaArray(peos_table->nRho);
+  yq.NewAthenaArray(peos_table->nYe);
+  temp.NewAthenaArray(peos_table->nTemp);
+
+  int zero[] = {0};
+
+  int nrho[] = {peos_table->nRho};
+  HDF5ReadRealArray(fn.c_str(), "nb", 1, zero, nrho,
+                    1, zero, nrho, nb);
+
+  int nye[] = {peos_table->nYe};
+  HDF5ReadRealArray(fn.c_str(), "yq", 1, zero, nye,
+                    1, zero, nye, yq);
+  
+  int ntemp[] = {peos_table->nTemp};
+  HDF5ReadRealArray(fn.c_str(), "t", 1, zero, ntemp,
+                    1, zero, ntemp, temp);
+  
+  peos_table->table3d.SetX3lim(std::log10(nb(0)),
+                               std::log10(nb(peos_table->nRho - 1)));
+  
+  peos_table->table3d.SetX2lim(yq(0),
+                               yq(peos_table->nYe - 1));
+
+  peos_table->table3d.SetX1lim(std::log10(temp(0)),
+                               std::log10(temp(peos_table->nTemp - 1)));
   
 }
 
