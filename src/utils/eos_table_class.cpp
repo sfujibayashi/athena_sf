@@ -29,6 +29,7 @@
 
 // Order of datafields for HDF5 EOS tables
 const char *var_names[] = {"p/e(e/rho,rho)", "e/p(p/rho,rho)", "asq*rho/p(p/rho,rho)"};
+const char *compose_var_names[] = {"Q1", "Q7", "cs2"};
 
 //----------------------------------------------------------------------------------------
 //! \fn void ReadBinaryTable(std::string fn, EosTable *peos_table)
@@ -110,14 +111,14 @@ void ReadHDF5Table(std::string fn, EosTable *peos_table, ParameterInput *pin) {
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn void ReadCompOSEHDF5Table(std::string fn, EosTable *peos_table, ParameterInput *pin)
+//! \fn void ReadHDF5Table3D(std::string fn, EosTable *peos_table, ParameterInput *pin)
 //! \brief Read data from HDF5 EOS table and initialize interpolated table.
 
-void ReadCompOSEHDF5Table(std::string fn, EosTable *peos_table, ParameterInput *pin) {
+void ReadHDF5Table3D(std::string fn, EosTable *peos_table, ParameterInput *pin) {
 #ifndef HDF5OUTPUT
   {
     std::stringstream msg;
-    msg << "### FATAL ERROR in EosTable::EosTable, ReadCompOSEHDF5Table" << std::endl
+    msg << "### FATAL ERROR in EosTable::EosTable, ReadHDF5Table3D" << std::endl
         << "HDF5 EOS table specified, but HDF5 flag is not enabled."  << std::endl;
     ATHENA_ERROR(msg);
   }
@@ -144,7 +145,7 @@ void ReadCompOSEHDF5Table(std::string fn, EosTable *peos_table, ParameterInput *
                       1, zero, pnVar, peos_table->EosRatios);
     if (peos_table->EosRatios(0) <= 0) {
       std::stringstream msg;
-      msg << "### FATAL ERROR in EosTable::EosTable, ReadCompOSEHDF5Table" << std::endl
+      msg << "### FATAL ERROR in EosTable::EosTable, ReadHDF5Table3D" << std::endl
           << "Invalid ratio. " << fn.c_str() << ", " << ratio_field << ", "
           << peos_table->EosRatios(0) << std::endl;
       ATHENA_ERROR(msg);
@@ -152,6 +153,31 @@ void ReadCompOSEHDF5Table(std::string fn, EosTable *peos_table, ParameterInput *
   } else {
     for (int i=0; i<peos_table->nVar; ++i) peos_table->EosRatios(i) = 1.0;
   }
+}
+
+
+//----------------------------------------------------------------------------------------
+//! \fn void ReadCompOSEHDF5Table(std::string fn, EosTable *peos_table, ParameterInput *pin)
+//! \brief Read data from HDF5 EOS table and initialize interpolated table.
+
+void ReadCompOSEHDF5Table(std::string fn, EosTable *peos_table) {
+#ifndef HDF5OUTPUT
+  {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in EosTable::EosTable, ReadCompOSEHDF5Table" << std::endl
+        << "HDF5 EOS table specified, but HDF5 flag is not enabled."  << std::endl;
+    ATHENA_ERROR(msg);
+  }
+#endif
+  const char *compose_var_names[] = {"Q1", "Q7", "cs2"};
+  HDF5Table3DLoader(fn.c_str(), &peos_table->table3d, 3, 
+                    compose_var_names, nullptr, nullptr, nullptr);
+  
+  peos_table->table3d.GetSize(peos_table->nVar,
+                              peos_table->nRho,
+                              peos_table->nYe,
+                              peos_table->nTemp);
+  
 }
 
 
@@ -321,7 +347,7 @@ EosTable::EosTable(ParameterInput *pin) :
   } else if (eos_file_type.compare("hdf5") == 0) { // HDF5 table
     ReadHDF5Table(eos_fn, this, pin);
   } else if (eos_file_type.compare("compose") == 0) { // CompOSE format HDF5 table
-    ReadCompOSEHDF5Table(eos_fn, this, pin);
+    ReadCompOSEHDF5Table(eos_fn, this);
   } else if (eos_file_type.compare("ascii") == 0) { // ASCII/text table
     ReadAsciiTable(eos_fn, this, pin);
   } else if (eos_file_type.compare("helm") == 0) { // Helmholtz table
