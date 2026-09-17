@@ -1,0 +1,11 @@
+#ifndef UTILS_COMPOSE_TABLE_HPP_
+#define UTILS_COMPOSE_TABLE_HPP_
+
+enum ComposeTableVariables {
+  ECLOGP = 0,
+  ECLOGE = 1,
+  ECCS   = 2,
+  ECNVARS = 3
+};
+
+#endif

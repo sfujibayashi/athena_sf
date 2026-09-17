@@ -26,16 +26,10 @@
 #include "../inputs/hdf5_reader.hpp"
 #include "../parameter_input.hpp"
 #include "interp_table.hpp"
+#include "compose_table.hpp"
 
 // Order of datafields for HDF5 EOS tables
 const char *var_names[] = {"p/e(e/rho,rho)", "e/p(p/rho,rho)", "asq*rho/p(p/rho,rho)"};
-
-enum ComposeTableVariables {
-  ECLOGP = 0,
-  ECLOGE = 1,
-  ECCS   = 2,
-  ECNVARS = 3
-};
 
 const char *compose_var_names[] = {"Q1", "Q7", "cs2"};
 
