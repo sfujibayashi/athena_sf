@@ -255,20 +255,23 @@ void HDF5Table3DLoader(const char *filename, InterpTable3D* ptable, const int nv
   }
   H5Fclose(file);
   ptable->SetSize(nvar, count_file[0], count_file[1], count_file[2]);
-  int start_file[2];
+  int start_file[3];
   start_file[0] = 0;
   start_file[1] = 0;
-  int start_mem[3];
+  start_file[2] = 0;
+  int start_mem[4];
   start_mem[1] = 0;
   start_mem[2] = 0;
-  int count_mem[3];
+  start_mem[3] = 0;
+  int count_mem[4];
   count_mem[0] = 1;
   count_mem[1] = count_file[0];
   count_mem[2] = count_file[1];
+  count_mem[3] = count_file[2];
   for (int i = 0; i < nvar; ++i) {
     start_mem[0] = i;
-    HDF5ReadRealArray(filename, var_names[i], 2, start_file, count_file,
-                      3, start_mem, count_mem, ptable->data);
+    HDF5ReadRealArray(filename, var_names[i], 3, start_file, count_file,
+                      4, start_mem, count_mem, ptable->data);
   }
   if (x3lim_name) {
     AthenaArray<Real> lim;
