@@ -1,0 +1,47 @@
+<comment>
+problem   = CompOSE EOS test
+configure = --prob=compose_test --eos=general/compose
+
+<job>
+problem_id = compose_test
+
+<time>
+cfl_number = 0.8
+nlim       = 1
+tlim       = 1.0
+integrator = vl2
+xorder     = 2
+ncycle_out = 1
+
+<mesh>
+nx1    = 16
+x1min  = -0.5
+x1max  =  0.5
+ix1_bc = outflow
+ox1_bc = outflow
+
+nx2    = 1
+x2min  = -0.5
+x2max  =  0.5
+ix2_bc = periodic
+ox2_bc = periodic
+
+nx3    = 1
+x3min  = -0.5
+x3max  =  0.5
+ix3_bc = periodic
+ox3_bc = periodic
+
+num_threads = 1
+
+<hydro>
+eos_file_name    = /Users/sfujibayashi/Dropbox/tmp/eos/CompOSE/HS/DD2/with_electrons_pycompose/DD2.h5
+eos_file_type    = compose
+eos_rho_unit     = 1.0
+eos_egas_unit    = 1.0
+compose_ye_index = 0
+
+<problem>
+rho  = 3.0e11
+temp = 1.37
+ye   = 0.173
