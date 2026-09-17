@@ -41,4 +41,6 @@ void HDF5Table3DLoader(const char *filename, InterpTable3D* ptable, const int nv
                      const char *x2lim_name=NULL,
                      const char *x1lim_name=NULL);
 
+Real HDF5ReadRealScalar(const char *filename, const char *dataset_name);
+
 #endif  // INPUTS_HDF5_READER_HPP_

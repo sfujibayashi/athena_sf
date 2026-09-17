@@ -29,6 +29,14 @@
 
 // Order of datafields for HDF5 EOS tables
 const char *var_names[] = {"p/e(e/rho,rho)", "e/p(p/rho,rho)", "asq*rho/p(p/rho,rho)"};
+
+enum ComposeTableVariables {
+  ECLOGP = 0,
+  ECLOGE = 1,
+  ECCS   = 2,
+  ECNVARS = 3
+};
+
 const char *compose_var_names[] = {"Q1", "Q7", "cs2"};
 
 //----------------------------------------------------------------------------------------
@@ -169,7 +177,7 @@ void ReadCompOSEHDF5Table(std::string fn, EosTable *peos_table) {
     ATHENA_ERROR(msg);
   }
 #endif
-  const char *compose_var_names[] = {"Q1", "Q7", "cs2"};
+
   HDF5Table3DLoader(fn.c_str(), &peos_table->table3d, 3, 
                     compose_var_names, nullptr, nullptr, nullptr);
   
@@ -205,6 +213,28 @@ void ReadCompOSEHDF5Table(std::string fn, EosTable *peos_table) {
 
   peos_table->table3d.SetX1lim(std::log10(temp(0)),
                                std::log10(temp(peos_table->nTemp - 1)));
+
+  Real mn = HDF5ReadRealScalar(fn.c_str(), "mn");
+  
+  for (int in = 0; in < peos_table->nRho; ++in) {
+    for (int iy = 0; iy < peos_table->nYe; ++iy) {
+      for (int it = 0; it < peos_table->nTemp; ++it) {
+        Real q1  = peos_table->table3d.data(0, in, iy, it);
+        Real q7  = peos_table->table3d.data(1, in, iy, it);
+        Real cs2 = peos_table->table3d.data(2, in, iy, it);
+        
+        peos_table->table3d.data(0, in, iy, it)
+          = std::log10(q1 * nb(in));
+        
+        peos_table->table3d.data(1, in, iy, it)
+          = std::log10(mn * (q7 + 1.0) * nb(in));
+        
+        peos_table->table3d.data(2, in, iy, it)
+          = std::sqrt(cs2);
+      }
+    }
+  }
+  
   
 }
 

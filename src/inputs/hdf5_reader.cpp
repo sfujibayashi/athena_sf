@@ -299,4 +299,57 @@ void HDF5Table3DLoader(const char *filename, InterpTable3D* ptable, const int nv
   }
   return;
 }
+
+//----------------------------------------------------------------------------------------
+//! \fn Real HDF5ReadRealScalar(const char *filename, const char *dataset_name)
+//! \brief Read a scalar Real dataset from an HDF5 file.
+
+Real HDF5ReadRealScalar(const char *filename, const char *dataset_name) {
+  // Open data file
+  hid_t property_list_file = H5Pcreate(H5P_FILE_ACCESS);
+  hid_t file = H5Fopen(filename, H5F_ACC_RDONLY, property_list_file);
+  H5Pclose(property_list_file);
+
+  if (file < 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in HDF5ReadRealScalar" << std::endl
+        << "Could not open " << filename << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  // Open dataset
+  hid_t dataset = H5Dopen(file, dataset_name, H5P_DEFAULT);
+  if (dataset < 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in HDF5ReadRealScalar" << std::endl
+        << "Could not open dataset '" << dataset_name
+        << "' in file '" << filename << "'." << std::endl;
+    H5Fclose(file);
+    ATHENA_ERROR(msg);
+  }
+
+  // Check that dataset is scalar
+  hid_t dataspace = H5Dget_space(dataset);
+  int ndims = H5Sget_simple_extent_ndims(dataspace);
+  if (ndims != 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in HDF5ReadRealScalar" << std::endl
+        << "Dataset '" << dataset_name << "' in file '" << filename
+        << "' must be scalar. Rank is " << ndims << "." << std::endl;
+    H5Sclose(dataspace);
+    H5Dclose(dataset);
+    H5Fclose(file);
+    ATHENA_ERROR(msg);
+  }
+
+  Real value;
+  H5Dread(dataset, H5T_REAL, H5S_ALL, H5S_ALL, H5P_DEFAULT, &value);
+
+  H5Sclose(dataspace);
+  H5Dclose(dataset);
+  H5Fclose(file);
+
+  return value;
+}
+
 #endif  // HDF5OUTPUT
