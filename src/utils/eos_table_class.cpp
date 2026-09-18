@@ -31,7 +31,7 @@
 // Order of datafields for HDF5 EOS tables
 const char *var_names[] = {"p/e(e/rho,rho)", "e/p(p/rho,rho)", "asq*rho/p(p/rho,rho)"};
 
-const char *compose_var_names[] = {"Q1", "Q7", "cs2"};
+const char *compose_var_names[] = {"Q1", "Q7", "cs2", "Q2", "Y[n]", "Y[p]"};
 
 //----------------------------------------------------------------------------------------
 //! \fn void ReadBinaryTable(std::string fn, EosTable *peos_table)
