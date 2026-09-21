@@ -228,6 +228,16 @@ void EquationOfState::ConservedToPrimitive(
           fixed = true;
         }
         if (!success) {
+ std::cout << "C2P failed:"
+            << " i=" << i
+            << " rho_old=" << prim_old(IDN,k,j,i)
+            << " p_old=" << prim_old(IPR,k,j,i)
+            << " D=" << normal_dd_(i)
+            << " E=" << normal_ee_(i)
+            << " M2=" << normal_mm_(0,i)
+            << std::endl;
+
+ 
           rho = density_floor_local;
           pgas = pressure_floor_local;
           uu1 = uu2 = uu3 = 0.0;
@@ -512,7 +522,7 @@ bool ConservedToPrimitiveNormal(
 
     // Step 3: Check for convergence
     if (n%3 != 2) {
-      if (pgas[(n+1)%3] > pgas_min && std::abs(pgas[(n+1)%3]-pgas[n%3]) < tol) {
+      if (pgas[(n+1)%3] > pgas_min && std::abs(pgas[(n+1)%3]-pgas[n%3]) < tol*std::max(std::abs(pgas[0]),std::abs(pgas[2]))) {
         break;
       }
     }
@@ -525,7 +535,7 @@ bool ConservedToPrimitiveNormal(
       }
       pgas[0] = pgas[1] + (pgas[2] - pgas[1]) / (1.0 - rr);  // (NH 7.2)
       pgas[0] = std::max(pgas[0], pgas_min);
-      if (pgas[0] > pgas_min && std::abs(pgas[0]-pgas[2]) < tol) {
+      if (pgas[0] > pgas_min && std::abs(pgas[0]-pgas[2]) < tol*std::max(std::abs(pgas[0]),std::abs(pgas[2]))) {
         break;
       }
     }
