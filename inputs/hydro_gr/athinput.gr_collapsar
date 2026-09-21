@@ -1,0 +1,82 @@
+<comment>
+problem   = spherical collapsar test
+configure = --prob=gr_collapsar -g --coord=schwarzschild --eos=adiabatic --flux=hlle -hdf5
+
+<job>
+problem_id = gr_collapsar
+
+<units>
+unit_system = custom
+
+# Choose c = 1 in code units:
+#   length unit = 1.0 cm
+#   time unit   = length/c
+# Mass unit is arbitrary here because self-gravity is not included.
+mass_cgs   = 1.0
+length_cgs = 1.0
+time_cgs   = 3.3356409519815204e-11
+
+<time>
+cfl_number = 0.4
+nlim       = -1
+tlim       = 0.1
+integrator = vl2
+xorder     = 2
+ncycle_out = 10
+
+<mesh>
+# 1D radial grid
+nx1    = 128
+x1min  = 5.0e8
+x1max  = 1.0e11
+x1rat  = 1.0
+ix1_bc = outflow
+ox1_bc = outflow
+
+nx2    = 1
+x2min  = 0.0
+x2max  = 3.1415926535897932
+ix2_bc = polar_wedge
+ox2_bc = polar_wedge
+
+nx3    = 1
+x3min  = 0.0
+x3max  = 6.2831853071795862
+ix3_bc = periodic
+ox3_bc = periodic
+
+<coord>
+# This value is overwritten in Mesh::InitUserMeshData()
+# using the enclosed mass inside x1min.
+m = 0.0
+
+<hydro>
+gamma = 1.3333333333333333
+
+<problem>
+# HDF5 progenitor profile; relative to the run directory.
+progenitor_file = progenitor.h5
+
+# Physical time used to construct the collapsed profile [s].
+# This is NOT in Athena code-time units.
+t0 = 1.0
+
+# Atmosphere values in cgs.
+rho_atmos   = 1.0e-10
+press_atmos = 1.0e6
+
+<output1>
+file_type = tab
+variable  = prim
+id        = prim
+dt        = 0.001
+
+<output2>
+file_type = tab
+variable  = cons
+id        = cons
+dt        = 0.001
+
+<output3>
+file_type  = hst        # History data dump
+dt         = 0.001       # time increment between outputs
