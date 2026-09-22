@@ -12,6 +12,26 @@ Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
   alpha.NewAthenaArray(nc3, nc2, nc1);
   beta.NewAthenaArray(3, nc3, nc2, nc1);
   gamma.NewAthenaArray(N_GAMMA, nc3, nc2, nc1);
+
+  // initialize with Minkowski metric
+  for(int k=0; k<nc3; ++k){
+    for(int j=0; j<nc2; ++j){
+      for(int i=0; i<nc1; ++i){
+        alpha(k,j,i) = 1.0;
+        beta(0,k,j,i) = 0.0;
+        beta(1,k,j,i) = 0.0;
+        beta(2,k,j,i) = 0.0;
+
+        gamma(I_G11,k,j,i) = 1.0;
+        gamma(I_G22,k,j,i) = 1.0;
+        gamma(I_G33,k,j,i) = 1.0;
+
+        gamma(I_G12,k,j,i) = 0.0;
+        gamma(I_G13,k,j,i) = 0.0;
+        gamma(I_G23,k,j,i) = 0.0;
+      }
+    }
+  }
 }
 
 Metric::~Metric() {

@@ -11,12 +11,12 @@ class Metric {
  public:
 
   enum {
-    I_GXX = 0,
-    I_GXY,
-    I_GXZ,
-    I_GYY,
-    I_GYZ,
-    I_GZZ,
+    I_G11 = 0,
+    I_G12,
+    I_G13,
+    I_G22,
+    I_G23,
+    I_G33,
     N_GAMMA
   };
 
