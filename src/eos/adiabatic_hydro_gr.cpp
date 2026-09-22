@@ -491,6 +491,9 @@ bool ConservedToPrimitiveNormal(
   const Real &mm2 = mm_vals(2,i);
   const Real &mm3 = mm_vals(3,i);
 
+  const Real eps = std::numeric_limits<Real>::epsilon();
+  Real escale = std::max(std::abs(ee), std::abs(dd));
+
   // Calculate functions of conserved quantities
   Real pgas_min = -ee;
   pgas_min = std::max(pgas_min, pgas_floor);
@@ -525,7 +528,8 @@ bool ConservedToPrimitiveNormal(
       Real pnew = pgas[(n+1)%3];
       Real pold = pgas[n%3];
       Real pscale = std::max(std::abs(pnew),std::abs(pold));
-      if (pgas[(n+1)%3] > pgas_min && std::abs(pnew-pold) < tol*pscale) {
+      Real conv_tol = tol*pscale + 10.0*eps*escale;
+      if (pgas[(n+1)%3] > pgas_min && std::abs(pnew-pold) < conv_tol) {
         break;
       }
     }
@@ -541,8 +545,8 @@ bool ConservedToPrimitiveNormal(
       Real pnew = pgas[0];
       Real pold = pgas[2];
       Real pscale = std::max(std::abs(pnew),std::abs(pold));
-
-      if (pgas[0] > pgas_min && std::abs(pnew-pold) < tol*pscale) {
+      Real conv_tol = tol*pscale + 10.0*eps*escale;
+      if (pgas[0] > pgas_min && std::abs(pnew-pold) < conv_tol) {
         break;
       }
     }
