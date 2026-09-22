@@ -51,6 +51,23 @@ void Coordinates::Initialize(ParameterInput *pin) {
   bh_mass_ = pin->GetReal("coord", "m");
   const Real &m = bh_mass_;
 
+  Real r_inner_ghost = x1f(il-ng);
+  if (r_inner_ghost <= 0.0) {
+    std::cout
+      << "### Warning in Schwarzschild coordinates" << std::endl
+      << "Inner ghost-zone radius extends to r <= 0." << std::endl
+      << "Consider increasing x1min or reducing the radial grid spacing."
+      << std::endl;
+  }
+  if (r_inner_ghost <= 2.0*bh_mass_) {
+    std::cout
+      << "### Warning in Schwarzschild coordinates" << std::endl
+      << "Inner ghost zones extend to or inside the Schwarzschild horizon."
+      << std::endl
+      << "r_inner_ghost = " << r_inner_ghost << std::endl
+      << "2M = " << 2.0*bh_mass_ << std::endl;
+  }
+  
   // Initialize volume-averaged coordinates and spacings: r-direction
   for (int i=il-ng; i<=iu+ng; ++i) {
     Real r_m = x1f(i);
