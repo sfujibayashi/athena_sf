@@ -137,6 +137,8 @@ class MeshBlock {
   ChemRadiation *pchemrad;
   OrbitalAdvection *porb;
 
+  // metric
+  Metric *pmetric;
 
   // functions
   std::size_t GetBlockSizeInBytes();

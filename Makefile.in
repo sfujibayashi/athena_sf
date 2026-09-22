@@ -54,6 +54,7 @@ SRC_FILES := $(wildcard src/*.cpp) \
 	     $(wildcard src/field/*.cpp) \
 	     $(wildcard src/field/field_diffusion/*.cpp) \
 	     $(wildcard src/gravity/*.cpp) \
+	     $(wildcard src/metric/*.cpp) \
 	     $(wildcard src/hydro/*.cpp) \
 	     $(wildcard src/hydro/srcterms/*.cpp) \
 	     $(wildcard src/hydro/hydro_diffusion/*.cpp) \
