@@ -30,7 +30,7 @@ void CalculateNormalConserved(
     AthenaArray<Real> &ee, AthenaArray<Real> &mm);
 bool ConservedToPrimitiveNormal(
     const AthenaArray<Real> &dd_vals, const AthenaArray<Real> &ee_vals,
-    const AthenaArray<Real> &mm_vals, Real gamma_adi, Real pgas_old, int k, int j, int i,
+    const AthenaArray<Real> &mm_vals, Real gamma_adi, Real pgas_old, Real pgas_floor, int k, int j, int i,
     AthenaArray<Real> &prim, Real *p_gamma_lor);
 void PrimitiveToConservedSingle(
     const AthenaArray<Real> &prim, Real gamma_adi, const AthenaArray<Real> &g,
@@ -150,7 +150,7 @@ void EquationOfState::ConservedToPrimitive(
         // Set primitives
         Real gamma;
         bool success = ConservedToPrimitiveNormal(normal_dd_, normal_ee_, normal_mm_,
-                                                  gamma_adi, prim_old(IPR,k,j,i), k, j, i,
+                                                  gamma_adi, prim_old(IPR,k,j,i), pressure_floor_local, k, j, i,
                                                   prim, &gamma);
 
         // Handle failures
@@ -174,7 +174,7 @@ void EquationOfState::ConservedToPrimitive(
 
           // Recalculate primitives
           success = ConservedToPrimitiveNormal(normal_dd_, normal_ee_, normal_mm_,
-                                               gamma_adi, prim_old(IPR,k,j,i), k, j, i,
+                                               gamma_adi, prim_old(IPR,k,j,i), pressure_floor_local, k, j, i,
                                                prim, &gamma);
 
           // Handle failures
@@ -473,12 +473,12 @@ void CalculateNormalConserved(
 
 bool ConservedToPrimitiveNormal(
     const AthenaArray<Real> &dd_vals, const AthenaArray<Real> &ee_vals,
-    const AthenaArray<Real> &mm_vals, Real gamma_adi, Real pgas_old, int k, int j, int i,
+    const AthenaArray<Real> &mm_vals, Real gamma_adi, Real pgas_old, Real pgas_floor, int k, int j, int i,
     AthenaArray<Real> &prim, Real *p_gamma_lor) {
   // Parameters
   const int max_iterations = 15;
   const Real tol = 1.0e-12;
-  const Real pgas_uniform_min = 1.0e-12;
+  //const Real pgas_uniform_min = 1.0e-12;
   const Real a_min = 1.0e-12;
   const Real v_sq_max = 1.0 - 1.0e-12;
   const Real rr_max = 1.0 - 1.0e-12;
@@ -493,7 +493,7 @@ bool ConservedToPrimitiveNormal(
 
   // Calculate functions of conserved quantities
   Real pgas_min = -ee;
-  pgas_min = std::max(pgas_min, pgas_uniform_min);
+  pgas_min = std::max(pgas_min, pgas_floor);
 
   // Iterate until convergence
   Real pgas[3];
@@ -522,7 +522,10 @@ bool ConservedToPrimitiveNormal(
 
     // Step 3: Check for convergence
     if (n%3 != 2) {
-      if (pgas[(n+1)%3] > pgas_min && std::abs(pgas[(n+1)%3]-pgas[n%3]) < tol*std::max(std::abs(pgas[0]),std::abs(pgas[2]))) {
+      Real pnew = pgas[(n+1)%3];
+      Real pold = pgas[n%3];
+      Real pscale = std::max(std::abs(pnew),std::abs(pold));
+      if (pgas[(n+1)%3] > pgas_min && std::abs(pnew-pold) < tol*pscale) {
         break;
       }
     }
@@ -535,7 +538,11 @@ bool ConservedToPrimitiveNormal(
       }
       pgas[0] = pgas[1] + (pgas[2] - pgas[1]) / (1.0 - rr);  // (NH 7.2)
       pgas[0] = std::max(pgas[0], pgas_min);
-      if (pgas[0] > pgas_min && std::abs(pgas[0]-pgas[2]) < tol*std::max(std::abs(pgas[0]),std::abs(pgas[2]))) {
+      Real pnew = pgas[0];
+      Real pold = pgas[2];
+      Real pscale = std::max(std::abs(pnew),std::abs(pold));
+
+      if (pgas[0] > pgas_min && std::abs(pnew-pold) < tol*pscale) {
         break;
       }
     }
