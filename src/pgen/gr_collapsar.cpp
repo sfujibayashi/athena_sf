@@ -144,6 +144,14 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 }
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
+  AllocateUserOutputVariables(6);
+  
+  SetUserOutputVariableName(0, "gtt");
+  SetUserOutputVariableName(1, "grr");
+  SetUserOutputVariableName(2, "alpha-1");
+  SetUserOutputVariableName(3, "Lorentz-1");
+  SetUserOutputVariableName(4, "u_t+1");
+  SetUserOutputVariableName(5, "enthalpy-1");
 
 }
 
@@ -152,6 +160,52 @@ void MeshBlock::UserWorkInLoop(void) {
 }
 
 void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
+  
+  AthenaArray<Real> g, gi;
+  g.NewAthenaArray(NMETRIC, ie + NGHOST + 1);
+  gi.NewAthenaArray(NMETRIC, ie + NGHOST + 1);
+
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      pcoord->CellMetric(k, j, is, ie, g, gi);
+
+      for (int i = is; i <= ie; ++i) {
+        user_out_var(0,k,j,i) = g(I00,i);
+        user_out_var(1,k,j,i) = g(I11,i);
+        user_out_var(2,k,j,i) = std::sqrt(-1.0 / gi(I00,i)) - 1.0;
+      }
+    }
+  }
+
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      pcoord->CellMetric(k, j, is, ie, g, gi);
+
+      for (int i = is; i <= ie; ++i) {
+        Real uu1 = phydro->w(IVX,k,j,i);
+        Real uu2 = phydro->w(IVY,k,j,i);
+        Real uu3 = phydro->w(IVZ,k,j,i);
+        
+        Real tmp = g(I11,i)*SQR(uu1)
+          + 2.0*g(I12,i)*uu1*uu2
+          + 2.0*g(I13,i)*uu1*uu3
+          + g(I22,i)*SQR(uu2)
+          + 2.0*g(I23,i)*uu2*uu3
+          + g(I33,i)*SQR(uu3);
+        Real lorentz = std::sqrt(1.0 + tmp);
+        user_out_var(3,k,j,i) = lorentz;
+
+        Real alpha = std::sqrt(-1.0 / gi(I00,i));
+        Real u_t = -alpha*lorentz;
+        user_out_var(4,k,j,i) = u_t+1.0;
+
+        Real press = phydro->w(IPR,k,j,i);
+        Real rho   = phydro->w(IDN,k,j,i);
+        Real enthalpy = 1.0 + gamma_gas/(gamma_gas - 1.0) * press/rho;
+        user_out_var(5,k,j,i) = enthalpy-1.0;
+      }
+    }
+  }
 
 }
 
