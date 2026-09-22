@@ -3,13 +3,17 @@
 
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
+#include "../coordinates/coordinates.hpp"
 
 class MeshBlock;
 class ParameterInput;
 
 class Metric {
- public:
-
+private:
+  Real bh_mass_;
+  
+public:
+  
   enum {
     I_G11 = 0,
     I_G12,
