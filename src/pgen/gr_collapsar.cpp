@@ -193,7 +193,7 @@ void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
           + 2.0*g(I23,i)*uu2*uu3
           + g(I33,i)*SQR(uu3);
         Real lorentz = std::sqrt(1.0 + tmp);
-        user_out_var(3,k,j,i) = lorentz;
+        user_out_var(3,k,j,i) = lorentz-1.0;
 
         Real alpha = std::sqrt(-1.0 / gi(I00,i));
         Real u_t = -alpha*lorentz;
