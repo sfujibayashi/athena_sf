@@ -66,6 +66,8 @@ class NRRadiation;
 class IMRadiation;
 class TurbulenceDriver;
 
+class Metric;
+
 FluidFormulation GetFluidFormulation(const std::string& input_string);
 
 //----------------------------------------------------------------------------------------
