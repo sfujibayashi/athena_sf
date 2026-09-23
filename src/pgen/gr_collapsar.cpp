@@ -35,10 +35,9 @@
 #include "../parameter_input.hpp"
 #include "../scalars/scalars.hpp"
 
-
-
 // progenitor-reader
 #include "../inputs/progenitor_reader.hpp"
+#include "../metric/metric.hpp"
 
 struct CollapsedProfile {
   int nface = 0;
@@ -224,7 +223,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         << std::endl;
     ATHENA_ERROR(msg);
   }
-
+  
   Real rho_atmos = pin->GetReal("problem", "rho_atmos");
   Real press_atmos = pin->GetReal("problem", "press_atmos");
   int ind_first = collapsed.FirstCellIndex();
