@@ -92,6 +92,7 @@ parser.add_argument(
         'spherical_polar',
         'minkowski',
         'schwarzschild',
+        'gr_dynamic',
         'kerr-schild',
         'gr_user'],
     help='select coordinate system')
