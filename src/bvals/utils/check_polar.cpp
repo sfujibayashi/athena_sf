@@ -34,6 +34,7 @@ void BoundaryValues::CheckPolarBoundaries() {
        && (std::strcmp(COORDINATE_SYSTEM, "kerr-schild") != 0)
        && (std::strcmp(COORDINATE_SYSTEM, "schwarzschild") != 0)
        // no safety-checks or restrictions on user-defined metrics
+       && (std::strcmp(COORDINATE_SYSTEM, "gr_dynamic") != 0)
        && (std::strcmp(COORDINATE_SYSTEM, "gr_user") != 0))) {
     std::stringstream msg;
     msg << "### FATAL ERROR in BoundaryValues constructor" << std::endl

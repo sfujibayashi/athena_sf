@@ -216,7 +216,9 @@ void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
-  if (std::strcmp(COORDINATE_SYSTEM, "schwarzschild") != 0 && std::strcmp(COORDINATE_SYSTEM, "minkowski") != 0) {
+  if (std::strcmp(COORDINATE_SYSTEM, "schwarzschild") != 0 && 
+      std::strcmp(COORDINATE_SYSTEM, "minkowski") != 0 && 
+      std::strcmp(COORDINATE_SYSTEM, "gr_dynamic") != 0) {
     std::stringstream msg;
     msg << "### FATAL ERROR in gr_collapsar.cpp" << std::endl
         << "This problem generator requires Schwarzschild/Minkowski coordinates."
