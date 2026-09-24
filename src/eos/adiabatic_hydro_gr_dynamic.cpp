@@ -418,6 +418,16 @@ void CalculateNormalConserved(
     const Real &t0_2 = cons(IVY,k,j,i);
     const Real &t0_3 = cons(IVZ,k,j,i);
 
+    // un-densitize with q := sqrt(-g)/(r^2 sin(theta));
+    const Real q = DensitizationFactor(k, j, i);
+    const Real qi= 1.0/q;
+    
+    rho_u0 *= qi;
+    t0_0   *= qi;
+    t0_1   *= qi;
+    t0_2   *= qi;
+    t0_3   *= qi;
+
     // Calculate projected momentum densities Q_\mu = -n_\nu T^\nu_\mu (N 17)
     const Real qq_0 = alpha * t0_0;
     const Real qq_1 = alpha * t0_1;
@@ -636,7 +646,7 @@ void PrimitiveToConservedSingle(
   t0_3 = wgas * u0 * u_3;
 
   // densitize with q := sqrt(-g)/(r^2 sin(theta));
-  const Real q = DensitizationFactor(int k, int j, int i);
+  const Real q = DensitizationFactor(k,j,i);
   
   rho_u0 *= q;
   t0_0   *= q;
