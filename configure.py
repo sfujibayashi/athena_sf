@@ -542,7 +542,11 @@ if args['s']:
         makefile_options['GENERAL_EOS_FILE'] += '_sr'
     makefile_options['RSOLVER_FILE'] += '_rel'
 if args['g']:
-    makefile_options['EOS_FILE'] += '_gr'
+    if args['coord'] == 'gr_dynamic':
+        makefile_options['EOS_FILE'] += '_gr_dynamic'
+    else:
+        makefile_options['EOS_FILE'] += '_gr'
+    
     if definitions['GENERAL_EOS'] != '0':
         makefile_options['GENERAL_EOS_FILE'] += '_gr'
     makefile_options['RSOLVER_FILE'] += '_rel'
