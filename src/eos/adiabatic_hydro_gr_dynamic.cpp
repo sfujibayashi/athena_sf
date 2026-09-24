@@ -386,8 +386,8 @@ namespace {
 //   More complex version with magnetic fields found in adiabatic_mhd_gr.cpp.
 
 void CalculateNormalConserved(
-    const AthenaArray<Real> &cons, const AthenaArray<Real> &g, const Metric *pmetric,
-    const AthenaArray<Real> &gi, int k, int j, int il, int iu, AthenaArray<Real> &dd,
+    const AthenaArray<Real> &cons, const AthenaArray<Real> &g, const AthenaArray<Real> &gi,
+    const Metric *pmetric, int k, int j, int il, int iu, AthenaArray<Real> &dd,
     AthenaArray<Real> &ee, AthenaArray<Real> &mm) {
 
   // Go through row
@@ -419,11 +419,11 @@ void CalculateNormalConserved(
     const Real q = pmetric->DensitizationFactor(k, j, i);
     const Real qi= 1.0/q;
 
-    const Real &rho_u0 = cons(IDN,k,j,i) * qi;
-    const Real &t0_0 = cons(IEN,k,j,i) * qi;
-    const Real &t0_1 = cons(IVX,k,j,i) * qi;
-    const Real &t0_2 = cons(IVY,k,j,i) * qi;
-    const Real &t0_3 = cons(IVZ,k,j,i) * qi;
+    const Real rho_u0 = cons(IDN,k,j,i) * qi;
+    const Real t0_0 = cons(IEN,k,j,i) * qi;
+    const Real t0_1 = cons(IVX,k,j,i) * qi;
+    const Real t0_2 = cons(IVY,k,j,i) * qi;
+    const Real t0_3 = cons(IVZ,k,j,i) * qi;
 
     // Calculate projected momentum densities Q_\mu = -n_\nu T^\nu_\mu (N 17)
     const Real qq_0 = alpha * t0_0;
