@@ -14,7 +14,10 @@ private:
   void InvertSpatialMetric(Real g11, Real g12, Real g13,
                            Real g22, Real g23, Real g33,
                            Real &gi11, Real &gi12, Real &gi13,
-                           Real &gi22, Real &gi23, Real &gi33);
+                           Real &gi22, Real &gi23, Real &gi33) const ;
+
+  Real DetSpatialMetric(Real g11, Real g12, Real g13,
+                        Real g22, Real g23, Real g33) const ;
   
 public:
   
@@ -44,6 +47,9 @@ public:
                   const int il, const int iu,
                   AthenaArray<Real> &g,
                   AthenaArray<Real> &g_inv);
+  
+  Real SqrtMinusG(int k, int j, int i) const;
+  Real DensitizationFactor(int k, int j, int i) const;
   
 };
 

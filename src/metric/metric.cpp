@@ -62,10 +62,8 @@ void Metric::Update(Real time) {
 
 }
 
-void Metric::InvertSpatialMetric(Real g11, Real g12, Real g13,
-                         Real g22, Real g23, Real g33,
-                         Real &gi11, Real &gi12, Real &gi13,
-                         Real &gi22, Real &gi23, Real &gi33){
+Real Metric::DetSpatialMetric(Real g11, Real g12, Real g13,
+                              Real g22, Real g23, Real g33) const {
   const Real det =
     g11 * (g22*g33 - g23*g23)
     - g12 * (g12*g33 - g13*g23)
@@ -78,7 +76,17 @@ void Metric::InvertSpatialMetric(Real g11, Real g12, Real g13,
         << det << std::endl;
     ATHENA_ERROR(msg);
   }
+  return det;
+}
 
+
+void Metric::InvertSpatialMetric(Real g11, Real g12, Real g13,
+                                 Real g22, Real g23, Real g33,
+                                 Real &gi11, Real &gi12, Real &gi13,
+                                 Real &gi22, Real &gi23, Real &gi33) const {
+  
+  const Real det = DetSpatialMetric(g11,g12,g13,g22,g23,g33);
+  
   const Real inv_det = 1.0 / det;
     
   gi11 =  (g22*g33 - g23*g23) * inv_det;
@@ -146,4 +154,27 @@ void Metric::CellMetric(const int k, const int j, const int il, const int iu,
   }
 }
 
+Real Metric::SqrtMinusG(int k, int j, int i) const {
+  
+  // lapse
+  const Real a = alpha(k,j,i);
+  
+  // g_ij = gamma_ij
+  const Real g11 = gamma(I_G11,k,j,i);
+  const Real g12 = gamma(I_G12,k,j,i);
+  const Real g13 = gamma(I_G13,k,j,i);
+  const Real g22 = gamma(I_G22,k,j,i);
+  const Real g23 = gamma(I_G23,k,j,i);
+  const Real g33 = gamma(I_G33,k,j,i);
+  
+  const Real detgamma = DetSpatialMetric(g11,g12,g13,g22,g23,g33);
+  
+  return a*std::sqrt(detgamma);
+}
 
+Real Metric::DensitizationFactor(int k, int j, int i) const {
+  const Real sqrt_minus_g = SqrtMinusG(k,j,i);
+  const Real r = pmy_block->pcoord->x1v(i);
+  const Real theta = pmy_block->pcoord->x2v(j);
+  return sqrt_minus_g/(r*r*std::sin(theta));
+}
