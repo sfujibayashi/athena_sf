@@ -22,11 +22,13 @@
 #include "../parameter_input.hpp"          // ParameterInput
 #include "eos.hpp"
 
+#include "../metric/metric.hpp"
+
 namespace {
 // Declarations
 void CalculateNormalConserved(
-    const AthenaArray<Real> &cons, const AthenaArray<Real> &g,
-    const AthenaArray<Real> &gi, int k, int j, int il, int iu, AthenaArray<Real> &dd,
+    const AthenaArray<Real> &cons, const AthenaArray<Real> &g, const AthenaArray<Real> &gi,
+    const Metric *pmetric, int k, int j, int il, int iu, AthenaArray<Real> &dd,
     AthenaArray<Real> &ee, AthenaArray<Real> &mm);
 bool ConservedToPrimitiveNormal(
     const AthenaArray<Real> &dd_vals, const AthenaArray<Real> &ee_vals,
@@ -102,8 +104,8 @@ void EquationOfState::ConservedToPrimitive(
       pco->CellMetric(k, j, il, iu, g_, g_inv_);
 
       // Cast problem into normal frame
-      CalculateNormalConserved(cons, g_, g_inv_, k, j, il, iu, normal_dd_, normal_ee_,
-                               normal_mm_);
+      CalculateNormalConserved(cons, g_, g_inv_, pco->pmy_block->pmetric, 
+                               k, j, il, iu, normal_dd_, normal_ee_, normal_mm_);
 
       // Go through cells
       for (int i=il; i<=iu; ++i) {
@@ -384,9 +386,10 @@ namespace {
 //   More complex version with magnetic fields found in adiabatic_mhd_gr.cpp.
 
 void CalculateNormalConserved(
-    const AthenaArray<Real> &cons, const AthenaArray<Real> &g,
+    const AthenaArray<Real> &cons, const AthenaArray<Real> &g, const Metric *pmetric,
     const AthenaArray<Real> &gi, int k, int j, int il, int iu, AthenaArray<Real> &dd,
     AthenaArray<Real> &ee, AthenaArray<Real> &mm) {
+
   // Go through row
   for (int i=il; i<=iu; ++i) {
     // Extract metric
@@ -412,21 +415,15 @@ void CalculateNormalConserved(
     const Real j13 = g13 + n1*n3, j23 = g23 + n2*n3, j33 = g33 + n3*n3;
 
     // Extract conserved quantities
-    const Real &rho_u0 = cons(IDN,k,j,i);
-    const Real &t0_0 = cons(IEN,k,j,i);
-    const Real &t0_1 = cons(IVX,k,j,i);
-    const Real &t0_2 = cons(IVY,k,j,i);
-    const Real &t0_3 = cons(IVZ,k,j,i);
-
     // un-densitize with q := sqrt(-g)/(r^2 sin(theta));
-    const Real q = DensitizationFactor(k, j, i);
+    const Real q = pmetric->DensitizationFactor(k, j, i);
     const Real qi= 1.0/q;
-    
-    rho_u0 *= qi;
-    t0_0   *= qi;
-    t0_1   *= qi;
-    t0_2   *= qi;
-    t0_3   *= qi;
+
+    const Real &rho_u0 = cons(IDN,k,j,i) * qi;
+    const Real &t0_0 = cons(IEN,k,j,i) * qi;
+    const Real &t0_1 = cons(IVX,k,j,i) * qi;
+    const Real &t0_2 = cons(IVY,k,j,i) * qi;
+    const Real &t0_3 = cons(IVZ,k,j,i) * qi;
 
     // Calculate projected momentum densities Q_\mu = -n_\nu T^\nu_\mu (N 17)
     const Real qq_0 = alpha * t0_0;
@@ -646,7 +643,7 @@ void PrimitiveToConservedSingle(
   t0_3 = wgas * u0 * u_3;
 
   // densitize with q := sqrt(-g)/(r^2 sin(theta));
-  const Real q = DensitizationFactor(k,j,i);
+  const Real q = pco->pmy_block->pmetric->DensitizationFactor(k,j,i);
   
   rho_u0 *= q;
   t0_0   *= q;
