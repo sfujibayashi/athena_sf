@@ -31,16 +31,6 @@ private:
     Real &g11, Real &g12, Real &g13,
     Real &g22, Real &g23, Real &g33) const;
 
-  void ConstructBackgroundMetric(
-    Real r, Real theta,
-    int i,
-    AthenaArray<Real> &g) const;
-
-  void AddSelfGravityPerturbation(
-    Real r, Real Psi, Real delta_m,
-    int i,
-    AthenaArray<Real> &g) const;
-
   void InvertMetric(
     int i,
     const AthenaArray<Real> &g,

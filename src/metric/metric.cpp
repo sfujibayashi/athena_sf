@@ -9,7 +9,8 @@
 
 Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
   : pmy_block(pmb),
-    bh_mass_(pmb->pcoord->GetMass())  {
+    bh_mass_(pmb->pcoord->GetMass()),
+    bh_spin_(pmb->pcoord->GetSpin())  {
   const int nc1 = pmb->ncells1;
   const int nc2 = pmb->ncells2;
   const int nc3 = pmb->ncells3;
@@ -82,7 +83,6 @@ void Metric::CellMetric(const int k, const int j, const int il, const int iu,
   
   Coordinates *pcoord = pmy_block->pcoord;
   
-  const Real theta = pcoord->x2v(j);
   for(int i=il; i<=iu; ++i){
     const Real r = pcoord->x1v(i);
     
@@ -268,46 +268,6 @@ void Metric::SetBlackHoleMass(Real mass){
 
 Real Metric::GetBlackHoleMass() const {
   return bh_mass_;
-}
-
-
-
-// constructor of background metric g_munu
-void Metric::ConstructBackgroundMetric(
-    Real r, Real theta,
-    int i,
-    AthenaArray<Real> &g) const{
-  
-  const Real r_sq = SQR(r);
-  const Real f = 1.0 - 2.0*bh_mass_/r;
-  const Real sintheta = std::sin(theta);
-  const Real sin2theta = sintheta*sintheta;
-
-  g(I00,i) = -f;
-  g(I01,i) = 0.0;
-  g(I02,i) = 0.0;
-  g(I03,i) = 0.0;
-  g(I11,i) = 1.0/f;
-  g(I12,i) = 0.0;
-  g(I13,i) = 0.0;
-  g(I22,i) = r_sq;
-  g(I23,i) = 0.0;
-  g(I33,i) = r_sq*sin2theta;
-
-}
-
-void Metric::AddSelfGravityPerturbation(
-    Real r, Real Psi, Real delta_m,
-    int i,
-    AthenaArray<Real> &g) const {
-
-  const Real f = 1.0 - 2.0*bh_mass_/r;
-
-  const Real h00 = 2.0*delta_m/r + 2.0*f*Psi;
-  const Real h11 = 2.0*delta_m / (r*f*f);
-  g(I00,i) += h00;
-  g(I11,i) += h11;
-
 }
 
 
