@@ -8,6 +8,8 @@
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
 
+#include "../hydro/hydro.hpp"
+
 Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
   : pmy_block(pmb),
     bh_mass_(pmb->pcoord->GetMass()),
@@ -21,6 +23,12 @@ Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
 
   Psi_.ZeroClear();
   delta_m_.ZeroClear();
+
+  Psi_face1_.NewAthenaArray(nc1+1);
+  delta_m_face1_.NewAthenaArray(nc1+1);
+
+  Psi_face1_.ZeroClear();
+  delta_m_face1_.ZeroClear();
 }
 
 Metric::~Metric() {
@@ -29,17 +37,66 @@ Metric::~Metric() {
 // delta_m_ and Psi_ are derived from fluid distribution.
 void Metric::Update(Real time) {
   Coordinates *pcoord = pmy_block->pcoord;
+  Hydro *phydro = pmy_block->phydro;
+
+  const int is = pmy_block->is;
+  const int ie = pmy_block->ie;
+  const int js = pmy_block->js;
+  const int je = pmy_block->je;
+  const int ks = pmy_block->ks;
+  const int ke = pmy_block->ke;
   
-  // const int nc1 = pmy_block->ncells1;
-  // const int nc2 = pmy_block->ncells2;
-  // const int nc3 = pmy_block->ncells3;
+  const int nc1 = pmy_block->ncells1;
+  //const int nc2 = pmy_block->ncells2;
+  //const int nc3 = pmy_block->ncells3;
+
+  AthenaArray<Real> dm_shell;
+  dm_shell.NewAthenaArray(nc1);
+  dm_shell.ZeroClear();
+
+  AthenaArray<Real> vol;
+  vol.NewAthenaArray(nc1);
+  vol.ZeroClear();
   
-  // for (int k=0; k<nc3; ++k) {
-  //   for (int j=0; j<nc2; ++j) {
-  //     for (int i=0; i<nc1; ++i) {
-  //     }
-  //   }
-  // }
+  for (int k=ks; k<=ke; ++k) {
+    for (int j=js; j<=je; ++j) {
+      pcoord->CellVolume(k, j, is, ie, vol);
+#pragma omp simd
+      for (int i=is; i<=ie; ++i) {
+        dm_shell(i) += phydro->u(IDN, k, j, i) * vol(i);
+      }
+    }
+  }
+
+  
+  delta_m_face1_(is) = 0.0;
+
+  for (int i=is; i<=ie; ++i) {
+    delta_m_face1_(i+1) = delta_m_face1_(i) + dm_shell(i);
+  }
+
+  
+  dm_shell.ZeroClear();
+
+  for (int k=ks; k<=ke; ++k) {
+    for (int j=js; j<=je; ++j) {
+      pcoord->CellVolume(k, j, is, ie, vol);
+#pragma omp simd
+      for (int i=is; i<=ie; ++i) {
+        const Real r = pcoord->x1v(i);
+        dm_shell(i) += phydro->u(IDN, k, j, i)/(r-2.0*bh_mass_) * vol(i);
+      }
+    }
+  }
+
+  
+  Psi_face1_(ie+1) = 0.0;
+
+  for (int i=ie; i>is; --i) {
+    Psi_face1_(i-1) = Psi_face1_(i) + dm_shell(i);
+  }
+  
+  
 }
 
 Real Metric::DetSpatialMetric(Real g11, Real g12, Real g13,
