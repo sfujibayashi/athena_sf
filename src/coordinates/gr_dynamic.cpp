@@ -691,22 +691,36 @@ void Coordinates::Face3Metric(const int k, const int j, const int il, const int 
 void Coordinates::PrimToLocal1(const int k, const int j, const int il, const int iu,
     const AthenaArray<Real> &bb1, AthenaArray<Real> &prim_l, AthenaArray<Real> &prim_r,
     AthenaArray<Real> &bbx) {
+
+  class Metric *pmetric = pmy_block->pmetric;
+  
   // Calculate metric coefficients
   if (MAGNETIC_FIELDS_ENABLED) {
-    pmy_block->pmetric->Face1Metric(k, j, il, iu, g_, gi_);
+    pmetric->Face1Metric(k, j, il, iu, g_, gi_);
   }
 
+  const Real &theta = x2v(j);
+  const Real &phi = x3v(k);
+  
   // Extract useful quantities that do not depend on r
-  const Real &abs_sin_theta = trans_face1_j1_(j);
+  const Real abs_sin_theta = std::sin(theta);
 
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
-    // Extract transformation coefficients
     const Real &r = x1f(i);
-    const Real &alpha = trans_face1_i1_(i);
-    const Real mt_0 = alpha;
-    const Real mx_1 = 1.0/alpha;
+    const Real &Psi = pmetric->Psi_face1_(i);
+    const Real &dm = pmetric->delta_m_face1_(i);
+
+    Real g00, g01, g02, g03;
+    Real g11, g12, g13, g22, g23, g33;
+    pmetric->ConstructCovariantMetric(r, theta, phi, Psi, dm,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+    // Extract transformation coefficients
+    const Real mt_0 = std::sqrt(-g00);
+    const Real mx_1 = std::sqrt(g11);
     const Real my_2 = r;
     const Real mz_3 = r * abs_sin_theta;
 
@@ -745,13 +759,13 @@ void Coordinates::PrimToLocal1(const int k, const int j, const int il, const int
       // Calculate global 4-velocities
       Real tmp = g_11*uu1_l*uu1_l + g_22*uu2_l*uu2_l + g_33*uu3_l*uu3_l;
       Real gamma_l = std::sqrt(1.0 + tmp);
-      Real u0_l = gamma_l / alpha;
+      Real u0_l = gamma_l * std::sqrt(-g00);
       Real u1_l = uu1_l;
       Real u2_l = uu2_l;
       Real u3_l = uu3_l;
       tmp = g_11*uu1_r*uu1_r + g_22*uu2_r*uu2_r + g_33*uu3_r*uu3_r;
       Real gamma_r = std::sqrt(1.0 + tmp);
-      Real u0_r = gamma_r / alpha;
+      Real u0_r = gamma_r  * std::sqrt(-g00);
       Real u1_r = uu1_r;
       Real u2_r = uu2_r;
       Real u3_r = uu3_r;
