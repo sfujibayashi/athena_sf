@@ -116,42 +116,153 @@ void Metric::CellMetric(const int k, const int j, const int il, const int iu,
     const Real g22 = gamma(I_G22,k,j,i);
     const Real g23 = gamma(I_G23,k,j,i);
     const Real g33 = gamma(I_G33,k,j,i);
-
-    // g_0i = gamma_ij beta^j
-    const Real g01 = g11*b1 + g12*b2 + g13*b3;
-    const Real g02 = g12*b1 + g22*b2 + g23*b3;
-    const Real g03 = g13*b1 + g23*b2 + g33*b3;
-      
-    // gamma_ij beta^j beta^i = g_0i beta^i
-    const Real g00 = -a*a + g01*b1 + g02*b2 + g03*b3;
-
-    g(I00,i) = g00;
-    g(I01,i) = g01;
-    g(I02,i) = g02;
-    g(I03,i) = g03;
-    g(I11,i) = g11;
-    g(I12,i) = g12;
-    g(I13,i) = g13;
-    g(I22,i) = g22;
-    g(I23,i) = g23;
-    g(I33,i) = g33;
-      
-    Real gi11, gi12, gi13, gi22, gi23, gi33;
-    InvertSpatialMetric(g11, g12, g13, g22, g23, g33,
-                        gi11, gi12, gi13, gi22, gi23, gi33);
-    const Real a2i = 1.0/(a*a);
-    g_inv(I00,i) = -a2i;
-    g_inv(I01,i) = b1*a2i;
-    g_inv(I02,i) = b2*a2i;
-    g_inv(I03,i) = b3*a2i;
-    g_inv(I11,i) = gi11 - b1*b1*a2i;
-    g_inv(I12,i) = gi12 - b1*b2*a2i;
-    g_inv(I13,i) = gi13 - b1*b3*a2i;
-    g_inv(I22,i) = gi22 - b2*b2*a2i;
-    g_inv(I23,i) = gi23 - b2*b3*a2i;
-    g_inv(I33,i) = gi33 - b3*b3*a2i;
+    
+    Construct4Metric(
+      alpha(k,j,i),
+      beta(0,k,j,i),
+      beta(1,k,j,i),
+      beta(2,k,j,i),
+      gamma(I_G11,k,j,i),
+      gamma(I_G12,k,j,i),
+      gamma(I_G13,k,j,i),
+      gamma(I_G22,k,j,i),
+      gamma(I_G23,k,j,i),
+      gamma(I_G33,k,j,i),
+      i, g, g_inv);
       
   }
+}
+
+void Metric::Face1Metric(const int k, const int j, const int il, const int iu,
+                                AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {
+  // Extract geometric quantities that do not depend on r
+  Coordinates *pcoord = pmy_block->pcoord;
+  
+  const Real theta = pcoord->x2v(j);
+  const Real sintheta = std::sin(theta);
+  const Real sin2theta = sintheta*sintheta;
+
+  // Go through 1D block of cells
+#pragma omp simd
+  for (int i=il; i<=iu; ++i) {
+
+    Real r = pcoord->x1f(i);
+    Real r_sq = SQR(r);
+    Real f = 1.0 - 2.0*bh_mass_/r;
+
+    Real a = std::sqrt(f);
+    Real b1= 0.0;
+    Real b2= 0.0;
+    Real b3= 0.0;
+    Real g11 = 1.0/f;
+    Real g12 = 0.0;
+    Real g13 = 0.0;
+    Real g22 = r_sq;
+    Real g23 = 0.0;
+    Real g33 = r_sq*sin2theta;
+
+    Construct4Metric(
+      a,
+      b1,
+      b2,
+      b3,
+      g11,
+      g12,
+      g13,
+      g22,
+      g23,
+      g33,
+      i, g, g_inv);
+  }
+  return;
+}
+
+void Metric::Face2Metric(const int k, const int j, const int il, const int iu,
+                         AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {
+  // Extract geometric quantities that do not depend on r
+  Coordinates *pcoord = pmy_block->pcoord;
+  
+  const Real theta = pcoord->x2f(j);
+  const Real sintheta = std::sin(theta);
+  const Real sin2theta = sintheta*sintheta;
+
+  // Go through 1D block of cells
+#pragma omp simd
+  for (int i=il; i<=iu; ++i) {
+
+    Real r = pcoord->x1v(i);
+    Real r_sq = SQR(r);
+    Real f = 1.0 - 2.0*bh_mass_/r;
+
+    Real a = std::sqrt(f);
+    Real b1= 0.0;
+    Real b2= 0.0;
+    Real b3= 0.0;
+    Real g11 = 1.0/f;
+    Real g12 = 0.0;
+    Real g13 = 0.0;
+    Real g22 = r_sq;
+    Real g23 = 0.0;
+    Real g33 = r_sq*sin2theta;
+
+    Construct4Metric(
+      a,
+      b1,
+      b2,
+      b3,
+      g11,
+      g12,
+      g13,
+      g22,
+      g23,
+      g33,
+      i, g, g_inv);
+  }
+  return;
+}
+
+void Metric::Face3Metric(const int k, const int j, const int il, const int iu,
+                         AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {
+  // Extract geometric quantities that do not depend on r
+  Coordinates *pcoord = pmy_block->pcoord;
+  
+  const Real theta = pcoord->x2v(j);
+  const Real sintheta = std::sin(theta);
+  const Real sin2theta = sintheta*sintheta;
+
+  // Go through 1D block of cells
+#pragma omp simd
+  for (int i=il; i<=iu; ++i) {
+
+    Real r = pcoord->x1v(i);
+    Real r_sq = SQR(r);
+    Real f = 1.0 - 2.0*bh_mass_/r;
+
+    Real a = std::sqrt(f);
+    Real b1= 0.0;
+    Real b2= 0.0;
+    Real b3= 0.0;
+    Real g11 = 1.0/f;
+    Real g12 = 0.0;
+    Real g13 = 0.0;
+    Real g22 = r_sq;
+    Real g23 = 0.0;
+    Real g33 = r_sq*sin2theta;
+
+    Construct4Metric(
+      a,
+      b1,
+      b2,
+      b3,
+      g11,
+      g12,
+      g13,
+      g22,
+      g23,
+      g33,
+      i, g, g_inv);
+  }
+  return;
 }
 
 Real Metric::SqrtMinusG(int k, int j, int i) const {
@@ -178,3 +289,65 @@ Real Metric::DensitizationFactor(int k, int j, int i) const {
   const Real theta = pmy_block->pcoord->x2v(j);
   return sqrt_minus_g/(r*r*std::sin(theta));
 }
+
+
+void Metric::SetBlackHoleMass(Real mass){
+  bh_mass_ = mass;
+}
+
+
+Real Metric::GetBlackHoleMass() const {
+  return bh_mass_;
+}
+
+void Metric::Construct4Metric(
+     Real a,
+     Real b1, Real b2, Real b3,
+     Real g11, Real g12, Real g13,
+     Real g22, Real g23, Real g33,
+     int i,
+     AthenaArray<Real> &g,
+     AthenaArray<Real> &g_inv) const {
+
+  // g_0i = gamma_ij beta^j
+  const Real g01 = g11*b1 + g12*b2 + g13*b3;
+  const Real g02 = g12*b1 + g22*b2 + g23*b3;
+  const Real g03 = g13*b1 + g23*b2 + g33*b3;
+
+  // g_00 = -alpha^2 + gamma_ij beta^i beta^j
+  const Real g00 = -a*a + g01*b1 + g02*b2 + g03*b3;
+
+  g(I00,i) = g00;
+  g(I01,i) = g01;
+  g(I02,i) = g02;
+  g(I03,i) = g03;
+  g(I11,i) = g11;
+  g(I12,i) = g12;
+  g(I13,i) = g13;
+  g(I22,i) = g22;
+  g(I23,i) = g23;
+  g(I33,i) = g33;
+
+  Real gi11, gi12, gi13, gi22, gi23, gi33;
+
+  InvertSpatialMetric(
+      g11, g12, g13,
+      g22, g23, g33,
+      gi11, gi12, gi13,
+      gi22, gi23, gi33);
+
+  const Real a2i = 1.0/(a*a);
+
+  g_inv(I00,i) = -a2i;
+  g_inv(I01,i) =  b1*a2i;
+  g_inv(I02,i) =  b2*a2i;
+  g_inv(I03,i) =  b3*a2i;
+
+  g_inv(I11,i) = gi11 - b1*b1*a2i;
+  g_inv(I12,i) = gi12 - b1*b2*a2i;
+  g_inv(I13,i) = gi13 - b1*b3*a2i;
+  g_inv(I22,i) = gi22 - b2*b2*a2i;
+  g_inv(I23,i) = gi23 - b2*b3*a2i;
+  g_inv(I33,i) = gi33 - b3*b3*a2i;
+}
+

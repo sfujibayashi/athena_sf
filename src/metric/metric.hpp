@@ -47,10 +47,31 @@ public:
                   const int il, const int iu,
                   AthenaArray<Real> &g,
                   AthenaArray<Real> &g_inv);
+
+  void Face1Metric(const int k, const int j, const int il, const int iu,
+                   AthenaArray<Real> &g, AthenaArray<Real> &g_inv);
+  void Face2Metric(const int k, const int j, const int il, const int iu,
+                   AthenaArray<Real> &g, AthenaArray<Real> &g_inv);
+  void Face3Metric(const int k, const int j, const int il, const int iu,
+                   AthenaArray<Real> &g, AthenaArray<Real> &g_inv);
+
   
   Real SqrtMinusG(int k, int j, int i) const;
+
   Real DensitizationFactor(int k, int j, int i) const;
-  
+
+  void SetBlackHoleMass(Real mass);
+
+  Real GetBlackHoleMass() const;
+
+  void Construct4Metric(Real alpha,
+                        Real beta1, Real beta2, Real beta3,
+                        Real gamma11, Real gamma12, Real gamma13,
+                        Real gamma22, Real gamma23, Real gamma33,
+                        int i,
+                        AthenaArray<Real> &g,
+                        AthenaArray<Real> &g_inv) const;
+
 };
 
 #endif  // METRIC_METRIC_HPP_
