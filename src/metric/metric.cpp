@@ -1,6 +1,7 @@
 // C++ headers
 #include <cmath>
 #include <sstream>
+#include <limits>
 
 #include "metric.hpp"
 
@@ -154,6 +155,7 @@ void Metric::Face2Metric(const int k, const int j, const int il, const int iu,
   
   const Real theta = pcoord->x2f(j);
   const Real phi = pcoord->x3v(k);
+  const bool pole = pcoord->IsPole(j);
   
   // Go through 1D block of cells
 #pragma omp simd
@@ -181,8 +183,27 @@ void Metric::Face2Metric(const int k, const int j, const int il, const int iu,
     g(I22, i) = g22;
     g(I23, i) = g23;
     g(I33, i) = g33;
-    
-    InvertMetric(i, g, g_inv);
+  
+    if (!pole) {
+      InvertMetric(i, g, g_inv);
+    }else{
+      // Coordinate singularity at theta = 0 or pi.
+      // Current Schwarzschild + l=0 self-gravity metric is diagonal.
+      g_inv(I00,i) = 1.0/g00;
+      g_inv(I01,i) = 0.0;
+      g_inv(I02,i) = 0.0;
+      g_inv(I03,i) = 0.0;
+      
+      g_inv(I11,i) = 1.0/g11;
+      g_inv(I12,i) = 0.0;
+      g_inv(I13,i) = 0.0;
+      
+      g_inv(I22,i) = 1.0/g22;
+      g_inv(I23,i) = 0.0;
+      
+      // g^{phi phi} is singular in spherical coordinates at the pole.
+      g_inv(I33,i) = std::numeric_limits<Real>::infinity();
+    }
   }
   return;
 }
@@ -350,7 +371,7 @@ void Metric::ConstructCovariantMetric(
 
   const Real sintheta = std::sin(theta);
   const Real f = 1.0 - 2.0*bh_mass_/r;
-  
+
   g00 = -f + 2.0*dm/r + 2.0*f*Psi;
   g01 = 0.0;
   g02 = 0.0;
