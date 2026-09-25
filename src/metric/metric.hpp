@@ -50,7 +50,7 @@ public:
   AthenaArray<Real> Psi_face1_;
   AthenaArray<Real> delta_m_face1_;
 
-  void Update(Real time);
+  void Update();
 
   void CellMetric(const int k, const int j,
                   const int il, const int iu,

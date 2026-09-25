@@ -37,7 +37,7 @@ Metric::~Metric() {
 }
 
 // delta_m_ and Psi_ are derived from fluid distribution.
-void Metric::Update(Real time) {
+void Metric::Update() {
   Coordinates *pcoord = pmy_block->pcoord;
   Hydro *phydro = pmy_block->phydro;
 
