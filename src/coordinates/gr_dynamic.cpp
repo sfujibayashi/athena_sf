@@ -530,14 +530,15 @@ void Coordinates::AddCoordTermsDivergence(
         Real r2 = SQR(r);
 
         const Real f = 1.0 - 2.0*bh_mass_/r;
-
-        Real d1_h_00 = - 2.0*dm / r2 + 8.0*M_PI*r*phydro->w(IDN,k,j,i) 
-            + 2.0*4.0*bh_mass/r2*Psi + 8.0*M_PI*r*phydro->w(IDN,k,j,i);
-        Real d1_h_11 = - 2.0*dm / r2 + 8.0*M_PI*r*phydro->w(IDN,k,j,i) 
-            + 2.0*4.0*bh_mass/r2*Psi + 8.0*M_PI*r*phydro->w(IDN,k,j,i);
+        
+        const Real dxf = x1f(i+1)-x1f(i);
+        const Real d1_Psi = (Psi_face1_(i+1) - Psi_face1_(i))/dxf;
+        const Real d1_delta_m = (delta_m_face1_(i+1) - delta_m_face1_(i))/dxf;
+        Real d1_h_00 = -2.0*delta_m_(i)/r2 + 2.0/r*d1_delta_m + 4.0*bh_mass_/r2*Psi_(i) + 2.0*f*d1_Psi;
+        Real d1_h_11 = 2.0/(r*f*f)*(d1_delta_m - (f+4.0*bh_mass_/r)*delta_m_(i));
 
         Real d1_g_00 = -2.0*m / r2 + d1_h_00;
-        Real d1_g_11 = -2.0*m / r2 * SQR(g_11);
+        Real d1_g_11 = -2.0*m / r2 * SQR(g_11) + d1_h_11;
         Real d1_g_22 = 2.0 * r;
         Real d1_g_33 = 2.0 * r * sin2;
         Real d2_g_33 = 2.0 * r2 * sincos;
