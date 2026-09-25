@@ -188,8 +188,8 @@ void Metric::Face1Metric(const int k, const int j, const int il, const int iu,
     Real g00, g01, g02, g03;
     Real g11, g12, g13, g22, g23, g33;
 
-    Real Psi = 0.0;
-    Real dm = 0.0;
+    Real Psi = Psi_face1_(i);
+    Real dm = delta_m_face1_(i);
 
     ConstructCovariantMetric(r, theta, phi, Psi, dm,
         g00, g01, g02, g03,
@@ -229,8 +229,8 @@ void Metric::Face2Metric(const int k, const int j, const int il, const int iu,
     Real g00, g01, g02, g03;
     Real g11, g12, g13, g22, g23, g33;
     
-    Real Psi = 0.0;
-    Real dm = 0.0;
+    Real Psi = Psi_(i);
+    Real dm = delta_m_(i);
     
     ConstructCovariantMetric(r, theta, phi, Psi, dm,
         g00, g01, g02, g03,
@@ -288,8 +288,8 @@ void Metric::Face3Metric(const int k, const int j, const int il, const int iu,
     Real g00, g01, g02, g03;
     Real g11, g12, g13, g22, g23, g33;
     
-    Real Psi = 0.0;
-    Real dm = 0.0;
+    Real Psi = Psi_(i);
+    Real dm = delta_m_(i);
     
     ConstructCovariantMetric(r, theta, phi, Psi, dm, 
         g00, g01, g02, g03,
