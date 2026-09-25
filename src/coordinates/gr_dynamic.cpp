@@ -490,11 +490,12 @@ void Coordinates::AddCoordTermsDivergence(
     const Real dt, const AthenaArray<Real> *flux,
     const AthenaArray<Real> &prim, const AthenaArray<Real> &bb_cc,
     AthenaArray<Real> &cons) {
+  class Metric *pmetric = pmy_block->pmetric;
   // Extract ratio of specific heats
   const Real gamma_adi = pmy_block->peos->GetGamma();
 
   // Extract geometric quantities that do not depend on location
-  const Real &m = bh_mass_;
+  const Real m = pmetric->GetBlackHoleMass();
 
   // Go through cells
   for (int k = pmy_block->ks; k <= pmy_block->ke; ++k) {
@@ -529,16 +530,16 @@ void Coordinates::AddCoordTermsDivergence(
         const Real &r = x1v(i);
         Real r2 = SQR(r);
 
-        const Real f = 1.0 - 2.0*bh_mass_/r;
+        const Real f = 1.0 - 2.0*m/r;
         
         const Real dxf = x1f(i+1)-x1f(i);
-        const Real d1_Psi = (Psi_face1_(i+1) - Psi_face1_(i))/dxf;
-        const Real d1_delta_m = (delta_m_face1_(i+1) - delta_m_face1_(i))/dxf;
-        Real d1_h_00 = -2.0*delta_m_(i)/r2 + 2.0/r*d1_delta_m + 4.0*bh_mass_/r2*Psi_(i) + 2.0*f*d1_Psi;
-        Real d1_h_11 = 2.0/(r*f*f)*(d1_delta_m - (f+4.0*bh_mass_/r)*delta_m_(i));
+        const Real d1_Psi = (pmetric->Psi_face1_(i+1) - pmetric->Psi_face1_(i))/dxf;
+        const Real d1_delta_m = (pmetric->delta_m_face1_(i+1) - pmetric->delta_m_face1_(i))/dxf;
+        Real d1_h_00 = -2.0*pmetric->delta_m_(i)/r2 + 2.0/r*d1_delta_m + 4.0*m/r2*pmetric->Psi_(i) + 2.0*f*d1_Psi;
+        Real d1_h_11 = 2.0/(r*f*f)*(d1_delta_m - (f+4.0*m/r)*pmetric->delta_m_(i)/(r*f));
 
         Real d1_g_00 = -2.0*m / r2 + d1_h_00;
-        Real d1_g_11 = -2.0*m / r2 * SQR(g_11) + d1_h_11;
+        Real d1_g_11 = -2.0*m / (r2*f*f) + d1_h_11;
         Real d1_g_22 = 2.0 * r;
         Real d1_g_33 = 2.0 * r * sin2;
         Real d2_g_33 = 2.0 * r2 * sincos;
