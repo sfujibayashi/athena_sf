@@ -225,7 +225,300 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         << std::endl;
     ATHENA_ERROR(msg);
   }
+
+// ------------------------------------------------------------
+// Regression check: Metric class vs analytic Schwarzschild
+// Assumes Psi_ = delta_m_ = 0
+// ------------------------------------------------------------
+{
+  AthenaArray<Real> gtest, gitest;
+  gtest.NewAthenaArray(NMETRIC, ie + NGHOST + 1);
+  gitest.NewAthenaArray(NMETRIC, ie + NGHOST + 1);
+
+  Real max_dg   = 0.0;
+  Real max_dgi  = 0.0;
+  Real max_id   = 0.0;
+  Real max_dq   = 0.0;
+
+  const Real m = pmetric->GetBlackHoleMass();
+
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+
+      pmetric->CellMetric(k, j, is, ie, gtest, gitest);
+
+      const Real theta = pcoord->x2v(j);
+      const Real sintheta = std::sin(theta);
+      const Real sin2theta = sintheta*sintheta;
+
+      for (int i = is; i <= ie; ++i) {
+        const Real r = pcoord->x1v(i);
+        const Real r2 = r*r;
+
+        // Use the same floating-point route as the old Schwarzschild implementation
+        const Real alpha = std::sqrt(1.0 - 2.0*m/r);
+        const Real f = alpha*alpha;
+
+        Real ga[NMETRIC] = {};
+        Real gia[NMETRIC] = {};
+
+        // analytic covariant Schwarzschild metric
+        ga[I00] = -f;
+        ga[I11] = 1.0/f;
+        ga[I22] = r2;
+        ga[I33] = r2*sin2theta;
+
+        // analytic contravariant Schwarzschild metric
+        gia[I00] = -1.0/f;
+        gia[I11] = f;
+        gia[I22] = 1.0/r2;
+        gia[I33] = 1.0/(r2*sin2theta);
+
+        for (int n = 0; n < NMETRIC; ++n) {
+          max_dg =
+              std::max(max_dg, std::abs(gtest(n,i) - ga[n]));
+          max_dgi =
+              std::max(max_dgi, std::abs(gitest(n,i) - gia[n]));
+        }
+
+        // g_{mu nu} g^{nu lambda} = delta_mu^lambda
+        Real gcov[4][4] = {
+          {gtest(I00,i), gtest(I01,i), gtest(I02,i), gtest(I03,i)},
+          {gtest(I01,i), gtest(I11,i), gtest(I12,i), gtest(I13,i)},
+          {gtest(I02,i), gtest(I12,i), gtest(I22,i), gtest(I23,i)},
+          {gtest(I03,i), gtest(I13,i), gtest(I23,i), gtest(I33,i)}
+        };
+
+        Real gcon[4][4] = {
+          {gitest(I00,i), gitest(I01,i), gitest(I02,i), gitest(I03,i)},
+          {gitest(I01,i), gitest(I11,i), gitest(I12,i), gitest(I13,i)},
+          {gitest(I02,i), gitest(I12,i), gitest(I22,i), gitest(I23,i)},
+          {gitest(I03,i), gitest(I13,i), gitest(I23,i), gitest(I33,i)}
+        };
+
+        for (int mu = 0; mu < 4; ++mu) {
+          for (int lam = 0; lam < 4; ++lam) {
+            Real sum = 0.0;
+            for (int nu = 0; nu < 4; ++nu) {
+              sum += gcov[mu][nu] * gcon[nu][lam];
+            }
+
+            const Real delta = (mu == lam ? 1.0 : 0.0);
+            max_id = std::max(max_id, std::abs(sum - delta));
+          }
+        }
+
+        // Schwarzschild should give q = sqrt(-g)/(r^2 sin(theta)) = 1
+        const Real q = pmetric->DensitizationFactor(k,j,i);
+        max_dq = std::max(max_dq, std::abs(q - 1.0));
+      }
+    }
+  }
+
+  std::printf(
+      "Metric check gid=%d: "
+      "max|dg|=%15.7e  "
+      "max|dgi|=%15.7e  "
+      "max|g*g^-1-I|=%15.7e  "
+      "max|q-1|=%15.7e\n",
+      gid, max_dg, max_dgi, max_id, max_dq);
+}
+
   
+// ------------------------------------------------------------
+// Regression check: face-centered Metric vs analytic Schwarzschild
+// Assumes Psi_ = delta_m_ = 0
+// ------------------------------------------------------------
+{
+  AthenaArray<Real> gtest, gitest;
+  gtest.NewAthenaArray(NMETRIC, ie + NGHOST + 1);
+  gitest.NewAthenaArray(NMETRIC, ie + NGHOST + 1);
+
+  const Real m = pmetric->GetBlackHoleMass();
+
+  // Helper: compare one metric point with analytic Schwarzschild
+  auto CheckMetricPoint =
+    [&](Real r, Real theta, int i,
+        const AthenaArray<Real> &g,
+        const AthenaArray<Real> &gi,
+        Real &max_dg,
+        Real &max_dgi,
+        Real &max_id) {
+
+      const Real r2 = r*r;
+      const Real sintheta = std::sin(theta);
+      const Real sin2theta = sintheta*sintheta;
+
+      // Same floating-point path as old Schwarzschild implementation
+      const Real alpha = std::sqrt(1.0 - 2.0*m/r);
+      const Real f = alpha*alpha;
+
+      Real ga[NMETRIC]  = {};
+      Real gia[NMETRIC] = {};
+
+      // analytic covariant metric
+      ga[I00] = -f;
+      ga[I11] = 1.0/f;
+      ga[I22] = r2;
+      ga[I33] = r2*sin2theta;
+
+      // analytic inverse metric
+      gia[I00] = -1.0/f;
+      gia[I11] = f;
+      gia[I22] = 1.0/r2;
+      gia[I33] = 1.0/(r2*sin2theta);
+
+      for (int n = 0; n < NMETRIC; ++n) {
+        max_dg =
+          std::max(max_dg, std::abs(g(n,i) - ga[n]));
+        max_dgi =
+          std::max(max_dgi, std::abs(gi(n,i) - gia[n]));
+      }
+
+      // g_{mu nu} g^{nu lambda} = delta_mu^lambda
+      Real gcov[4][4] = {
+        {g(I00,i), g(I01,i), g(I02,i), g(I03,i)},
+        {g(I01,i), g(I11,i), g(I12,i), g(I13,i)},
+        {g(I02,i), g(I12,i), g(I22,i), g(I23,i)},
+        {g(I03,i), g(I13,i), g(I23,i), g(I33,i)}
+      };
+
+      Real gcon[4][4] = {
+        {gi(I00,i), gi(I01,i), gi(I02,i), gi(I03,i)},
+        {gi(I01,i), gi(I11,i), gi(I12,i), gi(I13,i)},
+        {gi(I02,i), gi(I12,i), gi(I22,i), gi(I23,i)},
+        {gi(I03,i), gi(I13,i), gi(I23,i), gi(I33,i)}
+      };
+
+      for (int mu = 0; mu < 4; ++mu) {
+        for (int lam = 0; lam < 4; ++lam) {
+          Real sum = 0.0;
+
+          for (int nu = 0; nu < 4; ++nu) {
+            sum += gcov[mu][nu] * gcon[nu][lam];
+          }
+
+          const Real delta = (mu == lam ? 1.0 : 0.0);
+          max_id =
+            std::max(max_id, std::abs(sum - delta));
+        }
+      }
+    };
+
+
+  // ----------------------------------------------------------
+  // Face1Metric: radial interfaces
+  // r = x1f(i), theta = x2v(j)
+  // ----------------------------------------------------------
+  {
+    Real max_dg  = 0.0;
+    Real max_dgi = 0.0;
+    Real max_id  = 0.0;
+
+    for (int k = ks; k <= ke; ++k) {
+      for (int j = js; j <= je; ++j) {
+
+        pmetric->Face1Metric(k, j, is, ie+1, gtest, gitest);
+
+        const Real theta = pcoord->x2v(j);
+
+        for (int i = is; i <= ie+1; ++i) {
+          const Real r = pcoord->x1f(i);
+
+          CheckMetricPoint(
+              r, theta, i,
+              gtest, gitest,
+              max_dg, max_dgi, max_id);
+        }
+      }
+    }
+
+    std::printf(
+        "Face1 metric check gid=%d: "
+        "max|dg|=%15.7e  "
+        "max|dgi|=%15.7e  "
+        "max|g*g^-1-I|=%15.7e\n",
+        gid, max_dg, max_dgi, max_id);
+  }
+
+
+  // ----------------------------------------------------------
+  // Face2Metric: theta interfaces
+  // r = x1v(i), theta = x2f(j)
+  // ----------------------------------------------------------
+  {
+    Real max_dg  = 0.0;
+    Real max_dgi = 0.0;
+    Real max_id  = 0.0;
+
+    for (int k = ks; k <= ke; ++k) {
+      for (int j = js; j <= je+1; ++j) {
+
+        if (pcoord->IsPole(j)) {
+          continue;
+        }
+
+        pmetric->Face2Metric(k, j, is, ie, gtest, gitest);
+
+        const Real theta = pcoord->x2f(j);
+        
+        for (int i = is; i <= ie; ++i) {
+          const Real r = pcoord->x1v(i);
+
+          CheckMetricPoint(
+              r, theta, i,
+              gtest, gitest,
+              max_dg, max_dgi, max_id);
+        }
+      }
+    }
+
+    std::printf(
+        "Face2 metric check gid=%d: "
+        "max|dg|=%15.7e  "
+        "max|dgi|=%15.7e  "
+        "max|g*g^-1-I|=%15.7e\n",
+        gid, max_dg, max_dgi, max_id);
+  }
+
+
+  // ----------------------------------------------------------
+  // Face3Metric: phi interfaces
+  // r = x1v(i), theta = x2v(j)
+  // Schwarzschild metric has no phi dependence
+  // ----------------------------------------------------------
+  {
+    Real max_dg  = 0.0;
+    Real max_dgi = 0.0;
+    Real max_id  = 0.0;
+
+    for (int k = ks; k <= ke+1; ++k) {
+      for (int j = js; j <= je; ++j) {
+
+        pmetric->Face3Metric(k, j, is, ie, gtest, gitest);
+
+        const Real theta = pcoord->x2v(j);
+
+        for (int i = is; i <= ie; ++i) {
+          const Real r = pcoord->x1v(i);
+
+          CheckMetricPoint(
+              r, theta, i,
+              gtest, gitest,
+              max_dg, max_dgi, max_id);
+        }
+      }
+    }
+
+    std::printf(
+        "Face3 metric check gid=%d: "
+        "max|dg|=%15.7e  "
+        "max|dgi|=%15.7e  "
+        "max|g*g^-1-I|=%15.7e\n",
+        gid, max_dg, max_dgi, max_id);
+  }
+}
+
   Real rho_atmos = pin->GetReal("problem", "rho_atmos");
   Real press_atmos = pin->GetReal("problem", "press_atmos");
   int ind_first = collapsed.FirstCellIndex();
