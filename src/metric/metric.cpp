@@ -92,16 +92,16 @@ void Metric::CellMetric(const int k, const int j, const int il, const int iu,
       g00, g01, g02, g03,
       g11, g12, g13, g22, g23, g33);
     
-    g(I00) = g00;
-    g(I01) = g01;
-    g(I02) = g02;
-    g(I03) = g03;
-    g(I11) = g11;
-    g(I12) = g12;
-    g(I13) = g13;
-    g(I22) = g22;
-    g(I23) = g23;
-    g(I33) = g33;
+    g(I00, i) = g00;
+    g(I01, i) = g01;
+    g(I02, i) = g02;
+    g(I03, i) = g03;
+    g(I11, i) = g11;
+    g(I12, i) = g12;
+    g(I13, i) = g13;
+    g(I22, i) = g22;
+    g(I23, i) = g23;
+    g(I33, i) = g33;
     
     InvertMetric(i, g, g_inv);
   }
@@ -113,16 +113,34 @@ void Metric::Face1Metric(const int k, const int j, const int il, const int iu,
   Coordinates *pcoord = pmy_block->pcoord;
   
   const Real theta = pcoord->x2v(j);
+  const Real phi = pcoord->x3v(k);
   
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
+
     const Real r = pcoord->x1f(i);
-    ConstructBackgroundMetric(r, theta, i, g);
     
-    const Real Psi = 0.0;
-    const Real delta_m = 0.0;
-    AddSelfGravityPerturbation(r, Psi, delta_m, i, g);
+    Real g00, g01, g02, g03;
+    Real g11, g12, g13, g22, g23, g33;
+
+    Real Psi = 0.0;
+    Real dm = 0.0;
+
+    ConstructCovariantMetric(r, theta, phi, Psi, dm,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+    g(I00, i) = g00;
+    g(I01, i) = g01;
+    g(I02, i) = g02;
+    g(I03, i) = g03;
+    g(I11, i) = g11;
+    g(I12, i) = g12;
+    g(I13, i) = g13;
+    g(I22, i) = g22;
+    g(I23, i) = g23;
+    g(I33, i) = g33;
     
     InvertMetric(i, g, g_inv);
   }
@@ -135,6 +153,7 @@ void Metric::Face2Metric(const int k, const int j, const int il, const int iu,
   Coordinates *pcoord = pmy_block->pcoord;
   
   const Real theta = pcoord->x2f(j);
+  const Real phi = pcoord->x3v(k);
   
   // Go through 1D block of cells
 #pragma omp simd
@@ -142,11 +161,26 @@ void Metric::Face2Metric(const int k, const int j, const int il, const int iu,
 
     const Real r = pcoord->x1v(i);
 
-    ConstructBackgroundMetric(r, theta, i, g);
+    Real g00, g01, g02, g03;
+    Real g11, g12, g13, g22, g23, g33;
     
-    const Real Psi = 0.0;
-    const Real delta_m = 0.0;
-    AddSelfGravityPerturbation(r, Psi, delta_m, i, g);
+    Real Psi = 0.0;
+    Real dm = 0.0;
+    
+    ConstructCovariantMetric(r, theta, phi, Psi, dm,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+    g(I00, i) = g00;
+    g(I01, i) = g01;
+    g(I02, i) = g02;
+    g(I03, i) = g03;
+    g(I11, i) = g11;
+    g(I12, i) = g12;
+    g(I13, i) = g13;
+    g(I22, i) = g22;
+    g(I23, i) = g23;
+    g(I33, i) = g33;
     
     InvertMetric(i, g, g_inv);
   }
@@ -159,18 +193,34 @@ void Metric::Face3Metric(const int k, const int j, const int il, const int iu,
   Coordinates *pcoord = pmy_block->pcoord;
   
   const Real theta = pcoord->x2v(j);
-
+  const Real phi = pcoord->x3f(k);
+  
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
 
     const Real r = pcoord->x1v(i);
 
-    ConstructBackgroundMetric(r, theta, i, g);
+    Real g00, g01, g02, g03;
+    Real g11, g12, g13, g22, g23, g33;
     
-    const Real Psi = 0.0;
-    const Real delta_m = 0.0;
-    AddSelfGravityPerturbation(r, Psi, delta_m, i, g);
+    Real Psi = 0.0;
+    Real dm = 0.0;
+    
+    ConstructCovariantMetric(r, theta, phi, Psi, dm, 
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+    g(I00, i) = g00;
+    g(I01, i) = g01;
+    g(I02, i) = g02;
+    g(I03, i) = g03;
+    g(I11, i) = g11;
+    g(I12, i) = g12;
+    g(I13, i) = g13;
+    g(I22, i) = g22;
+    g(I23, i) = g23;
+    g(I33, i) = g33;
     
     InvertMetric(i, g, g_inv);
 
@@ -322,18 +372,31 @@ void Metric::ConstructCellCovariantMetric(
 
   Coordinates *pcoord = pmy_block->pcoord;
 
-  const Real theta = pcoord->x2v(j);
   const Real r = pcoord->x1v(i);
+  const Real theta = pcoord->x2v(j);
+  const Real phi = pcoord->x3v(k);
+  
+  ConstructCovariantMetric(r, theta, phi, Psi_(i), delta_m_(i),
+      g00, g01, g02, g03,
+      g11, g12, g13, g22, g23, g33);
+  
+}
+
+void Metric::ConstructCovariantMetric(
+    Real r, Real theta, Real phi, Real Psi, Real dm,
+    Real &g00, Real &g01, Real &g02, Real &g03,
+    Real &g11, Real &g12, Real &g13,
+    Real &g22, Real &g23, Real &g33) const {
 
   const Real sintheta = std::sin(theta);
   const Real f = 1.0 - 2.0*bh_mass_/r;
-
-  g00 = -f + 2.0*delta_m_(i)/r + 2.0*f*Psi_(i);
+  
+  g00 = -f + 2.0*dm/r + 2.0*f*Psi;
   g01 = 0.0;
   g02 = 0.0;
   g03 = 0.0;
   
-  g11 = 1.0/f + 2.0*delta_m_(i)/(r*f*f);
+  g11 = 1.0/f + 2.0*dm/(r*f*f);
   g12 = 0.0;
   g13 = 0.0;
   

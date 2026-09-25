@@ -19,6 +19,12 @@ private:
   Real DetSpatialMetric(Real g11, Real g12, Real g13,
                         Real g22, Real g23, Real g33) const ;
   
+  void ConstructCovariantMetric(
+    Real r, Real theta, Real phi, Real Psi, Real dm,
+    Real &g00, Real &g01, Real &g02, Real &g03,
+    Real &g11, Real &g12, Real &g13,
+    Real &g22, Real &g23, Real &g33) const;
+
   void ConstructCellCovariantMetric(
     int k, int j, int i,
     Real &g00, Real &g01, Real &g02, Real &g03,
