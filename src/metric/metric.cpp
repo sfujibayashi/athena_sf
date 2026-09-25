@@ -31,8 +31,6 @@ Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
   Psi_face1_.ZeroClear();
   delta_m_face1_.ZeroClear();
   
-  Update(0.0);
-  std::abort();
 }
 
 Metric::~Metric() {
@@ -95,90 +93,17 @@ void Metric::Update(Real time) {
   
   Psi_face1_(ie+1) = 0.0;
 
-  for (int i=ie; i>is; --i) {
+  for (int i=ie; i>=is; --i) {
     Psi_face1_(i) = Psi_face1_(i+1) + dm_shell(i);
   }
 
-
-// -----------------------------------------------------------------------------
-// Test against uniform-density solution
-// Assumes:
-//   - uniform rho
-//   - full sphere
-//   - single MeshBlock
-// -----------------------------------------------------------------------------
-
-const Real rho0 = phydro->w(IDN, ks, js, is);
-const Real rin  = pcoord->x1f(is);
-const Real rout = pcoord->x1f(ie+1);
-
-Real err_dm_max = 0.0;
-Real err_psi_discrete_max = 0.0;
-Real err_psi_cont_max = 0.0;
-
-// Primitive of r^2/(r-2M)
-auto Fpsi = [this](Real r) {
-  const Real a = 2.0*bh_mass_;
-  return 0.5*r*r + a*r + a*a*std::log(r-a);
-};
-
-// ----- delta_m -----
-for (int i=is; i<=ie+1; ++i) {
-  const Real r = pcoord->x1f(i);
-
-  const Real dm_exact =
-      (4.0*M_PI/3.0) * rho0
-      * (r*r*r - rin*rin*rin);
-
-  err_dm_max =
-      std::max(err_dm_max,
-               std::abs(delta_m_face1_(i) - dm_exact));
-}
-
-// ----- Psi: discrete reference matching current implementation -----
-Real psi_discrete = 0.0;
-
-// outer boundary
-err_psi_discrete_max =
-    std::max(err_psi_discrete_max,
-             std::abs(Psi_face1_(ie+1)));
-
-for (int i=ie; i>=is; --i) {
-  const Real rl = pcoord->x1f(i);
-  const Real rr = pcoord->x1f(i+1);
-  const Real rc = pcoord->x1v(i);
-
-  const Real shell_mass =
-      (4.0*M_PI/3.0) * rho0
-      * (rr*rr*rr - rl*rl*rl);
-
-  psi_discrete += shell_mass/(rc - 2.0*bh_mass_);
-
-  err_psi_discrete_max =
-      std::max(err_psi_discrete_max,
-               std::abs(Psi_face1_(i) - psi_discrete));
-}
-
-// ----- Psi: continuum analytic solution -----
-for (int i=is; i<=ie+1; ++i) {
-  const Real r = pcoord->x1f(i);
-
-  const Real psi_exact =
-      4.0*M_PI*rho0 * (Fpsi(rout) - Fpsi(r));
-
-  err_psi_cont_max =
-      std::max(err_psi_cont_max,
-               std::abs(Psi_face1_(i) - psi_exact));
-}
-
-std::cout << "Self-gravity uniform-density test:"
-          << " gid=" << pmy_block->gid
-          << " rho0=" << rho0
-          << " max|dm-dm_exact|=" << err_dm_max
-          << " max|Psi-Psi_discrete|=" << err_psi_discrete_max
-          << " max|Psi-Psi_continuum|=" << err_psi_cont_max
-          << std::endl;
- 
+  
+  for (int i=is; i<=ie; ++i) {
+    Real xx1 = (pcoord->x1v(i)-pcoord->x1f(i))/(pcoord->x1f(i+1)-pcoord->x1f(i));
+    Real xx0 = 1.0 - xx1;
+    Psi_(i) = xx0*Psi_face1_(i) + xx1*Psi_face1_(i+1);
+    delta_m_(i) = xx0*delta_m_face1_(i) + xx1*delta_m_face1_(i+1);
+  }
   
 }
 

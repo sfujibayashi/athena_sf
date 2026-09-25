@@ -560,6 +560,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           press_cgs= xx0*collapsed.press[ind] + xx1*collapsed.press[ind+1];
           uu1 = (xx0*collapsed.ur[ind] + xx1*collapsed.ur[ind+1])/Constants::speed_of_light_cgs;
         }
+        rho_cgs = 1.0;
+        uu1 = 0.0;
         Real rho_code = rho_cgs/pmy_mesh->punit->code_density_cgs;
         Real press_code = press_cgs/pmy_mesh->punit->code_pressure_cgs;
         
@@ -588,7 +590,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   peos->PrimitiveToConserved(
       phydro->w, bb, phydro->u, pcoord,
       is, ie, js, je, ks, ke);
-  
+
+  pmetric->Update(0.0);
+  std::abort();
 }
 
 
