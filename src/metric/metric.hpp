@@ -10,7 +10,7 @@ class ParameterInput;
 
 class Metric {
 private:
-  Real bh_mass_;
+  Real bh_mass_, bh_spin_;
   void InvertSpatialMetric(Real g11, Real g12, Real g13,
                            Real g22, Real g23, Real g33,
                            Real &gi11, Real &gi12, Real &gi13,
@@ -19,6 +19,26 @@ private:
   Real DetSpatialMetric(Real g11, Real g12, Real g13,
                         Real g22, Real g23, Real g33) const ;
   
+  void ConstructCovariantMetric(
+    Real a,
+    Real b1, Real b2, Real b3,
+    Real g11, Real g12, Real g13,
+    Real g22, Real g23, Real g33,
+    int i,
+    AthenaArray<Real> &g) const;
+
+  void AddSelfGravityPerturbation(
+    Real h00, Real h01, Real h02, Real h03,
+    Real h11, Real h12, Real h13,
+    Real h22, Real h23, Real h33,
+    int i,
+    AthenaArray<Real> &g) const;
+
+  void InvertMetric(
+    int i,
+    const AthenaArray<Real> &g,
+    AthenaArray<Real> &g_inv) const;
+
 public:
   
   enum {
@@ -40,6 +60,8 @@ public:
   AthenaArray<Real> alpha;
   AthenaArray<Real> beta;
   AthenaArray<Real> gamma;
+  // AthenaArray<Real> H0_;
+  // AthenaArray<Real> delta_m_;
 
   void Update(Real time);
 

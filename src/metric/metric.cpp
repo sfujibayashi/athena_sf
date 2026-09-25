@@ -56,10 +56,6 @@ void Metric::Update(Real time) {
       }
     }
   }
-// 1. construct gravity source
-// 2. solve self-gravity equation
-// 3. construct alpha, beta^i, gamma_ij
-
 }
 
 Real Metric::DetSpatialMetric(Real g11, Real g12, Real g13,
@@ -102,22 +98,22 @@ void Metric::InvertSpatialMetric(Real g11, Real g12, Real g13,
 void Metric::CellMetric(const int k, const int j, const int il, const int iu,
                 AthenaArray<Real> &g, AthenaArray<Real> &g_inv){
   for(int i=il; i<=iu; ++i){
-    const Real a = alpha(k,j,i);
+    // const Real a = alpha(k,j,i);
 
-    // beta^i
-    const Real b1 = beta(0,k,j,i);
-    const Real b2 = beta(1,k,j,i);
-    const Real b3 = beta(2,k,j,i);
+    // // beta^i
+    // const Real b1 = beta(0,k,j,i);
+    // const Real b2 = beta(1,k,j,i);
+    // const Real b3 = beta(2,k,j,i);
       
-    // g_ij = gamma_ij
-    const Real g11 = gamma(I_G11,k,j,i);
-    const Real g12 = gamma(I_G12,k,j,i);
-    const Real g13 = gamma(I_G13,k,j,i);
-    const Real g22 = gamma(I_G22,k,j,i);
-    const Real g23 = gamma(I_G23,k,j,i);
-    const Real g33 = gamma(I_G33,k,j,i);
-    
-    Construct4Metric(
+    // // g_ij = gamma_ij
+    // const Real g11 = gamma(I_G11,k,j,i);
+    // const Real g12 = gamma(I_G12,k,j,i);
+    // const Real g13 = gamma(I_G13,k,j,i);
+    // const Real g22 = gamma(I_G22,k,j,i);
+    // const Real g23 = gamma(I_G23,k,j,i);
+    // const Real g33 = gamma(I_G33,k,j,i);
+
+    ConstructCovariantMetric(
       alpha(k,j,i),
       beta(0,k,j,i),
       beta(1,k,j,i),
@@ -128,8 +124,41 @@ void Metric::CellMetric(const int k, const int j, const int il, const int iu,
       gamma(I_G22,k,j,i),
       gamma(I_G23,k,j,i),
       gamma(I_G33,k,j,i),
-      i, g, g_inv);
-      
+      i, g);
+    
+    const Real h00 = 0.0;
+    const Real h01 = 0.0;
+    const Real h02 = 0.0;
+    const Real h03 = 0.0;
+    const Real h11 = 0.0;
+    const Real h12 = 0.0;
+    const Real h13 = 0.0;
+    const Real h22 = 0.0;
+    const Real h23 = 0.0;
+    const Real h33 = 0.0;
+
+    AddSelfGravityPerturbation(
+     h00,  h01,  h02,  h03,
+     h11,  h12,  h13,
+     h22,  h23,  h33,
+     i, g);
+    
+    InvertMetric(i, g, g_inv);
+
+    
+    // Construct4Metric(
+    //   alpha(k,j,i),
+    //   beta(0,k,j,i),
+    //   beta(1,k,j,i),
+    //   beta(2,k,j,i),
+    //   gamma(I_G11,k,j,i),
+    //   gamma(I_G12,k,j,i),
+    //   gamma(I_G13,k,j,i),
+    //   gamma(I_G22,k,j,i),
+    //   gamma(I_G23,k,j,i),
+    //   gamma(I_G33,k,j,i),
+    //   i, g, g_inv);
+
   }
 }
 
@@ -351,3 +380,105 @@ void Metric::Construct4Metric(
   g_inv(I33,i) = gi33 - b3*b3*a2i;
 }
 
+void Metric::ConstructCovariantMetric(
+    Real a,
+    Real b1, Real b2, Real b3,
+    Real g11, Real g12, Real g13,
+    Real g22, Real g23, Real g33,
+    int i,
+    AthenaArray<Real> &g) const{
+  
+  // g_0i = gamma_ij beta^j
+  const Real g01 = g11*b1 + g12*b2 + g13*b3;
+  const Real g02 = g12*b1 + g22*b2 + g23*b3;
+  const Real g03 = g13*b1 + g23*b2 + g33*b3;
+
+  // g_00 = -alpha^2 + gamma_ij beta^i beta^j
+  const Real g00 = -a*a + g01*b1 + g02*b2 + g03*b3;
+
+  g(I00,i) = g00;
+  g(I01,i) = g01;
+  g(I02,i) = g02;
+  g(I03,i) = g03;
+  g(I11,i) = g11;
+  g(I12,i) = g12;
+  g(I13,i) = g13;
+  g(I22,i) = g22;
+  g(I23,i) = g23;
+  g(I33,i) = g33;
+
+}
+
+void Metric::AddSelfGravityPerturbation(
+    Real h00, Real h01, Real h02, Real h03,
+    Real h11, Real h12, Real h13,
+    Real h22, Real h23, Real h33,
+    int i,
+    AthenaArray<Real> &g) const {
+  
+  g(I00,i) += h00;
+  g(I01,i) += h01;
+  g(I02,i) += h02;
+  g(I03,i) += h03;
+  g(I11,i) += h11;
+  g(I12,i) += h12;
+  g(I13,i) += h13;
+  g(I22,i) += h22;
+  g(I23,i) += h23;
+  g(I33,i) += h33;
+
+}
+
+
+void Metric::InvertMetric(
+    int i,
+    const AthenaArray<Real> &g,
+    AthenaArray<Real> &g_inv) const {
+
+  // spatial metric
+  const Real g11 = g(I11,i);
+  const Real g12 = g(I12,i);
+  const Real g13 = g(I13,i);
+  const Real g22 = g(I22,i);
+  const Real g23 = g(I23,i);
+  const Real g33 = g(I33,i);
+
+  Real gi11, gi12, gi13, gi22, gi23, gi33;
+
+  InvertSpatialMetric(
+      g11, g12, g13,
+      g22, g23, g33,
+      gi11, gi12, gi13,
+      gi22, gi23, gi33);
+
+  // beta_i = g_0i
+  const Real b_1 = g(I01,i);
+  const Real b_2 = g(I02,i);
+  const Real b_3 = g(I03,i);
+
+  // beta^i = gamma^{ij} beta_j
+  const Real b1 = gi11*b_1 + gi12*b_2 + gi13*b_3;
+  const Real b2 = gi12*b_1 + gi22*b_2 + gi23*b_3;
+  const Real b3 = gi13*b_1 + gi23*b_2 + gi33*b_3;
+
+  const Real beta2 =
+      b_1*b1 + b_2*b2 + b_3*b3;
+
+  const Real alpha_sq =
+      -g(I00,i) + beta2;
+
+  const Real a2i = 1.0/alpha_sq;
+
+  g_inv(I00,i) = -a2i;
+
+  g_inv(I01,i) = b1*a2i;
+  g_inv(I02,i) = b2*a2i;
+  g_inv(I03,i) = b3*a2i;
+
+  g_inv(I11,i) = gi11 - b1*b1*a2i;
+  g_inv(I12,i) = gi12 - b1*b2*a2i;
+  g_inv(I13,i) = gi13 - b1*b3*a2i;
+  g_inv(I22,i) = gi22 - b2*b2*a2i;
+  g_inv(I23,i) = gi23 - b2*b3*a2i;
+  g_inv(I33,i) = gi33 - b3*b3*a2i;
+}
