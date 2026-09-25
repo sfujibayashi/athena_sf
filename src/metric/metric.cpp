@@ -99,10 +99,8 @@ void Metric::Update(Real time) {
 
   
   for (int i=is; i<=ie; ++i) {
-    Real xx1 = (pcoord->x1v(i)-pcoord->x1f(i))/(pcoord->x1f(i+1)-pcoord->x1f(i));
-    Real xx0 = 1.0 - xx1;
-    Psi_(i) = xx0*Psi_face1_(i) + xx1*Psi_face1_(i+1);
-    delta_m_(i) = xx0*delta_m_face1_(i) + xx1*delta_m_face1_(i+1);
+    Psi_(i) = 0.5*(Psi_face1_(i) + Psi_face1_(i+1));
+    delta_m_(i) = 0.5*(delta_m_face1_(i) + delta_m_face1_(i+1));
   }
   
 }
