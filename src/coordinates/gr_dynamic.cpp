@@ -596,9 +596,11 @@ void Coordinates::AddCoordTermsDivergence(
         Real &m_1 = cons(IM1,k,j,i);
         Real &m_2 = cons(IM2,k,j,i);
 
-        // Add source terms to conserved quantities
-        m_1 += dt * s_1;
-        m_2 += dt * s_2;
+        const Real q = pmetric->DensitizationFactor(k,j,i);
+
+        // Add source terms to conserved quantities        
+        m_1 += dt * q * s_1;
+        m_2 += dt * q * s_2;
       }
     }
   }
@@ -631,37 +633,7 @@ void Coordinates::CellMetric(const int k, const int j, const int il, const int i
 
 void Coordinates::Face1Metric(const int k, const int j, const int il, const int iu,
                                 AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {
-  // Extract geometric quantities that do not depend on r
-  const Real &sin_sq_theta = metric_face1_j1_(j);
-
-  // Go through 1D block of cells
-#pragma omp simd
-  for (int i=il; i<=iu; ++i) {
-    // Extract remaining geometric quantities
-    const Real &alpha_sq = metric_face1_i1_(i);
-    const Real &r = x1f(i);
-    Real r_sq = SQR(r);
-
-    // Extract metric terms
-    Real &g00 = g(I00,i);
-    Real &g11 = g(I11,i);
-    Real &g22 = g(I22,i);
-    Real &g33 = g(I33,i);
-    Real &gi00 = g_inv(I00,i);
-    Real &gi11 = g_inv(I11,i);
-    Real &gi22 = g_inv(I22,i);
-    Real &gi33 = g_inv(I33,i);
-
-    // Set metric terms
-    g00 = -alpha_sq;
-    g11 = 1.0/alpha_sq;
-    g22 = r_sq;
-    g33 = r_sq * sin_sq_theta;
-    gi00 = -1.0/alpha_sq;
-    gi11 = alpha_sq;
-    gi22 = 1.0/r_sq;
-    gi33 = 1.0 / (r_sq * sin_sq_theta);
-  }
+  pmy_block->pmetric->Face1Metric(k, j, il, iu, g, g_inv);
   return;
 }
 
@@ -676,37 +648,7 @@ void Coordinates::Face1Metric(const int k, const int j, const int il, const int 
 
 void Coordinates::Face2Metric(const int k, const int j, const int il, const int iu,
                                 AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {
-  // Extract geometric quantities that do not depend on r
-  const Real &sin_sq_theta = metric_face2_j1_(j);
-
-  // Go through 1D block of cells
-#pragma omp simd
-  for (int i=il; i<=iu; ++i) {
-    // Extract remaining geometric quantities
-    const Real &alpha_sq = metric_face2_i1_(i);
-    const Real &r = x1v(i);
-    Real r_sq = SQR(r);
-
-    // Extract metric terms
-    Real &g00 = g(I00,i);
-    Real &g11 = g(I11,i);
-    Real &g22 = g(I22,i);
-    Real &g33 = g(I33,i);
-    Real &gi00 = g_inv(I00,i);
-    Real &gi11 = g_inv(I11,i);
-    Real &gi22 = g_inv(I22,i);
-    Real &gi33 = g_inv(I33,i);
-
-    // Set metric terms
-    g00 = -alpha_sq;
-    g11 = 1.0/alpha_sq;
-    g22 = r_sq;
-    g33 = r_sq * sin_sq_theta;
-    gi00 = -1.0/alpha_sq;
-    gi11 = alpha_sq;
-    gi22 = 1.0/r_sq;
-    gi33 = 1.0 / (r_sq * sin_sq_theta);
-  }
+  pmy_block->pmetric->Face2Metric(k, j, il, iu, g, g_inv);
   return;
 }
 
@@ -721,37 +663,7 @@ void Coordinates::Face2Metric(const int k, const int j, const int il, const int 
 
 void Coordinates::Face3Metric(const int k, const int j, const int il, const int iu,
                                 AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {
-  // Extract geometric quantities that do not depend on r
-  const Real &sin_sq_theta = metric_face3_j1_(j);
-
-  // Go through 1D block of cells
-#pragma omp simd
-  for (int i=il; i<=iu; ++i) {
-    // Extract remaining geometric quantities
-    const Real &alpha_sq = metric_face3_i1_(i);
-    const Real &r = x1v(i);
-    Real r_sq = SQR(r);
-
-    // Extract metric terms
-    Real &g00 = g(I00,i);
-    Real &g11 = g(I11,i);
-    Real &g22 = g(I22,i);
-    Real &g33 = g(I33,i);
-    Real &gi00 = g_inv(I00,i);
-    Real &gi11 = g_inv(I11,i);
-    Real &gi22 = g_inv(I22,i);
-    Real &gi33 = g_inv(I33,i);
-
-    // Set metric terms
-    g00 = -alpha_sq;
-    g11 = 1.0/alpha_sq;
-    g22 = r_sq;
-    g33 = r_sq * sin_sq_theta;
-    gi00 = -1.0/alpha_sq;
-    gi11 = alpha_sq;
-    gi22 = 1.0/r_sq;
-    gi33 = 1.0 / (r_sq * sin_sq_theta);
-  }
+  pmy_block->pmetric->Face3Metric(k, j, il, iu, g, g_inv);
   return;
 }
 
@@ -781,7 +693,7 @@ void Coordinates::PrimToLocal1(const int k, const int j, const int il, const int
     AthenaArray<Real> &bbx) {
   // Calculate metric coefficients
   if (MAGNETIC_FIELDS_ENABLED) {
-    Face1Metric(k, j, il, iu, g_, gi_);
+    pmy_block->pmetric->Face1Metric(k, j, il, iu, g_, gi_);
   }
 
   // Extract useful quantities that do not depend on r
