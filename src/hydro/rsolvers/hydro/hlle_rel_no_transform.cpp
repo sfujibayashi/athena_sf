@@ -19,7 +19,7 @@
 #include "../../../eos/eos.hpp"                  // EquationOfState
 #include "../../../mesh/mesh.hpp"                // MeshBlock
 #include "../../hydro.hpp"
-
+#include "../../../metric/metric.hpp"
 //----------------------------------------------------------------------------------------
 //! \fn void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
 //!                           const int ivx,
@@ -53,13 +53,13 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
   // Get metric components
   switch (ivx) {
     case IVX:
-      pmy_block->pcoord->Face1Metric(k, j, il, iu, g_, gi_);
+      pmy_block->pmetric->Face1Metric(k, j, il, iu, g_, gi_);
       break;
     case IVY:
-      pmy_block->pcoord->Face2Metric(k, j, il, iu, g_, gi_);
+      pmy_block->pmetric->Face2Metric(k, j, il, iu, g_, gi_);
       break;
     case IVZ:
-      pmy_block->pcoord->Face3Metric(k, j, il, iu, g_, gi_);
+      pmy_block->pmetric->Face3Metric(k, j, il, iu, g_, gi_);
       break;
   }
 

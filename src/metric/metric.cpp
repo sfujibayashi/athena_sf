@@ -275,6 +275,7 @@ Real Metric::SqrtMinusG(int k, int j, int i) const {
 }
 
 Real Metric::DensitizationFactor(int k, int j, int i) const {
+  // return 1.0;
   const Real sqrt_minus_g = SqrtMinusG(k,j,i);
   const Real r = pmy_block->pcoord->x1v(i);
   const Real theta = pmy_block->pcoord->x2v(j);
@@ -370,6 +371,9 @@ void Metric::ConstructCovariantMetric(
     Real &g22, Real &g23, Real &g33) const {
 
   const Real sintheta = std::sin(theta);
+
+  // const Real alpha = std::sqrt(1.0 - 2.0*bh_mass_/r);
+  // const Real f = alpha*alpha;
   const Real f = 1.0 - 2.0*bh_mass_/r;
 
   g00 = -f + 2.0*dm/r + 2.0*f*Psi;
