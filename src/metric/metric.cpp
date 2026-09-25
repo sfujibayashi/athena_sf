@@ -13,49 +13,31 @@ Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
   const int nc1 = pmb->ncells1;
   const int nc2 = pmb->ncells2;
   const int nc3 = pmb->ncells3;
-  
-  alpha.NewAthenaArray(nc3, nc2, nc1);
-  beta.NewAthenaArray(3, nc3, nc2, nc1);
-  gamma.NewAthenaArray(N_GAMMA, nc3, nc2, nc1);
 
-  // for now
-  Update(0.0);
+  Psi_.NewAthenaArray(nc1);
+  delta_m_.NewAthenaArray(nc1);
+
+  Psi_.ZeroClear();
+  delta_m_.ZeroClear();
 }
 
 Metric::~Metric() {
 }
 
+// delta_m_ and Psi_ are derived from fluid distribution.
 void Metric::Update(Real time) {
   Coordinates *pcoord = pmy_block->pcoord;
   
-  const int nc1 = pmy_block->ncells1;
-  const int nc2 = pmy_block->ncells2;
-  const int nc3 = pmy_block->ncells3;
+  // const int nc1 = pmy_block->ncells1;
+  // const int nc2 = pmy_block->ncells2;
+  // const int nc3 = pmy_block->ncells3;
   
-  for (int k=0; k<nc3; ++k) {
-    for (int j=0; j<nc2; ++j) {
-      const Real theta = pcoord->x2v(j);
-      const Real sin_theta = std::sin(theta);
-      
-      for (int i=0; i<nc1; ++i) {
-        const Real r = pcoord->x1v(i);
-        const Real alpha_sq = 1.0 - 2.0*bh_mass_/r;
-        
-        alpha(k,j,i) = std::sqrt(alpha_sq);
-        
-        beta(0,k,j,i) = 0.0;
-        beta(1,k,j,i) = 0.0;
-        beta(2,k,j,i) = 0.0;
-        
-        gamma(I_G11,k,j,i) = 1.0/alpha_sq;
-        gamma(I_G12,k,j,i) = 0.0;
-        gamma(I_G13,k,j,i) = 0.0;
-        gamma(I_G22,k,j,i) = r*r;
-        gamma(I_G23,k,j,i) = 0.0;
-        gamma(I_G33,k,j,i) = r*r*sin_theta*sin_theta;
-      }
-    }
-  }
+  // for (int k=0; k<nc3; ++k) {
+  //   for (int j=0; j<nc2; ++j) {
+  //     for (int i=0; i<nc1; ++i) {
+  //     }
+  //   }
+  // }
 }
 
 Real Metric::DetSpatialMetric(Real g11, Real g12, Real g13,
@@ -97,68 +79,31 @@ void Metric::InvertSpatialMetric(Real g11, Real g12, Real g13,
   
 void Metric::CellMetric(const int k, const int j, const int il, const int iu,
                 AthenaArray<Real> &g, AthenaArray<Real> &g_inv){
+  
+  Coordinates *pcoord = pmy_block->pcoord;
+  
+  const Real theta = pcoord->x2v(j);
   for(int i=il; i<=iu; ++i){
-    // const Real a = alpha(k,j,i);
-
-    // // beta^i
-    // const Real b1 = beta(0,k,j,i);
-    // const Real b2 = beta(1,k,j,i);
-    // const Real b3 = beta(2,k,j,i);
-      
-    // // g_ij = gamma_ij
-    // const Real g11 = gamma(I_G11,k,j,i);
-    // const Real g12 = gamma(I_G12,k,j,i);
-    // const Real g13 = gamma(I_G13,k,j,i);
-    // const Real g22 = gamma(I_G22,k,j,i);
-    // const Real g23 = gamma(I_G23,k,j,i);
-    // const Real g33 = gamma(I_G33,k,j,i);
-
-    ConstructCovariantMetric(
-      alpha(k,j,i),
-      beta(0,k,j,i),
-      beta(1,k,j,i),
-      beta(2,k,j,i),
-      gamma(I_G11,k,j,i),
-      gamma(I_G12,k,j,i),
-      gamma(I_G13,k,j,i),
-      gamma(I_G22,k,j,i),
-      gamma(I_G23,k,j,i),
-      gamma(I_G33,k,j,i),
-      i, g);
+    const Real r = pcoord->x1v(i);
     
-    const Real h00 = 0.0;
-    const Real h01 = 0.0;
-    const Real h02 = 0.0;
-    const Real h03 = 0.0;
-    const Real h11 = 0.0;
-    const Real h12 = 0.0;
-    const Real h13 = 0.0;
-    const Real h22 = 0.0;
-    const Real h23 = 0.0;
-    const Real h33 = 0.0;
-
-    AddSelfGravityPerturbation(
-     h00,  h01,  h02,  h03,
-     h11,  h12,  h13,
-     h22,  h23,  h33,
-     i, g);
+    Real g00, g01, g02, g03;
+    Real g11, g12, g13, g22, g23, g33;
+    ConstructCellCovariantMetric(k,j,i,
+      g00, g01, g02, g03,
+      g11, g12, g13, g22, g23, g33);
+    
+    g(I00) = g00;
+    g(I01) = g01;
+    g(I02) = g02;
+    g(I03) = g03;
+    g(I11) = g11;
+    g(I12) = g12;
+    g(I13) = g13;
+    g(I22) = g22;
+    g(I23) = g23;
+    g(I33) = g33;
     
     InvertMetric(i, g, g_inv);
-
-    
-    // Construct4Metric(
-    //   alpha(k,j,i),
-    //   beta(0,k,j,i),
-    //   beta(1,k,j,i),
-    //   beta(2,k,j,i),
-    //   gamma(I_G11,k,j,i),
-    //   gamma(I_G12,k,j,i),
-    //   gamma(I_G13,k,j,i),
-    //   gamma(I_G22,k,j,i),
-    //   gamma(I_G23,k,j,i),
-    //   gamma(I_G33,k,j,i),
-    //   i, g, g_inv);
-
   }
 }
 
@@ -168,40 +113,18 @@ void Metric::Face1Metric(const int k, const int j, const int il, const int iu,
   Coordinates *pcoord = pmy_block->pcoord;
   
   const Real theta = pcoord->x2v(j);
-  const Real sintheta = std::sin(theta);
-  const Real sin2theta = sintheta*sintheta;
-
+  
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
-
-    Real r = pcoord->x1f(i);
-    Real r_sq = SQR(r);
-    Real f = 1.0 - 2.0*bh_mass_/r;
-
-    Real a = std::sqrt(f);
-    Real b1= 0.0;
-    Real b2= 0.0;
-    Real b3= 0.0;
-    Real g11 = 1.0/f;
-    Real g12 = 0.0;
-    Real g13 = 0.0;
-    Real g22 = r_sq;
-    Real g23 = 0.0;
-    Real g33 = r_sq*sin2theta;
-
-    Construct4Metric(
-      a,
-      b1,
-      b2,
-      b3,
-      g11,
-      g12,
-      g13,
-      g22,
-      g23,
-      g33,
-      i, g, g_inv);
+    const Real r = pcoord->x1f(i);
+    ConstructBackgroundMetric(r, theta, i, g);
+    
+    const Real Psi = 0.0;
+    const Real delta_m = 0.0;
+    AddSelfGravityPerturbation(r, Psi, delta_m, i, g);
+    
+    InvertMetric(i, g, g_inv);
   }
   return;
 }
@@ -212,40 +135,20 @@ void Metric::Face2Metric(const int k, const int j, const int il, const int iu,
   Coordinates *pcoord = pmy_block->pcoord;
   
   const Real theta = pcoord->x2f(j);
-  const Real sintheta = std::sin(theta);
-  const Real sin2theta = sintheta*sintheta;
-
+  
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
 
-    Real r = pcoord->x1v(i);
-    Real r_sq = SQR(r);
-    Real f = 1.0 - 2.0*bh_mass_/r;
+    const Real r = pcoord->x1v(i);
 
-    Real a = std::sqrt(f);
-    Real b1= 0.0;
-    Real b2= 0.0;
-    Real b3= 0.0;
-    Real g11 = 1.0/f;
-    Real g12 = 0.0;
-    Real g13 = 0.0;
-    Real g22 = r_sq;
-    Real g23 = 0.0;
-    Real g33 = r_sq*sin2theta;
-
-    Construct4Metric(
-      a,
-      b1,
-      b2,
-      b3,
-      g11,
-      g12,
-      g13,
-      g22,
-      g23,
-      g33,
-      i, g, g_inv);
+    ConstructBackgroundMetric(r, theta, i, g);
+    
+    const Real Psi = 0.0;
+    const Real delta_m = 0.0;
+    AddSelfGravityPerturbation(r, Psi, delta_m, i, g);
+    
+    InvertMetric(i, g, g_inv);
   }
   return;
 }
@@ -256,60 +159,48 @@ void Metric::Face3Metric(const int k, const int j, const int il, const int iu,
   Coordinates *pcoord = pmy_block->pcoord;
   
   const Real theta = pcoord->x2v(j);
-  const Real sintheta = std::sin(theta);
-  const Real sin2theta = sintheta*sintheta;
 
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
 
-    Real r = pcoord->x1v(i);
-    Real r_sq = SQR(r);
-    Real f = 1.0 - 2.0*bh_mass_/r;
+    const Real r = pcoord->x1v(i);
 
-    Real a = std::sqrt(f);
-    Real b1= 0.0;
-    Real b2= 0.0;
-    Real b3= 0.0;
-    Real g11 = 1.0/f;
-    Real g12 = 0.0;
-    Real g13 = 0.0;
-    Real g22 = r_sq;
-    Real g23 = 0.0;
-    Real g33 = r_sq*sin2theta;
+    ConstructBackgroundMetric(r, theta, i, g);
+    
+    const Real Psi = 0.0;
+    const Real delta_m = 0.0;
+    AddSelfGravityPerturbation(r, Psi, delta_m, i, g);
+    
+    InvertMetric(i, g, g_inv);
 
-    Construct4Metric(
-      a,
-      b1,
-      b2,
-      b3,
-      g11,
-      g12,
-      g13,
-      g22,
-      g23,
-      g33,
-      i, g, g_inv);
   }
   return;
 }
 
 Real Metric::SqrtMinusG(int k, int j, int i) const {
+  Real g00, g01, g02, g03;
+  Real g11, g12, g13, g22, g23, g33;
   
-  // lapse
-  const Real a = alpha(k,j,i);
+  ConstructCellCovariantMetric(k, j, i,
+      g00, g01, g02, g03,
+      g11, g12, g13, g22, g23, g33);
   
-  // g_ij = gamma_ij
-  const Real g11 = gamma(I_G11,k,j,i);
-  const Real g12 = gamma(I_G12,k,j,i);
-  const Real g13 = gamma(I_G13,k,j,i);
-  const Real g22 = gamma(I_G22,k,j,i);
-  const Real g23 = gamma(I_G23,k,j,i);
-  const Real g33 = gamma(I_G33,k,j,i);
-  
-  const Real detgamma = DetSpatialMetric(g11,g12,g13,g22,g23,g33);
-  
-  return a*std::sqrt(detgamma);
+  const Real detgamma = DetSpatialMetric(g11, g12, g13, g22, g23, g33);
+
+  // beta_i = g_0i
+  Real gi11, gi12, gi13, gi22, gi23, gi33;
+  InvertSpatialMetric(g11, g12, g13, g22, g23, g33,
+                      gi11, gi12, gi13, gi22, gi23, gi33);
+
+  const Real beta1 = gi11*g01 + gi12*g02 + gi13*g03;
+  const Real beta2 = gi12*g01 + gi22*g02 + gi23*g03;
+  const Real beta3 = gi13*g01 + gi23*g02 + gi33*g03;
+
+
+  const Real alpha_sq = -g00 + g01*beta1 + g02*beta2 + g03*beta3;
+
+  return std::sqrt(alpha_sq*detgamma);
 }
 
 Real Metric::DensitizationFactor(int k, int j, int i) const {
@@ -329,103 +220,43 @@ Real Metric::GetBlackHoleMass() const {
   return bh_mass_;
 }
 
-void Metric::Construct4Metric(
-     Real a,
-     Real b1, Real b2, Real b3,
-     Real g11, Real g12, Real g13,
-     Real g22, Real g23, Real g33,
-     int i,
-     AthenaArray<Real> &g,
-     AthenaArray<Real> &g_inv) const {
 
-  // g_0i = gamma_ij beta^j
-  const Real g01 = g11*b1 + g12*b2 + g13*b3;
-  const Real g02 = g12*b1 + g22*b2 + g23*b3;
-  const Real g03 = g13*b1 + g23*b2 + g33*b3;
 
-  // g_00 = -alpha^2 + gamma_ij beta^i beta^j
-  const Real g00 = -a*a + g01*b1 + g02*b2 + g03*b3;
-
-  g(I00,i) = g00;
-  g(I01,i) = g01;
-  g(I02,i) = g02;
-  g(I03,i) = g03;
-  g(I11,i) = g11;
-  g(I12,i) = g12;
-  g(I13,i) = g13;
-  g(I22,i) = g22;
-  g(I23,i) = g23;
-  g(I33,i) = g33;
-
-  Real gi11, gi12, gi13, gi22, gi23, gi33;
-
-  InvertSpatialMetric(
-      g11, g12, g13,
-      g22, g23, g33,
-      gi11, gi12, gi13,
-      gi22, gi23, gi33);
-
-  const Real a2i = 1.0/(a*a);
-
-  g_inv(I00,i) = -a2i;
-  g_inv(I01,i) =  b1*a2i;
-  g_inv(I02,i) =  b2*a2i;
-  g_inv(I03,i) =  b3*a2i;
-
-  g_inv(I11,i) = gi11 - b1*b1*a2i;
-  g_inv(I12,i) = gi12 - b1*b2*a2i;
-  g_inv(I13,i) = gi13 - b1*b3*a2i;
-  g_inv(I22,i) = gi22 - b2*b2*a2i;
-  g_inv(I23,i) = gi23 - b2*b3*a2i;
-  g_inv(I33,i) = gi33 - b3*b3*a2i;
-}
-
-void Metric::ConstructCovariantMetric(
-    Real a,
-    Real b1, Real b2, Real b3,
-    Real g11, Real g12, Real g13,
-    Real g22, Real g23, Real g33,
+// constructor of background metric g_munu
+void Metric::ConstructBackgroundMetric(
+    Real r, Real theta,
     int i,
     AthenaArray<Real> &g) const{
   
-  // g_0i = gamma_ij beta^j
-  const Real g01 = g11*b1 + g12*b2 + g13*b3;
-  const Real g02 = g12*b1 + g22*b2 + g23*b3;
-  const Real g03 = g13*b1 + g23*b2 + g33*b3;
+  const Real r_sq = SQR(r);
+  const Real f = 1.0 - 2.0*bh_mass_/r;
+  const Real sintheta = std::sin(theta);
+  const Real sin2theta = sintheta*sintheta;
 
-  // g_00 = -alpha^2 + gamma_ij beta^i beta^j
-  const Real g00 = -a*a + g01*b1 + g02*b2 + g03*b3;
-
-  g(I00,i) = g00;
-  g(I01,i) = g01;
-  g(I02,i) = g02;
-  g(I03,i) = g03;
-  g(I11,i) = g11;
-  g(I12,i) = g12;
-  g(I13,i) = g13;
-  g(I22,i) = g22;
-  g(I23,i) = g23;
-  g(I33,i) = g33;
+  g(I00,i) = -f;
+  g(I01,i) = 0.0;
+  g(I02,i) = 0.0;
+  g(I03,i) = 0.0;
+  g(I11,i) = 1.0/f;
+  g(I12,i) = 0.0;
+  g(I13,i) = 0.0;
+  g(I22,i) = r_sq;
+  g(I23,i) = 0.0;
+  g(I33,i) = r_sq*sin2theta;
 
 }
 
 void Metric::AddSelfGravityPerturbation(
-    Real h00, Real h01, Real h02, Real h03,
-    Real h11, Real h12, Real h13,
-    Real h22, Real h23, Real h33,
+    Real r, Real Psi, Real delta_m,
     int i,
     AthenaArray<Real> &g) const {
-  
+
+  const Real f = 1.0 - 2.0*bh_mass_/r;
+
+  const Real h00 = 2.0*delta_m/r + 2.0*f*Psi;
+  const Real h11 = 2.0*delta_m / (r*f*f);
   g(I00,i) += h00;
-  g(I01,i) += h01;
-  g(I02,i) += h02;
-  g(I03,i) += h03;
   g(I11,i) += h11;
-  g(I12,i) += h12;
-  g(I13,i) += h13;
-  g(I22,i) += h22;
-  g(I23,i) += h23;
-  g(I33,i) += h33;
 
 }
 
@@ -481,4 +312,32 @@ void Metric::InvertMetric(
   g_inv(I22,i) = gi22 - b2*b2*a2i;
   g_inv(I23,i) = gi23 - b2*b3*a2i;
   g_inv(I33,i) = gi33 - b3*b3*a2i;
+}
+
+void Metric::ConstructCellCovariantMetric(
+    int k, int j, int i,
+    Real &g00, Real &g01, Real &g02, Real &g03,
+    Real &g11, Real &g12, Real &g13,
+    Real &g22, Real &g23, Real &g33) const {
+
+  Coordinates *pcoord = pmy_block->pcoord;
+
+  const Real theta = pcoord->x2v(j);
+  const Real r = pcoord->x1v(i);
+
+  const Real sintheta = std::sin(theta);
+  const Real f = 1.0 - 2.0*bh_mass_/r;
+
+  g00 = -f + 2.0*delta_m_(i)/r + 2.0*f*Psi_(i);
+  g01 = 0.0;
+  g02 = 0.0;
+  g03 = 0.0;
+  
+  g11 = 1.0/f + 2.0*delta_m_(i)/(r*f*f);
+  g12 = 0.0;
+  g13 = 0.0;
+  
+  g22 = r*r;
+  g23 = 0.0;
+  g33 = r*r*sintheta*sintheta;
 }

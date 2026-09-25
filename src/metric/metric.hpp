@@ -19,18 +19,19 @@ private:
   Real DetSpatialMetric(Real g11, Real g12, Real g13,
                         Real g22, Real g23, Real g33) const ;
   
-  void ConstructCovariantMetric(
-    Real a,
-    Real b1, Real b2, Real b3,
-    Real g11, Real g12, Real g13,
-    Real g22, Real g23, Real g33,
+  void ConstructCellCovariantMetric(
+    int k, int j, int i,
+    Real &g00, Real &g01, Real &g02, Real &g03,
+    Real &g11, Real &g12, Real &g13,
+    Real &g22, Real &g23, Real &g33) const;
+
+  void ConstructBackgroundMetric(
+    Real r, Real theta,
     int i,
     AthenaArray<Real> &g) const;
 
   void AddSelfGravityPerturbation(
-    Real h00, Real h01, Real h02, Real h03,
-    Real h11, Real h12, Real h13,
-    Real h22, Real h23, Real h33,
+    Real r, Real Psi, Real delta_m,
     int i,
     AthenaArray<Real> &g) const;
 
@@ -40,28 +41,15 @@ private:
     AthenaArray<Real> &g_inv) const;
 
 public:
-  
-  enum {
-    I_G11 = 0,
-    I_G12,
-    I_G13,
-    I_G22,
-    I_G23,
-    I_G33,
-    N_GAMMA
-  };
 
   Metric(MeshBlock *pmb, ParameterInput *pin);
   ~Metric();
 
   MeshBlock *pmy_block;  // ptr to MeshBlock containing this Field
 
-  // ADM metric variables
-  AthenaArray<Real> alpha;
-  AthenaArray<Real> beta;
-  AthenaArray<Real> gamma;
-  // AthenaArray<Real> H0_;
-  // AthenaArray<Real> delta_m_;
+  // Quantities needed to construct perturbed field (Only monopole l=0 mode)
+  AthenaArray<Real> Psi_;
+  AthenaArray<Real> delta_m_;
 
   void Update(Real time);
 
@@ -86,13 +74,6 @@ public:
 
   Real GetBlackHoleMass() const;
 
-  void Construct4Metric(Real alpha,
-                        Real beta1, Real beta2, Real beta3,
-                        Real gamma11, Real gamma12, Real gamma13,
-                        Real gamma22, Real gamma23, Real gamma33,
-                        int i,
-                        AthenaArray<Real> &g,
-                        AthenaArray<Real> &g_inv) const;
 
 };
 
