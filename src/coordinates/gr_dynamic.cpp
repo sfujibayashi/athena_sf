@@ -436,18 +436,24 @@ void Coordinates::Face3Area(const int k, const int j, const int il, const int iu
 //   interface area orthogonal to X-face
 
 Real Coordinates::GetFace1Area(const int k, const int j, const int i) {
+  class Metric *pmetric = pmy_block->pmetric;
   // \Delta A = r^2 (-\Delta\cos\theta) \Delta\phi
-  return coord_area1_i1_(i) * coord_area1_j1_(j) * dx3f(k);
+  return coord_area1_i1_(i) * coord_area1_j1_(j) * dx3f(k)
+    *pmetric->Face1DensitizationFactor(k,j,i);
 }
 
 Real Coordinates::GetFace2Area(const int k, const int j, const int i) {
+  class Metric *pmetric = pmy_block->pmetric;
   // \Delta A = 1/3 \Delta(r^3) \sin\theta \Delta\phi
-  return coord_area2_i1_(i) * coord_area2_j1_(j) * dx3f(k);
+  return coord_area2_i1_(i) * coord_area2_j1_(j) * dx3f(k)
+    *pmetric->Face2DensitizationFactor(k,j,i);
 }
 
 Real Coordinates::GetFace3Area(const int k, const int j, const int i) {
+  class Metric *pmetric = pmy_block->pmetric;
   // \Delta A = 1/3 \Delta(r^3) (-\Delta\cos\theta)
-  return coord_area3_i1_(i) * coord_area3_j1_(j);
+  return coord_area3_i1_(i) * coord_area3_j1_(j)
+    *pmetric->Face3DensitizationFactor(k,j,i);
 }
 
 //----------------------------------------------------------------------------------------
