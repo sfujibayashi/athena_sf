@@ -66,6 +66,10 @@ Real Metric::BlackHoleMassAccretionRate(const AthenaArray<Real> &x1flux) const {
 
 }
 
+void Metric::CommitBlackHoleMass(){
+  bh_mass_ = bh_mass_pending_;
+}
+
 
 // delta_m_ and Psi_ are derived from fluid distribution.
 void Metric::Update() {

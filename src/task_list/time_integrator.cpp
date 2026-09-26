@@ -2295,6 +2295,7 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
 
 #if DYNAMIC_METRIC_ENABLED
     // update gravity from newly obtained primitive variables
+    pmb->pmetric->CommitBlackHoleMass();
     pmb->pmetric->Update();
 #endif
 
@@ -3114,7 +3115,11 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsCRTC(MeshBlock *pmb, int stage)
 
 TaskStatus TimeIntegratorTaskList::IntegrateBlackHoleMass(MeshBlock *pmb, int stage) {
   Hydro *ph = pmb->phydro;
-  Field *pf = pmb->pfield;
+  
+  const Real mdot_bh =
+    pmb->pmetric->BlackHoleMassAccretionRate(ph->flux[X1DIR]);
+  pmb->pmetric->mdot_bh_ = mdot_bh;
+  
 
   if (pmb->pmy_mesh->fluid_setup != FluidFormulation::evolve) return TaskStatus::next;
 
@@ -3125,12 +3130,12 @@ TaskStatus TimeIntegratorTaskList::IntegrateBlackHoleMass(MeshBlock *pmb, int st
         pmb->pmetric->bh_mass_prev_ = pmb->pmetric->GetBlackHoleMass();
         
         pmb->pmetric->bh_mass_pending_ = pmb->pmetric->bh_mass_prev_
-          + 0.5 * pmb->pmy_mesh->dt * pmb->pmetric->mdot_bh_;
+          + 0.5 * pmb->pmy_mesh->dt * mdot_bh;
       }
       
       if (stage == 2) {
         pmb->pmetric->bh_mass_pending_ = pmb->pmetric->bh_mass_prev_
-          + pmb->pmy_mesh->dt * pmb->pmetric->mdot_bh_;
+          + pmb->pmy_mesh->dt * mdot_bh;
       }
     }
     return TaskStatus::next;
