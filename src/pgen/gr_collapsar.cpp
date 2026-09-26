@@ -359,6 +359,17 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   const bool initial_metric_update =
     pin->GetOrAddBoolean("coord", "initial_metric_update", true);
   
+  const bool time_metric_update =
+    pin->GetOrAddBoolean("coord", "time_metric_update", true);
+  
+  if (time_metric_update && !initial_metric_update) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in gr_collapsar.cpp" << std::endl
+        << "time_metric_update=true requires initial_metric_update=true."
+        << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  
   if (initial_metric_update) {
     // Calculate metric perturbation from primitive rho.
     pmetric->Update();
