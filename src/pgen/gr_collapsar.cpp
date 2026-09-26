@@ -286,6 +286,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       }
     }
   }
+  // Calculate metric perturbation from primitive rho.
+  pmetric->Update();
 
   // Convert primitive -> conserved
   AthenaArray<Real> bb;
@@ -296,8 +298,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       phydro->w, bb, phydro->u, pcoord,
       is, ie, js, je, ks, ke);
 
-  pmetric->Update();
-  std::abort();
 }
 
 

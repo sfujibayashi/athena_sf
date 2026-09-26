@@ -36,6 +36,8 @@
 #include "../scalars/scalars.hpp"
 #include "task_list.hpp"
 
+#include "../metric/metric.hpp"
+
 //----------------------------------------------------------------------------------------
 //! TimeIntegratorTaskList constructor
 
@@ -2278,6 +2280,10 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
     ph->w.SwapAthenaArray(ph->w1);
     // r1/r_old for GR is currently unused:
     // ps->r.SwapAthenaArray(ps->r1);
+
+    // update gravity from newly obtained primitive variables
+    pmb->pmetric->Update();
+    
     return TaskStatus::success;
   }
   return TaskStatus::fail;
