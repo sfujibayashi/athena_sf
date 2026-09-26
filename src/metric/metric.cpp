@@ -69,7 +69,6 @@ void Metric::Update() {
     }
   }
 
-  
   delta_m_face1_(is) = 0.0;
 
   for (int i=is; i<=ie; ++i) {
@@ -97,8 +96,19 @@ void Metric::Update() {
     Psi_face1_(i) = Psi_face1_(i+1) + dm_shell(i);
   }
 
+  // inner radial ghost faces
+  for (int i=is-1; i>=0; --i) {
+    delta_m_face1_(i) = delta_m_face1_(is);
+    Psi_face1_(i)     = Psi_face1_(is);
+  }
   
-  for (int i=is; i<=ie; ++i) {
+  // outer radial ghost faces
+  for (int i=ie+2; i<=nc1; ++i) {
+    delta_m_face1_(i) = delta_m_face1_(ie+1);
+    Psi_face1_(i)     = Psi_face1_(ie+1);
+  }
+  
+  for (int i=0; i<=nc1; ++i) {
     Psi_(i) = 0.5*(Psi_face1_(i) + Psi_face1_(i+1));
     delta_m_(i) = 0.5*(delta_m_face1_(i) + delta_m_face1_(i+1));
   }
