@@ -90,6 +90,25 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
   // Read a flag for shear periodic
   SHEAR_PERIODIC = pm->shear_periodic;
 
+  if (DYNAMIC_METRIC_ENABLED) {
+    if (integrator != "vl2") {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in TimeIntegratorTaskList constructor" << std::endl
+          << "Dynamic metric currently supports only integrator=vl2." << std::endl
+          << "Selected integrator=" << integrator << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    
+    if (ORBITAL_ADVECTION) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in TimeIntegratorTaskList constructor" << std::endl
+          << "Dynamic metric currently does not support orbital advection."
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+  }
+
+
   if (integrator == "rk4" || integrator == "ssprk5_4") {
     // shear periodic not work with rk4 or ssprk5_4
     if (SHEAR_PERIODIC) {
