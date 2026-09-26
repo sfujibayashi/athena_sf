@@ -182,7 +182,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   printf("Black hole mass (cgs,code unit)=%15.7e, %15.7e\n",M_inner_cgs, m_bh_code);
   pin->SetReal("coord", "m", m_bh_code);
 
-
+  // output
   AllocateUserHistoryOutput(3);
   
   EnrollUserHistoryOutput(0, HistoryBlackHoleMass, "m_bh",
@@ -194,6 +194,10 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(2, HistoryOuterMassFlux, "mdot_out",
                           UserHistoryOperation::sum);
 
+  // restart
+  AllocateRealUserMeshDataField(1);
+  // BH mass
+  ruser_mesh_data[0].NewAthenaArray(1);
 }
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
@@ -209,6 +213,13 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   SetUserOutputVariableName(7, "Phi");
   SetUserOutputVariableName(8, "q");
 
+
+  AllocateRealUserMeshBlockDataField(2);
+  
+  // for Psi_face1_
+  ruser_meshblock_data[0].NewAthenaArray(ncells1 + 1);
+  // for delta_m_face1_
+  ruser_meshblock_data[1].NewAthenaArray(ncells1 + 1);
 }
 
 void MeshBlock::UserWorkInLoop(void) {
@@ -275,6 +286,17 @@ void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
     }
   }
 
+
+  // restart data
+  
+  // BH mass -> MeshData
+  pmy_mesh->ruser_mesh_data[0](0) = pmetric->GetBlackHoleMass();
+  
+  // delta_m_face1_
+  for(int i=0; i<=ncells1; ++i){
+    ruser_meshblock_data[0](i) = pmetric->Psi_face1_(i);
+    ruser_meshblock_data[1](i) = pmetric->delta_m_face1_(i);
+  }
 }
 
 
