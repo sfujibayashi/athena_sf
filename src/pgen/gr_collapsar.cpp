@@ -137,29 +137,26 @@ namespace {
     return pmb->pmetric->mdot_bh_;
   }
 
-  Real OutflowRate(const AthenaArray<Real> &x1flux) const {
-    
-    MeshBlock *pmb = pmy_block;
-    Coordinates *pcoord = pmb->pcoord;
-    
-    // This MeshBlock does not touch the physical inner-x1 boundary.
+  Real HistoryOuterMassFlux(MeshBlock *pmb, int iout) {
+    // This block does not touch the physical outer-x1 boundary.
     if (pmb->pbval->block_bcs[BoundaryFace::outer_x1]
         == BoundaryFlag::block) {
       return 0.0;
     }
     
-    Real mdot = 0.0;
+    Real mdot_out = 0.0;
     
     for (int k=pmb->ks; k<=pmb->ke; ++k) {
       for (int j=pmb->js; j<=pmb->je; ++j) {
-        const Real area = pcoord->GetFace1Area(k, j, pmb->ie+1);
-      
-        // inward flux is negative
-        mdot += area * x1flux(IDN, k, j, pmb->ie+1);
+        const Real area =
+          pmb->pcoord->GetFace1Area(k, j, pmb->ie+1);
+        
+        mdot_out += area
+          * pmb->phydro->flux[X1DIR](IDN,k,j,pmb->ie+1);
       }
     }
-    return mdot;
     
+    return mdot_out;
   }
 
 }
@@ -194,7 +191,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(1, HistoryBlackHoleMassAccretionRate, "mdot_bh",
                           UserHistoryOperation::sum);
 
-  EnrollUserHistoryOutput(2, HistoryMout, "m_out",
+  EnrollUserHistoryOutput(2, HistoryOuterMassFlux, "mdot_out",
                           UserHistoryOperation::sum);
 
 }
