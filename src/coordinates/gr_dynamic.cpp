@@ -1095,26 +1095,27 @@ void Coordinates::PrimToLocal3(const int k, const int j, const int il, const int
 void Coordinates::FluxToGlobal1(const int k, const int j, const int il, const int iu,
     const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
     AthenaArray<Real> &ey, AthenaArray<Real> &ez) {
-  // Extract geometric quantities that do not depend on r
-  const Real &sin_sq_theta = metric_face1_j1_(j);
-  const Real &abs_sin_theta = trans_face1_j1_(j);
+
+  class Metric *pmetric = pmy_block->pmetric;
+  
+  // Calculate metric coefficients
+  pmetric->Face1Metric(k, j, il, iu, g_, gi_);
 
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
     // Extract geometric quantities
-    const Real &alpha_sq = metric_face1_i1_(i);
-    const Real &r = x1f(i);
-    const Real r_sq = SQR(r);
-    const Real &alpha = trans_face1_i1_(i);
-    const Real g00 = -alpha_sq;
-    const Real g11 = 1.0/alpha_sq;
-    const Real g22 = r_sq;
-    const Real g33 = r_sq * sin_sq_theta;
+    const Real &g00 = g_(I00,i);
+    const Real &g11 = g_(I11,i);
+    const Real &g22 = g_(I22,i);
+    const Real &g33 = g_(I33,i);
+
+    const Real &alpha_sq = -g00;
+    const Real &alpha = std::sqrt(alpha_sq);
     const Real m0_tm = 1.0/alpha;
-    const Real m1_x = alpha;
-    const Real m2_y = 1.0/r;
-    const Real m3_z = 1.0 / (r * abs_sin_theta);
+    const Real m1_x = 1.0 / std::sqrt(g11);
+    const Real m2_y = 1.0 / std::sqrt(g22);
+    const Real m3_z = 1.0 / std::sqrt(g33);
 
     // Extract local conserved quantities and fluxes
     const Real dx = flux(IDN,k,j,i);
@@ -1177,26 +1178,27 @@ void Coordinates::FluxToGlobal1(const int k, const int j, const int il, const in
 void Coordinates::FluxToGlobal2(const int k, const int j, const int il, const int iu,
     const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
     AthenaArray<Real> &ey, AthenaArray<Real> &ez) {
-  // Extract geometric quantities that do not depend on r
-  const Real &sin_sq_theta = metric_face2_j1_(j);
-  const Real &abs_sin_theta = trans_face2_j1_(j);
+
+  class Metric *pmetric = pmy_block->pmetric;
+  
+  // Calculate metric coefficients
+  pmetric->Face1Metric(k, j, il, iu, g_, gi_);
 
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
     // Extract geometric quantities
-    const Real &alpha_sq = metric_face2_i1_(i);
-    const Real &r = x1v(i);
-    const Real r_sq = SQR(r);
-    const Real &alpha = trans_face2_i1_(i);
-    const Real g00 = -alpha_sq;
-    const Real g11 = 1.0/alpha_sq;
-    const Real g22 = r_sq;
-    const Real g33 = r_sq * sin_sq_theta;
+    const Real &g00 = g_(I00,i);
+    const Real &g11 = g_(I11,i);
+    const Real &g22 = g_(I22,i);
+    const Real &g33 = g_(I33,i);
+
+    const Real &alpha_sq = -g00;
+    const Real &alpha = std::sqrt(alpha_sq);
     const Real m0_tm = 1.0/alpha;
-    const Real m1_z = alpha;
-    const Real m2_x = 1.0/r;
-    const Real m3_y = 1.0 / (r * abs_sin_theta);
+    const Real m1_z = 1.0 / std::sqrt(g11);
+    const Real m2_x = 1.0 / std::sqrt(g22);
+    const Real m3_y = 1.0 / std::sqrt(g33);
 
     // Extract local conserved quantities and fluxes
     const Real dx = flux(IDN,k,j,i);
@@ -1259,26 +1261,27 @@ void Coordinates::FluxToGlobal2(const int k, const int j, const int il, const in
 void Coordinates::FluxToGlobal3(const int k, const int j, const int il, const int iu,
     const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
     AthenaArray<Real> &ey, AthenaArray<Real> &ez) {
-  // Extract geometric quantities that do not depend on r
-  const Real &sin_sq_theta = metric_face3_j1_(j);
-  const Real &abs_sin_theta = trans_face3_j1_(j);
+
+  class Metric *pmetric = pmy_block->pmetric;
+  
+  // Calculate metric coefficients
+  pmetric->Face1Metric(k, j, il, iu, g_, gi_);
 
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
     // Extract geometric quantities
-    const Real &alpha_sq = metric_face3_i1_(i);
-    const Real &r = x1v(i);
-    const Real r_sq = SQR(r);
-    const Real &alpha = trans_face3_i1_(i);
-    const Real g00 = -alpha_sq;
-    const Real g11 = 1.0/alpha_sq;
-    const Real g22 = r_sq;
-    const Real g33 = r_sq * sin_sq_theta;
+    const Real &g00 = g_(I00,i);
+    const Real &g11 = g_(I11,i);
+    const Real &g22 = g_(I22,i);
+    const Real &g33 = g_(I33,i);
+
+    const Real &alpha_sq = -g00;
+    const Real &alpha = std::sqrt(alpha_sq);
     const Real m0_tm = 1.0/alpha;
-    const Real m1_y = alpha;
-    const Real m2_z = 1.0/r;
-    const Real m3_x = 1.0 / (r * abs_sin_theta);
+    const Real m1_y = 1.0 / std::sqrt(g11);
+    const Real m2_z = 1.0 / std::sqrt(g22);
+    const Real m3_x = 1.0 / std::sqrt(g33);
 
     // Extract local conserved quantities and fluxes
     const Real dx = flux(IDN,k,j,i);
