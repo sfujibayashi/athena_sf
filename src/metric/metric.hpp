@@ -61,7 +61,10 @@ public:
   
   Real SqrtMinusG(int k, int j, int i) const;
 
-  Real DensitizationFactor(int k, int j, int i) const;
+  Real CellDensitizationFactor(int k, int j, int i) const;
+  Real Face1DensitizationFactor(int k, int j, int i) const;
+  Real Face2DensitizationFactor(int k, int j, int i) const;
+  Real Face3DensitizationFactor(int k, int j, int i) const;
 
   void SetBlackHoleMass(Real mass);
 

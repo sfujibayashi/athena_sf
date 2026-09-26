@@ -416,7 +416,7 @@ void CalculateNormalConserved(
 
     // Extract conserved quantities
     // un-densitize with q := sqrt(-g)/(r^2 sin(theta));
-    const Real q = pmetric->DensitizationFactor(k, j, i);
+    const Real q = pmetric->CellDensitizationFactor(k, j, i);
     const Real qi= 1.0/q;
 
     const Real rho_u0 = cons(IDN,k,j,i) * qi;
@@ -646,7 +646,7 @@ void PrimitiveToConservedSingle(
   t0_3 = wgas * u0 * u_3;
 
   // densitize with q := sqrt(-g)/(r^2 sin(theta));
-  const Real q = pco->pmy_block->pmetric->DensitizationFactor(k,j,i);
+  const Real q = pco->pmy_block->pmetric->CellDensitizationFactor(k,j,i);
   
   rho_u0 *= q;
   t0_0   *= q;

@@ -596,7 +596,7 @@ void Coordinates::AddCoordTermsDivergence(
         Real &m_1 = cons(IM1,k,j,i);
         Real &m_2 = cons(IM2,k,j,i);
 
-        const Real q = pmetric->DensitizationFactor(k,j,i);
+        const Real q = pmetric->CellDensitizationFactor(k,j,i);
 
         // Add source terms to conserved quantities        
         m_1 += dt * q * s_1;
@@ -1182,7 +1182,7 @@ void Coordinates::FluxToGlobal2(const int k, const int j, const int il, const in
   class Metric *pmetric = pmy_block->pmetric;
   
   // Calculate metric coefficients
-  pmetric->Face1Metric(k, j, il, iu, g_, gi_);
+  pmetric->Face2Metric(k, j, il, iu, g_, gi_);
 
   // Go through 1D block of cells
 #pragma omp simd
@@ -1265,7 +1265,7 @@ void Coordinates::FluxToGlobal3(const int k, const int j, const int il, const in
   class Metric *pmetric = pmy_block->pmetric;
   
   // Calculate metric coefficients
-  pmetric->Face1Metric(k, j, il, iu, g_, gi_);
+  pmetric->Face3Metric(k, j, il, iu, g_, gi_);
 
   // Go through 1D block of cells
 #pragma omp simd

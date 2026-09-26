@@ -337,12 +337,72 @@ Real Metric::SqrtMinusG(int k, int j, int i) const {
   return std::sqrt(alpha_sq*detgamma);
 }
 
-Real Metric::DensitizationFactor(int k, int j, int i) const {
+Real Metric::CellDensitizationFactor(int k, int j, int i) const {
   // return 1.0;
   const Real sqrt_minus_g = SqrtMinusG(k,j,i);
   const Real r = pmy_block->pcoord->x1v(i);
   const Real theta = pmy_block->pcoord->x2v(j);
   return sqrt_minus_g/(r*r*std::sin(theta));
+}
+
+
+Real Metric::Face1DensitizationFactor(int k, int j, int i) const {
+  Coordinates *pcoord = pmy_block->pcoord;
+
+  const Real r = pcoord->x1f(i);
+  const Real theta = pcoord->x2v(j);
+  const Real phi = pcoord->x3v(k);
+  const Real Psi = Psi_face1_(i);
+  const Real dm = delta_m_face1_(i);
+
+  Real g00, g01, g02, g03;
+  Real g11, g12, g13, g22, g23, g33;
+  
+  ConstructCovariantMetric(r, theta, phi, Psi, dm,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+  return std::sqrt((-g00)*g11);
+}
+
+
+Real Metric::Face2DensitizationFactor(int k, int j, int i) const {
+  Coordinates *pcoord = pmy_block->pcoord;
+
+  const Real r = pcoord->x1v(i);
+  const Real theta = pcoord->x2f(j);
+  const Real phi = pcoord->x3v(k);
+  const Real Psi = Psi_(i);
+  const Real dm = delta_m_(i);
+
+  Real g00, g01, g02, g03;
+  Real g11, g12, g13, g22, g23, g33;
+  
+  ConstructCovariantMetric(r, theta, phi, Psi, dm,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+  return std::sqrt((-g00)*g11);
+}
+
+
+Real Metric::Face3DensitizationFactor(int k, int j, int i) const {
+  Coordinates *pcoord = pmy_block->pcoord;
+
+  const Real r = pcoord->x1v(i);
+  const Real theta = pcoord->x2v(j);
+  const Real phi = pcoord->x3f(k);
+  const Real Psi = Psi_(i);
+  const Real dm = delta_m_(i);
+
+  Real g00, g01, g02, g03;
+  Real g11, g12, g13, g22, g23, g33;
+  
+  ConstructCovariantMetric(r, theta, phi, Psi, dm,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+  return std::sqrt((-g00)*g11);
 }
 
 
