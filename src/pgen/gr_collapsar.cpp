@@ -118,6 +118,50 @@ namespace {
   Real m_bh, a_bh;
   CollapsedProfile collapsed;  
   Real gamma_gas;
+
+  Real Mout;
+
+  // Real HistoryBlackHoleMass(MeshBlock *pmb, int iout);
+  // Real HistoryBlackHoleMassAccretionRate(MeshBlock *pmb, int iout);
+
+  
+  Real HistoryBlackHoleMass(MeshBlock *pmb, int iout) {
+    const Real mass_to_length =
+      pmb->pmy_mesh->punit->grav_const_code
+      / SQR(pmb->pmy_mesh->punit->speed_of_light_code);
+    
+    return pmb->pmetric->GetBlackHoleMass()/mass_to_length;
+  }
+  
+  Real HistoryBlackHoleMassAccretionRate(MeshBlock *pmb, int iout) {
+    return pmb->pmetric->mdot_bh_;
+  }
+
+  Real OutflowRate(const AthenaArray<Real> &x1flux) const {
+    
+    MeshBlock *pmb = pmy_block;
+    Coordinates *pcoord = pmb->pcoord;
+    
+    // This MeshBlock does not touch the physical inner-x1 boundary.
+    if (pmb->pbval->block_bcs[BoundaryFace::outer_x1]
+        == BoundaryFlag::block) {
+      return 0.0;
+    }
+    
+    Real mdot = 0.0;
+    
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+        const Real area = pcoord->GetFace1Area(k, j, pmb->ie+1);
+      
+        // inward flux is negative
+        mdot += area * x1flux(IDN, k, j, pmb->ie+1);
+      }
+    }
+    return mdot;
+    
+  }
+
 }
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
@@ -140,6 +184,19 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     / punit->code_length_cgs;
   printf("Black hole mass (cgs,code unit)=%15.7e, %15.7e\n",M_inner_cgs, m_bh_code);
   pin->SetReal("coord", "m", m_bh_code);
+
+
+  AllocateUserHistoryOutput(3);
+  
+  EnrollUserHistoryOutput(0, HistoryBlackHoleMass, "m_bh",
+                          UserHistoryOperation::max);
+  
+  EnrollUserHistoryOutput(1, HistoryBlackHoleMassAccretionRate, "mdot_bh",
+                          UserHistoryOperation::sum);
+
+  EnrollUserHistoryOutput(2, HistoryMout, "m_out",
+                          UserHistoryOperation::sum);
+
 }
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
