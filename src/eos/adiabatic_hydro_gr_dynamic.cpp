@@ -230,15 +230,18 @@ void EquationOfState::ConservedToPrimitive(
           fixed = true;
         }
         if (!success) {
- std::cout << "C2P failed:"
-            << " i=" << i
-            << " rho_old=" << prim_old(IDN,k,j,i)
-            << " p_old=" << prim_old(IPR,k,j,i)
-            << " D=" << normal_dd_(i)
-            << " E=" << normal_ee_(i)
-            << " M2=" << normal_mm_(0,i)
-            << std::endl;
-
+          std::cout << "C2P failed:"
+                    << " i=" << i
+                    << " rho_old=" << prim_old(IDN,k,j,i)
+                    << " p_old=" << prim_old(IPR,k,j,i)
+                    << " D=" << normal_dd_(i)
+                    << " E=" << normal_ee_(i)
+                    << " M2=" << normal_mm_(0,i)
+                    << " pressure_floor_local=" << pressure_floor_local
+                    << " pgas_min_=" << pgas_min_
+                    << " p_est=" << (gamma_adi-1.0)*(normal_ee_(i)-normal_dd_(i))
+                    << std::endl;
+          
  
           rho = density_floor_local;
           pgas = pressure_floor_local;
@@ -502,9 +505,9 @@ bool ConservedToPrimitiveNormal(
   Real escale = std::max(std::abs(ee), std::abs(dd));
 
   // Calculate functions of conserved quantities
-  Real pgas_min = -ee;
-  pgas_min = std::max(pgas_min, pgas_floor);
-
+  //Real pgas_min = -ee;
+  //pgas_min = std::max(pgas_min, pgas_floor);
+  const Real pgas_min = std::max(-ee + a_min, 0.0);
   // Iterate until convergence
   Real pgas[3];
   pgas[0] = std::max(pgas_old, pgas_min);
@@ -536,7 +539,8 @@ bool ConservedToPrimitiveNormal(
       Real pold = pgas[n%3];
       Real pscale = std::max(std::abs(pnew),std::abs(pold));
       Real conv_tol = tol*pscale + 10.0*eps*escale;
-      if (pgas[(n+1)%3] > pgas_min && std::abs(pnew-pold) < conv_tol) {
+      //if (pgas[(n+1)%3] > pgas_min && std::abs(pnew-pold) < conv_tol) {
+      if (std::abs(pnew-pold) < conv_tol) {
         break;
       }
     }
@@ -553,7 +557,8 @@ bool ConservedToPrimitiveNormal(
       Real pold = pgas[2];
       Real pscale = std::max(std::abs(pnew),std::abs(pold));
       Real conv_tol = tol*pscale + 10.0*eps*escale;
-      if (pgas[0] > pgas_min && std::abs(pnew-pold) < conv_tol) {
+      //if (pgas[0] > pgas_min && std::abs(pnew-pold) < conv_tol) {
+      if (std::abs(pnew-pold) < conv_tol) {
         break;
       }
     }
