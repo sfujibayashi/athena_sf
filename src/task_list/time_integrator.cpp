@@ -939,6 +939,12 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       AddTask(INT_HYD, CALC_HYDFLX);
     }
 
+    TaskID hydro_done = INT_HYD;
+    if (DYNAMIC_METRIC_ENABLED){
+      AddTask(INT_BH_MASS, INT_HYD);
+      hydro_done = INT_BH_MASS;
+    }
+    
     if (radiation_flag) {
       AddTask(CALC_RADFLX,NONE);
       if (pm->multilevel || SHEAR_PERIODIC) { // SMR or AMR or shear periodic
@@ -976,9 +982,9 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     }
 
     if (NSCALARS > 0) {
-      AddTask(SRC_TERM,(INT_HYD|INT_SCLR|INT_CHM));
+      AddTask(SRC_TERM,(hydro_done|INT_SCLR|INT_CHM));
     } else {
-      AddTask(SRC_TERM,INT_HYD);
+      AddTask(SRC_TERM,hydro_done);
     }
 
     // Hydro will also be updated with radiation source term
@@ -1205,9 +1211,6 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       AddTask(CLEAR_ALLBND,PHY_BVAL);
     }
     
-    if (DYNAMIC_METRIC_ENABLED){
-      AddTask(INT_BH_MASS, RECV_HYDFLXSH);
-    }
   } // end of using namespace block
 }
 
