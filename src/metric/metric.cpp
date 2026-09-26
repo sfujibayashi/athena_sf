@@ -108,7 +108,7 @@ void Metric::Update() {
     Psi_face1_(i)     = Psi_face1_(ie+1);
   }
   
-  for (int i=0; i<=nc1; ++i) {
+  for (int i=0; i<nc1; ++i) {
     Psi_(i) = 0.5*(Psi_face1_(i) + Psi_face1_(i+1));
     delta_m_(i) = 0.5*(delta_m_face1_(i) + delta_m_face1_(i+1));
   }
