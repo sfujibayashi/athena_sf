@@ -456,6 +456,9 @@ definitions['PROBLEM'] = makefile_options['PROBLEM_FILE'] = args['prob']
 # --coord=[name] argument
 definitions['COORDINATE_SYSTEM'] = makefile_options['COORDINATES_FILE'] = args['coord']
 
+definitions['DYNAMIC_METRIC_ENABLED'] = \
+    '1' if args['coord'] == 'gr_dynamic' else '0'
+
 # --eos=[name] argument
 definitions['NON_BAROTROPIC_EOS'] = '0' if args['eos'] == 'isothermal' else '1'
 makefile_options['EOS_FILE'] = args['eos']

@@ -88,6 +88,9 @@
 // enable general relativity? default=0 (false)
 #define GENERAL_RELATIVITY @GENERAL_RELATIVITY@
 
+// enable dynamical metric? default=0 (false)
+#define DYNAMIC_METRIC_ENABLED @DYNAMIC_METRIC_ENABLED@
+
 // use single precision floating-point values (binary32)? default=0 (false; use binary64)
 #define SINGLE_PRECISION_ENABLED @SINGLE_PRECISION_ENABLED@
 
