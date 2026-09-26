@@ -31,6 +31,14 @@ Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
   Psi_face1_.ZeroClear();
   delta_m_face1_.ZeroClear();
   
+  bh_mass_prev_    = bh_mass_;
+  bh_mass_pending_ = bh_mass_;
+  mdot_bh_         = 0.0;
+  
+  bh_spin_prev_    = bh_spin_;
+  bh_spin_pending_ = bh_spin_;
+  angdot_bh_       = 0.0;
+  
 }
 
 Metric::~Metric() {

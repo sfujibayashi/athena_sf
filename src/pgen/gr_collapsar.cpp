@@ -355,8 +355,15 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       }
     }
   }
-  // Calculate metric perturbation from primitive rho.
-  pmetric->Update();
+
+  const bool initial_metric_update =
+    pin->GetOrAddBoolean("coord", "initial_metric_update", true);
+  
+  if (initial_metric_update) {
+    // Calculate metric perturbation from primitive rho.
+    pmetric->Update();
+  }
+  
 
   std::cout << "r=" << pcoord->x1v(is)
             << " dm=" << pmetric->delta_m_(is)

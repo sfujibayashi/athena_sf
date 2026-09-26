@@ -90,7 +90,9 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
   // Read a flag for shear periodic
   SHEAR_PERIODIC = pm->shear_periodic;
 
-  if (DYNAMIC_METRIC_ENABLED) {
+  TIME_METRIC_UPDATE =
+    pin->GetOrAddBoolean("coord", "time_metric_update", true);
+  if (DYNAMIC_METRIC_ENABLED && TIME_METRIC_UPDATE) {
     if (integrator != "vl2") {
       std::stringstream msg;
       msg << "### FATAL ERROR in TimeIntegratorTaskList constructor" << std::endl
@@ -959,7 +961,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     }
 
     TaskID hydro_done = INT_HYD;
-    if (DYNAMIC_METRIC_ENABLED){
+    if (DYNAMIC_METRIC_ENABLED && TIME_METRIC_UPDATE){
       AddTask(INT_BH_MASS, INT_HYD);
       hydro_done = INT_BH_MASS;
     }
@@ -2313,9 +2315,11 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
     // ps->r.SwapAthenaArray(ps->r1);
 
 #if DYNAMIC_METRIC_ENABLED
-    // update gravity from newly obtained primitive variables
-    pmb->pmetric->CommitBlackHoleMass();
-    pmb->pmetric->Update();
+    if (TIME_METRIC_UPDATE) {
+      // update gravity from newly obtained primitive variables
+      pmb->pmetric->CommitBlackHoleMass();
+      pmb->pmetric->Update();
+    }
 #endif
 
     return TaskStatus::success;

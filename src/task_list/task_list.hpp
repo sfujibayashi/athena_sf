@@ -246,6 +246,8 @@ class TimeIntegratorTaskList : public TaskList {
 
   void AddTask(const TaskID& id, const TaskID& dep) override;
   void StartupTaskList(MeshBlock *pmb, int stage) override;
+
+  bool TIME_METRIC_UPDATE;
 };
 
 //----------------------------------------------------------------------------------------
