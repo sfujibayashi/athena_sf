@@ -41,6 +41,10 @@ void Metric::Update() {
   Coordinates *pcoord = pmy_block->pcoord;
   Hydro *phydro = pmy_block->phydro;
 
+  const Real mass_to_length =
+    pmy_block->pmy_mesh->punit->grav_const_code
+    / SQR(pmy_block->pmy_mesh->punit->speed_of_light_code);
+  
   const int is = pmy_block->is;
   const int ie = pmy_block->ie;
   const int js = pmy_block->js;
@@ -58,13 +62,19 @@ void Metric::Update() {
 
   AthenaArray<Real> vol;
   vol.NewAthenaArray(nc1);
-  
+
+  // Psi_face1_.ZeroClear();
+  // delta_m_face1_.ZeroClear();
+  // Psi_.ZeroClear();
+  // delta_m_.ZeroClear();
+  // return;
+
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
       pcoord->CellVolume(k, j, is, ie, vol);
 #pragma omp simd
       for (int i=is; i<=ie; ++i) {
-        dm_shell(i) += phydro->w(IDN, k, j, i) * vol(i);
+        dm_shell(i) += phydro->w(IDN, k, j, i) * vol(i) * mass_to_length;
       }
     }
   }
@@ -84,7 +94,7 @@ void Metric::Update() {
 #pragma omp simd
       for (int i=is; i<=ie; ++i) {
         const Real r = pcoord->x1v(i);
-        dm_shell(i) += phydro->w(IDN, k, j, i)/(r-2.0*bh_mass_) * vol(i);
+        dm_shell(i) += phydro->w(IDN, k, j, i)/(r-2.0*bh_mass_) * vol(i) * mass_to_length;
       }
     }
   }
