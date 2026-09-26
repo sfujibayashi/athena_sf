@@ -143,7 +143,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 }
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
-  AllocateUserOutputVariables(6);
+  AllocateUserOutputVariables(9);
   
   SetUserOutputVariableName(0, "gtt");
   SetUserOutputVariableName(1, "grr");
@@ -151,6 +151,9 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   SetUserOutputVariableName(3, "Lorentz-1");
   SetUserOutputVariableName(4, "u_t+1");
   SetUserOutputVariableName(5, "enthalpy-1");
+  SetUserOutputVariableName(6, "delta_m");
+  SetUserOutputVariableName(7, "Phi");
+  SetUserOutputVariableName(8, "q");
 
 }
 
@@ -202,6 +205,18 @@ void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
         Real rho   = phydro->w(IDN,k,j,i);
         Real enthalpy = 1.0 + gamma_gas/(gamma_gas - 1.0) * press/rho;
         user_out_var(5,k,j,i) = enthalpy-1.0;
+      }
+    }
+  }
+
+
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      for (int i = is; i <= ie; ++i) {
+        user_out_var(6,k,j,i) = pmetric->delta_m_(i);
+        user_out_var(7,k,j,i) = pmetric->Psi_(i);
+        user_out_var(8,k,j,i) = pmetric->CellDensitizationFactor(k,j,i);
+        
       }
     }
   }
@@ -289,6 +304,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // Calculate metric perturbation from primitive rho.
   pmetric->Update();
 
+  std::cout << "r=" << pcoord->x1v(is)
+            << " dm=" << pmetric->delta_m_(is)
+            << " Psi=" << pmetric->Psi_(is)
+            << " q=" << pmetric->CellDensitizationFactor(0,0,is)
+            << std::endl;
+
   // Convert primitive -> conserved
   AthenaArray<Real> bb;
   bb.NewAthenaArray(3, ke+1, je+1, ie+1);
@@ -297,7 +318,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   peos->PrimitiveToConserved(
       phydro->w, bb, phydro->u, pcoord,
       is, ie, js, je, ks, ke);
-
+  //std::abort();
 }
 
 
