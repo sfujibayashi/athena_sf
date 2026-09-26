@@ -36,6 +36,37 @@ Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
 Metric::~Metric() {
 }
 
+Real Metric::BlackHoleMassAccretionRate(const AthenaArray<Real> &x1flux) const {
+  
+  MeshBlock *pmb = pmy_block;
+  Coordinates *pcoord = pmb->pcoord;
+
+  // This MeshBlock does not touch the physical inner-x1 boundary.
+  if (pmb->pbval->block_bcs[BoundaryFace::inner_x1]
+      == BoundaryFlag::block) {
+    return 0.0;
+  }
+
+  Real mdot = 0.0;
+
+  for (int k=pmb->ks; k<=pmb->ke; ++k) {
+    for (int j=pmb->js; j<=pmb->je; ++j) {
+      const Real area = pcoord->GetFace1Area(k, j, pmb->is);
+      
+      // inward flux is negative
+      mdot -= area * x1flux(IDN, k, j, pmb->is);
+    }
+  }
+
+  const Real mass_to_length =
+      pmb->pmy_mesh->punit->grav_const_code
+      / SQR(pmb->pmy_mesh->punit->speed_of_light_code);
+
+  return mass_to_length * mdot;
+
+}
+
+
 // delta_m_ and Psi_ are derived from fluid distribution.
 void Metric::Update() {
   Coordinates *pcoord = pmy_block->pcoord;
