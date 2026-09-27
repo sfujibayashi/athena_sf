@@ -48,26 +48,26 @@
 //!     where \f$ \alpha = \sqrt{1 - 2M/r} \f$
 
 void Coordinates::Initialize(ParameterInput *pin) {
-  // // Set parameters
-  const Real m = pmy_block->pmy_mesh->ruser_mesh_data[0](0);
-  // //bh_mass_ = m;
+  // // // Set parameters
+  // const Real m = pmy_block->pmy_mesh->ruser_mesh_data[0](0);
+  // // //bh_mass_ = m;
 
-  Real r_inner_ghost = x1f(il-ng);
-  if (r_inner_ghost <= 0.0) {
-    std::cout
-      << "### Warning in Schwarzschild coordinates" << std::endl
-      << "Inner ghost-zone radius extends to r <= 0." << std::endl
-      << "Consider increasing x1min or reducing the radial grid spacing."
-      << std::endl;
-  }
-  if (r_inner_ghost <= 2.0*m) {
-    std::cout
-      << "### Warning in Schwarzschild coordinates" << std::endl
-      << "Inner ghost zones extend to or inside the Schwarzschild horizon."
-      << std::endl
-      << "r_inner_ghost = " << r_inner_ghost << std::endl
-      << "2M = " << 2.0*m << std::endl;
-  }
+  // Real r_inner_ghost = x1f(il-ng);
+  // if (r_inner_ghost <= 0.0) {
+  //   std::cout
+  //     << "### Warning in Schwarzschild coordinates" << std::endl
+  //     << "Inner ghost-zone radius extends to r <= 0." << std::endl
+  //     << "Consider increasing x1min or reducing the radial grid spacing."
+  //     << std::endl;
+  // }
+  // if (r_inner_ghost <= 2.0*m) {
+  //   std::cout
+  //     << "### Warning in Schwarzschild coordinates" << std::endl
+  //     << "Inner ghost zones extend to or inside the Schwarzschild horizon."
+  //     << std::endl
+  //     << "r_inner_ghost = " << r_inner_ghost << std::endl
+  //     << "2M = " << 2.0*m << std::endl;
+  // }
   
   // Initialize volume-averaged coordinates and spacings: r-direction
   for (int i=il-ng; i<=iu+ng; ++i) {
@@ -166,7 +166,7 @@ void Coordinates::Initialize(ParameterInput *pin) {
     coord_len1_i1_.NewAthenaArray(nc1);
     coord_len2_i1_.NewAthenaArray(nc1+1);
     coord_len3_i1_.NewAthenaArray(nc1+1);
-    coord_width1_i1_.NewAthenaArray(nc1);
+    // coord_width1_i1_.NewAthenaArray(nc1);
     g_.NewAthenaArray(NMETRIC, nc1+1);
     gi_.NewAthenaArray(NMETRIC, nc1+1);
 
@@ -188,9 +188,9 @@ void Coordinates::Initialize(ParameterInput *pin) {
       Real r_c = x1v(i);
       Real r_m = x1f(i);
       Real r_p = x1f(i+1);
-      Real alpha_c = std::sqrt(1.0 - 2.0*m/r_c);
-      Real alpha_m = std::sqrt(1.0 - 2.0*m/r_m);
-      Real alpha_p = std::sqrt(1.0 - 2.0*m/r_p);
+      // Real alpha_c = std::sqrt(1.0 - 2.0*m/r_c);
+      // Real alpha_m = std::sqrt(1.0 - 2.0*m/r_m);
+      // Real alpha_p = std::sqrt(1.0 - 2.0*m/r_p);
       Real r_p_cu = r_p*r_p*r_p;
       Real r_m_cu = r_m*r_m*r_m;
 
@@ -209,8 +209,8 @@ void Coordinates::Initialize(ParameterInput *pin) {
         coord_len2_i1_(i+1) = coord_area1_i1_(i+1);
         coord_len3_i1_(i+1) = coord_area1_i1_(i+1);
       }
-      coord_width1_i1_(i) = r_p*alpha_p - r_m*alpha_m
-                            + m * std::log((r_p*(1.0+alpha_p)-m) / (r_m*(1.0+alpha_m)-m));
+      // coord_width1_i1_(i) = r_p*alpha_p - r_m*alpha_m
+      //                       + m * std::log((r_p*(1.0+alpha_p)-m) / (r_m*(1.0+alpha_m)-m));
 
     }
 
@@ -326,21 +326,19 @@ void Coordinates::CenterWidth1(const int k, const int j, const int il, const int
 
 void Coordinates::CenterWidth2(const int k, const int j, const int il, const int iu,
                                  AthenaArray<Real> &dx2) {
-  CellMetric(k, j, il, iu, g_, gi_);
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
-    dx2(i) = std::sqrt(g_(I22,i)) * dx2f(j);
+    dx2(i) = x1v(i) * dx2f(j);
   }
   return;
 }
 
 void Coordinates::CenterWidth3(const int k, const int j, const int il, const int iu,
                                  AthenaArray<Real> &dx3) {
-  CellMetric(k, j, il, iu, g_, gi_);
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
     // \Delta W = r \sin\theta \Delta\phi
-    dx3(i) = std::sqrt(g_(I33,i)) * dx3f(k);
+    dx3(i) = x1v(i) * coord_width3_j1_(j) * dx3f(k);
   }
   return;
 }
