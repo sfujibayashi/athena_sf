@@ -20,8 +20,7 @@ class Mesh;
 class ParameterInput;
 
 //! \class MonopoleGravity
-//! \brief Multigrid gravity solver for each block
-
+//! \brief Constructs global radial monopole gravity profiles
 class MonopoleGravity {
 public:
   MonopoleGravity(Mesh *pm, ParameterInput *pin);

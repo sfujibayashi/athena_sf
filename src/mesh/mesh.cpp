@@ -1060,6 +1060,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 //! destructor
 
 Mesh::~Mesh() {
+  delete pmonograv;
   delete punit;
   for (int b=0; b<nblocal; ++b)
     delete my_blocks(b);
@@ -1092,6 +1093,7 @@ Mesh::~Mesh() {
   }
   if (nint_user_mesh_data_>0) delete [] iuser_mesh_data;
   if (EOS_TABLE_ENABLED) delete peos_table;
+
 }
 
 //----------------------------------------------------------------------------------------
@@ -1238,8 +1240,6 @@ void Mesh::OutputMeshStructure(int ndim) {
   delete [] cost_per_plevel;
   delete [] nb_per_rank;
   delete [] cost_per_rank;
-
-  delete pmonograv;
 
   return;
 }
