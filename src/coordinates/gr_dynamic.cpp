@@ -49,8 +49,8 @@
 
 void Coordinates::Initialize(ParameterInput *pin) {
   // Set parameters
-  bh_mass_ = pin->GetReal("coord", "m");
-  const Real &m = bh_mass_;
+  const Real m = pmy_block->pmy_mesh->ruser_mesh_data[0](0);
+  bh_mass_ = m;
 
   Real r_inner_ghost = x1f(il-ng);
   if (r_inner_ghost <= 0.0) {
@@ -134,14 +134,14 @@ void Coordinates::Initialize(ParameterInput *pin) {
     }
   }
 
-  // Allocate and compute arrays for intermediate geometric quantities always needed
-  metric_cell_i1_.NewAthenaArray(nc1);
-  metric_cell_j1_.NewAthenaArray(nc2);
-  for (int i=il-ng; i<=iu+ng; ++i) {
-    Real r_c = x1v(i);
-    Real alpha_c = std::sqrt(1.0 - 2.0*m/r_c);
-    metric_cell_i1_(i) = SQR(alpha_c);
-  }
+  // // Allocate and compute arrays for intermediate geometric quantities always needed
+  // metric_cell_i1_.NewAthenaArray(nc1);
+  // metric_cell_j1_.NewAthenaArray(nc2);
+  // for (int i=il-ng; i<=iu+ng; ++i) {
+  //   Real r_c = x1v(i);
+  //   Real alpha_c = std::sqrt(1.0 - 2.0*m/r_c);
+  //   metric_cell_i1_(i) = SQR(alpha_c);
+  // }
 
   int jll, juu;
   if (pmy_block->block_size.nx2 > 1) {
@@ -149,11 +149,11 @@ void Coordinates::Initialize(ParameterInput *pin) {
   } else {
     jll = jl; juu = ju;
   }
-  for (int j=jll; j<=juu; ++j) {
-    Real sin_c = std::sin(x2v(j));
-    Real sin_c_sq = SQR(sin_c);
-    metric_cell_j1_(j) = sin_c_sq;
-  }
+  // for (int j=jll; j<=juu; ++j) {
+  //   Real sin_c = std::sin(x2v(j));
+  //   Real sin_c_sq = SQR(sin_c);
+  //   metric_cell_j1_(j) = sin_c_sq;
+  // }
 
   // Allocate and compute arrays for intermediate geometric quantities that are only
   // needed if object is NOT a coarse mesh
@@ -167,12 +167,6 @@ void Coordinates::Initialize(ParameterInput *pin) {
     coord_len2_i1_.NewAthenaArray(nc1+1);
     coord_len3_i1_.NewAthenaArray(nc1+1);
     coord_width1_i1_.NewAthenaArray(nc1);
-    metric_face1_i1_.NewAthenaArray(nc1+1);
-    metric_face2_i1_.NewAthenaArray(nc1);
-    metric_face3_i1_.NewAthenaArray(nc1);
-    trans_face1_i1_.NewAthenaArray(nc1+1);
-    trans_face2_i1_.NewAthenaArray(nc1);
-    trans_face3_i1_.NewAthenaArray(nc1);
     g_.NewAthenaArray(NMETRIC, nc1+1);
     gi_.NewAthenaArray(NMETRIC, nc1+1);
 
@@ -187,12 +181,6 @@ void Coordinates::Initialize(ParameterInput *pin) {
     coord_width3_j1_.NewAthenaArray(nc2);
     coord_src_j1_.NewAthenaArray(nc2);
     coord_src_j2_.NewAthenaArray(nc2);
-    metric_face1_j1_.NewAthenaArray(nc2);
-    metric_face2_j1_.NewAthenaArray(nc2+1);
-    metric_face3_j1_.NewAthenaArray(nc2);
-    trans_face1_j1_.NewAthenaArray(nc2);
-    trans_face2_j1_.NewAthenaArray(nc2+1);
-    trans_face3_j1_.NewAthenaArray(nc2);
 
     // Calculate intermediate geometric quantities: r-direction
     for (int i=il-ng; i<=iu+ng; ++i) {
@@ -224,21 +212,6 @@ void Coordinates::Initialize(ParameterInput *pin) {
       coord_width1_i1_(i) = r_p*alpha_p - r_m*alpha_m
                             + m * std::log((r_p*(1.0+alpha_p)-m) / (r_m*(1.0+alpha_m)-m));
 
-      // Metric coefficients
-      metric_face1_i1_(i) = SQR(alpha_m);
-      if (i == (iu+ng)) {
-        metric_face1_i1_(i+1) = SQR(alpha_p);
-      }
-      metric_face2_i1_(i) = SQR(alpha_c);
-      metric_face3_i1_(i) = SQR(alpha_c);
-
-      // Coordinate transformations
-      trans_face1_i1_(i) = alpha_m;
-      if (i == (iu+ng)) {
-        trans_face1_i1_(i+1) = alpha_p;
-      }
-      trans_face2_i1_(i) = alpha_c;
-      trans_face3_i1_(i) = alpha_c;
     }
 
     // Calculate intermediate geometric quantities: theta-direction
@@ -279,22 +252,6 @@ void Coordinates::Initialize(ParameterInput *pin) {
       // Source terms
       coord_src_j1_(j) = sin_c;
       coord_src_j2_(j) = cos_c;
-
-      // Metric coefficients
-      metric_face1_j1_(j) = sin_c_sq;
-      metric_face2_j1_(j) = sin_m_sq;
-      if (j == juu) {
-        metric_face2_j1_(j+1) = sin_p_sq;
-      }
-      metric_face3_j1_(j) = sin_c_sq;
-
-      // Coordinate transformations
-      trans_face1_j1_(j) = std::abs(sin_c);
-      trans_face2_j1_(j) = std::abs(sin_m);
-      if (j == juu) {
-        trans_face2_j1_(j+1) = std::abs(sin_p);
-      }
-      trans_face3_j1_(j) = std::abs(sin_c);
     }
   }
 }
@@ -847,9 +804,6 @@ void Coordinates::PrimToLocal2(const int k, const int j, const int il, const int
   // Calculate metric coefficients
   pmetric->Face2Metric(k, j, il, iu, g_, gi_);
 
-  // Extract useful quantities that do not depend on r
-  const Real &abs_sin_theta = trans_face2_j1_(j);
-
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
@@ -984,10 +938,6 @@ void Coordinates::PrimToLocal3(const int k, const int j, const int il, const int
   // Calculate metric coefficients
   pmetric->Face3Metric(k, j, il, iu, g_, gi_);
   
-
-  // Extract useful quantities that do not depend on r
-  const Real &abs_sin_theta = trans_face3_j1_(j);
-
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
@@ -1350,18 +1300,20 @@ void Coordinates::FluxToGlobal3(const int k, const int j, const int il, const in
 
 void Coordinates::RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k, int j,
                                   int i, Real *pa0, Real *pa1, Real *pa2, Real *pa3) {
-  // Extract geometric quantities
-  const Real &sin_sq_theta = metric_cell_j1_(j);
-  const Real &alpha_sq = metric_cell_i1_(i);
-  const Real &r = x1v(i);
-  Real r_sq = SQR(r);
+  class Metric *pmetric = pmy_block->pmetric;
 
-  // Calculate metric coefficients
-  Real g00 = -1.0/alpha_sq;
-  Real g11 = alpha_sq;
-  Real g22 = 1.0/r_sq;
-  Real g33 = 1.0/(r_sq*sin_sq_theta);
+  Real g_00, g_01, g_02, g_03;
+  Real g_11, g_12, g_13, g_22, g_23, g_33;
+  pmetric->ConstructCellCovariantMetric(k,j,i,
+    g_00, g_01, g_02, g_03,
+    g_11, g_12, g_13, g_22, g_23, g_33);
 
+  // works only diagonal matrix
+  Real g00 = 1.0/g_00;
+  Real g11 = 1.0/g_11;
+  Real g22 = 1.0/g_22;
+  Real g33 = 1.0/g_33;
+  
   // Set raised components
   *pa0 = g00 * a_0;
   *pa1 = g11 * a_1;
@@ -1380,17 +1332,13 @@ void Coordinates::RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k,
 
 void Coordinates::LowerVectorCell(Real a0, Real a1, Real a2, Real a3, int k, int j,
                                   int i, Real *pa_0, Real *pa_1, Real *pa_2, Real *pa_3) {
-  // Extract geometric quantities
-  const Real &sin_sq_theta = metric_cell_j1_(j);
-  const Real &alpha_sq = metric_cell_i1_(i);
-  const Real &r = x1v(i);
-  Real r_sq = SQR(r);
+  class Metric *pmetric = pmy_block->pmetric;
 
-  // Calculate metric coefficients
-  Real g_00 = -alpha_sq;
-  Real g_11 = 1.0/alpha_sq;
-  Real g_22 = r_sq;
-  Real g_33 = r_sq * sin_sq_theta;
+  Real g_00, g_01, g_02, g_03;
+  Real g_11, g_12, g_13, g_22, g_23, g_33;
+  pmetric->ConstructCellCovariantMetric(k,j,i,
+    g_00, g_01, g_02, g_03,
+    g_11, g_12, g_13, g_22, g_23, g_33);
 
   // Set lowered components
   *pa_0 = g_00 * a0;
