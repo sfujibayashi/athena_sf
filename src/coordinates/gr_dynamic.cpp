@@ -48,9 +48,9 @@
 //!     where \f$ \alpha = \sqrt{1 - 2M/r} \f$
 
 void Coordinates::Initialize(ParameterInput *pin) {
-  // Set parameters
+  // // Set parameters
   const Real m = pmy_block->pmy_mesh->ruser_mesh_data[0](0);
-  bh_mass_ = m;
+  // //bh_mass_ = m;
 
   Real r_inner_ghost = x1f(il-ng);
   if (r_inner_ghost <= 0.0) {
@@ -60,13 +60,13 @@ void Coordinates::Initialize(ParameterInput *pin) {
       << "Consider increasing x1min or reducing the radial grid spacing."
       << std::endl;
   }
-  if (r_inner_ghost <= 2.0*bh_mass_) {
+  if (r_inner_ghost <= 2.0*m) {
     std::cout
       << "### Warning in Schwarzschild coordinates" << std::endl
       << "Inner ghost zones extend to or inside the Schwarzschild horizon."
       << std::endl
       << "r_inner_ghost = " << r_inner_ghost << std::endl
-      << "2M = " << 2.0*bh_mass_ << std::endl;
+      << "2M = " << 2.0*m << std::endl;
   }
   
   // Initialize volume-averaged coordinates and spacings: r-direction
@@ -316,30 +316,31 @@ Real Coordinates::GetEdge3Length(const int k, const int j, const int i) {
 
 void Coordinates::CenterWidth1(const int k, const int j, const int il, const int iu,
                                  AthenaArray<Real> &dx1) {
+  CellMetric(k, j, il, iu, g_, gi_);
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
-    // \Delta W = \Delta(r \alpha) + M \Delta\log(r(1+\alpha)-M)
-    dx1(i) = coord_width1_i1_(i);
+    dx1(i) = std::sqrt(g_(I11,i)) * dx1f(i);
   }
   return;
 }
 
 void Coordinates::CenterWidth2(const int k, const int j, const int il, const int iu,
                                  AthenaArray<Real> &dx2) {
+  CellMetric(k, j, il, iu, g_, gi_);
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
-    // \Delta W = r \Delta\theta
-    dx2(i) = x1v(i) * dx2f(j);
+    dx2(i) = std::sqrt(g_(I22,i)) * dx2f(j);
   }
   return;
 }
 
 void Coordinates::CenterWidth3(const int k, const int j, const int il, const int iu,
                                  AthenaArray<Real> &dx3) {
+  CellMetric(k, j, il, iu, g_, gi_);
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
     // \Delta W = r \sin\theta \Delta\phi
-    dx3(i) = x1v(i) * coord_width3_j1_(j) * dx3f(k);
+    dx3(i) = std::sqrt(g_(I33,i)) * dx3f(k);
   }
   return;
 }
