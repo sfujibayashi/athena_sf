@@ -67,6 +67,7 @@ class IMRadiation;
 class TurbulenceDriver;
 
 class Metric;
+class MonopoleGravity;
 
 FluidFormulation GetFluidFormulation(const std::string& input_string);
 
@@ -280,6 +281,9 @@ class Mesh {
   MGGravityDriver *pmgrd;
   MGCRDiffusionDriver *pmcrd;
   Units *punit;
+  
+  // monopole gravity for gr-dynamic
+  MonopoleGravity *pmonograv;
 
   // implicit radiation iteration
   IMRadiation *pimrad;

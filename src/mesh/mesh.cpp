@@ -61,6 +61,8 @@
 #include "mesh_refinement.hpp"
 #include "meshblock_tree.hpp"
 
+#include "../gravity/monopole_gravity.hpp"
+
 // MPI/OpenMP header
 #ifdef MPI_PARALLEL
 #include <mpi.h>
@@ -613,6 +615,12 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     bssame++;
   }
 #endif
+  
+#if DYNAMIC_METRIC_ENABLED
+  pmonograv = new MonopoleGravity(this, pin);
+#else
+  pmonograv = nullptr;
+#endif
 }
 
 //----------------------------------------------------------------------------------------
@@ -1040,6 +1048,12 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     bssame++;
   }
 #endif
+
+#if DYNAMIC_METRIC_ENABLED
+  pmonograv = new MonopoleGravity(this, pin);
+#else
+  pmonograv = nullptr;
+#endif
 }
 
 //----------------------------------------------------------------------------------------
@@ -1224,6 +1238,8 @@ void Mesh::OutputMeshStructure(int ndim) {
   delete [] cost_per_plevel;
   delete [] nb_per_rank;
   delete [] cost_per_rank;
+
+  delete pmonograv;
 
   return;
 }
