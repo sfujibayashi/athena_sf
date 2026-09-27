@@ -22,6 +22,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <iomanip>
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -187,7 +188,13 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   
   printf("Black hole mass (cgs,code unit)=%15.7e, %15.7e\n",M_inner_cgs, m_bh_code);
   pin->SetReal("coord", "m", m_bh_code);
-  //pin->SetReal("coord", "j", ang_bh_code);
+  // pin->SetReal("coord", "j", ang_bh_code);
+  // m_bh_code = pin->GetReal("coord", "m");
+
+  std::cout << std::setprecision(17)
+            << "m_bh_code = " << m_bh_code
+            << "  m_from_pin = " << pin->GetReal("coord","m")
+            << std::endl;
 
   // output
   AllocateUserHistoryOutput(3);
@@ -408,6 +415,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
             << " Psi=" << pmetric->CellPsi(is)
             << " q=" << pmetric->CellDensitizationFactor(0,0,is)
             << std::endl;
+
 
   // Convert primitive -> conserved
   AthenaArray<Real> bb;
