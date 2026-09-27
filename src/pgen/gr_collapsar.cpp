@@ -175,12 +175,19 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   Real rin_code = mesh_size.x1min;
   Real rin_cgs = rin_code*punit->code_length_cgs;
   Real M_inner_cgs = collapsed.EnclosedMass(rin_cgs);
+  Real J_inner_cgs = 0.0;
 
   Real m_bh_code = Constants::grav_const_cgs * M_inner_cgs
     / SQR(Constants::speed_of_light_cgs)
     / punit->code_length_cgs;
+
+  Real ang_bh_code = J_inner_cgs
+    * std::pow(Constants::grav_const_cgs / SQR(Constants::speed_of_light_cgs)
+    / punit->code_length_cgs, 2);
+  
   printf("Black hole mass (cgs,code unit)=%15.7e, %15.7e\n",M_inner_cgs, m_bh_code);
   pin->SetReal("coord", "m", m_bh_code);
+  //pin->SetReal("coord", "j", ang_bh_code);
 
   // output
   AllocateUserHistoryOutput(3);
@@ -194,10 +201,17 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(2, HistoryOuterMassFlux, "mdot_out",
                           UserHistoryOperation::sum);
 
-  // restart
-  AllocateRealUserMeshDataField(1);
+  //
+  AllocateRealUserMeshDataField(2);
   // BH mass
   ruser_mesh_data[0].NewAthenaArray(1);
+  // BH spin
+  ruser_mesh_data[1].NewAthenaArray(1);
+
+  // canonical BH mass
+  ruser_mesh_data[0](0) = m_bh_code;
+  // canonical BH spin
+  ruser_mesh_data[1](0) = ang_bh_code;
 }
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
@@ -213,13 +227,16 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   SetUserOutputVariableName(7, "Phi");
   SetUserOutputVariableName(8, "q");
 
-
+  //
   AllocateRealUserMeshBlockDataField(2);
   
-  // for Psi_face1_
+  // for Psi_face1
   ruser_meshblock_data[0].NewAthenaArray(ncells1 + 1);
-  // for delta_m_face1_
+  // for delta_m_face1
   ruser_meshblock_data[1].NewAthenaArray(ncells1 + 1);
+
+  ruser_meshblock_data[0].ZeroClear();
+  ruser_meshblock_data[1].ZeroClear();
 }
 
 void MeshBlock::UserWorkInLoop(void) {
@@ -278,24 +295,12 @@ void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
       for (int i = is; i <= ie; ++i) {
-        user_out_var(6,k,j,i) = pmetric->delta_m_(i);
-        user_out_var(7,k,j,i) = pmetric->Psi_(i);
+        user_out_var(6,k,j,i) = pmetric->CellDeltaM(i);
+        user_out_var(7,k,j,i) = pmetric->CellPsi(i);
         user_out_var(8,k,j,i) = pmetric->CellDensitizationFactor(k,j,i);
         
       }
     }
-  }
-
-
-  // restart data
-  
-  // BH mass -> MeshData
-  pmy_mesh->ruser_mesh_data[0](0) = pmetric->GetBlackHoleMass();
-  
-  // delta_m_face1_
-  for(int i=0; i<=ncells1; ++i){
-    ruser_meshblock_data[0](i) = pmetric->Psi_face1_(i);
-    ruser_meshblock_data[1](i) = pmetric->delta_m_face1_(i);
   }
 }
 
@@ -399,8 +404,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   
 
   std::cout << "r=" << pcoord->x1v(is)
-            << " dm=" << pmetric->delta_m_(is)
-            << " Psi=" << pmetric->Psi_(is)
+            << " dm=" << pmetric->CellDeltaM(is)
+            << " Psi=" << pmetric->CellPsi(is)
             << " q=" << pmetric->CellDensitizationFactor(0,0,is)
             << std::endl;
 

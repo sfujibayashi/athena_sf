@@ -509,6 +509,9 @@ void Coordinates::AddCoordTermsDivergence(
   // Extract geometric quantities that do not depend on location
   const Real m = pmetric->GetBlackHoleMass();
 
+  const auto &Psi_face1 = pmetric->PsiFace1();
+  const auto &delta_m_face1 = pmetric->DeltaMFace1();
+
   // Go through cells
   for (int k = pmy_block->ks; k <= pmy_block->ke; ++k) {
     for (int j = pmy_block->js; j <= pmy_block->je; ++j) {
@@ -543,12 +546,14 @@ void Coordinates::AddCoordTermsDivergence(
         Real r2 = SQR(r);
 
         const Real f = 1.0 - 2.0*m/r;
-        
+        const Real Psi = pmetric->CellPsi(i);
+        const Real delta_m = pmetric->CellDeltaM(i);
+
         const Real dxf = x1f(i+1)-x1f(i);
-        const Real d1_Psi = (pmetric->Psi_face1_(i+1) - pmetric->Psi_face1_(i))/dxf;
-        const Real d1_delta_m = (pmetric->delta_m_face1_(i+1) - pmetric->delta_m_face1_(i))/dxf;
-        Real d1_h_00 = -2.0*pmetric->delta_m_(i)/r2 + 2.0/r*d1_delta_m + 4.0*m/r2*pmetric->Psi_(i) + 2.0*f*d1_Psi;
-        Real d1_h_11 = 2.0/(r*f*f)*(d1_delta_m - (f+4.0*m/r)*pmetric->delta_m_(i)/(r*f));
+        const Real d1_Psi = (Psi_face1(i+1) - Psi_face1(i))/dxf;
+        const Real d1_delta_m = (delta_m_face1(i+1) - delta_m_face1(i))/dxf;
+        Real d1_h_00 = -2.0*delta_m/r2 + 2.0/r*d1_delta_m + 4.0*m/r2*Psi + 2.0*f*d1_Psi;
+        Real d1_h_11 = 2.0/(r*f*f)*(d1_delta_m - (f+4.0*m/r)*delta_m/(r*f));
 
         Real d1_g_00 = -2.0*m / r2 + d1_h_00;
         Real d1_g_11 = -2.0*m / (r2*f*f) + d1_h_11;

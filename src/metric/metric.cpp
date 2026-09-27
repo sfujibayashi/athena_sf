@@ -12,31 +12,17 @@
 #include "../hydro/hydro.hpp"
 
 Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
-  : pmy_block(pmb),
-    bh_mass_(pmb->pcoord->GetMass()),
-    bh_spin_(pmb->pcoord->GetSpin())  {
-  const int nc1 = pmb->ncells1;
-  const int nc2 = pmb->ncells2;
-  const int nc3 = pmb->ncells3;
+  : pmy_block(pmb) {
 
-  Psi_.NewAthenaArray(nc1);
-  delta_m_.NewAthenaArray(nc1);
-
-  Psi_.ZeroClear();
-  delta_m_.ZeroClear();
-
-  Psi_face1_.NewAthenaArray(nc1+1);
-  delta_m_face1_.NewAthenaArray(nc1+1);
-
-  Psi_face1_.ZeroClear();
-  delta_m_face1_.ZeroClear();
+  const Real bh_mass = GetBlackHoleMass();
+  const Real bh_spin = GetBlackHoleSpin();
   
-  bh_mass_prev_    = bh_mass_;
-  bh_mass_pending_ = bh_mass_;
+  bh_mass_prev_    = bh_mass;
+  bh_mass_pending_ = bh_mass;
   mdot_bh_         = 0.0;
   
-  bh_spin_prev_    = bh_spin_;
-  bh_spin_pending_ = bh_spin_;
+  bh_spin_prev_    = bh_spin;
+  bh_spin_pending_ = bh_spin;
   angdot_bh_       = 0.0;
   
 }
@@ -75,12 +61,61 @@ Real Metric::BlackHoleMassAccretionRate(const AthenaArray<Real> &x1flux) const {
 }
 
 void Metric::CommitBlackHoleMass(){
-  bh_mass_ = bh_mass_pending_;
+  BlackHoleMassStorage() = bh_mass_pending_;
+}
+
+
+AthenaArray<Real>& Metric::PsiFace1() {
+  return pmy_block->ruser_meshblock_data[0];
+}
+
+const AthenaArray<Real>& Metric::PsiFace1() const {
+  return pmy_block->ruser_meshblock_data[0];
+}
+
+AthenaArray<Real>& Metric::DeltaMFace1() {
+  return pmy_block->ruser_meshblock_data[1];
+}
+
+const AthenaArray<Real>& Metric::DeltaMFace1() const {
+  return pmy_block->ruser_meshblock_data[1];
+}
+
+Real& Metric::BlackHoleMassStorage() {
+  return pmy_block->pmy_mesh->ruser_mesh_data[0](0);
+}
+
+const Real& Metric::BlackHoleMassStorage() const {
+  return pmy_block->pmy_mesh->ruser_mesh_data[0](0);
+}
+
+Real& Metric::BlackHoleSpinStorage() {
+  return pmy_block->pmy_mesh->ruser_mesh_data[1](0);
+}
+
+const Real& Metric::BlackHoleSpinStorage() const {
+  return pmy_block->pmy_mesh->ruser_mesh_data[1](0);
+}
+
+Real Metric::CellPsi(int i) const {
+  const auto &psi = PsiFace1();
+  return 0.5*(psi(i) + psi(i+1));
+}
+
+Real Metric::CellDeltaM(int i) const {
+  const auto &dm = DeltaMFace1();
+  return 0.5*(dm(i) + dm(i+1));
 }
 
 
 // delta_m_ and Psi_ are derived from fluid distribution.
 void Metric::Update() {
+
+  auto &Psi_face1 = PsiFace1();
+  auto &delta_m_face1 = DeltaMFace1();
+  
+  const Real bh_mass = GetBlackHoleMass();
+
   Coordinates *pcoord = pmy_block->pcoord;
   Hydro *phydro = pmy_block->phydro;
 
@@ -106,12 +141,6 @@ void Metric::Update() {
   AthenaArray<Real> vol;
   vol.NewAthenaArray(nc1);
 
-  // Psi_face1_.ZeroClear();
-  // delta_m_face1_.ZeroClear();
-  // Psi_.ZeroClear();
-  // delta_m_.ZeroClear();
-  // return;
-
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
       pcoord->CellVolume(k, j, is, ie, vol);
@@ -122,10 +151,10 @@ void Metric::Update() {
     }
   }
 
-  delta_m_face1_(is) = 0.0;
+  delta_m_face1(is) = 0.0;
 
   for (int i=is; i<=ie; ++i) {
-    delta_m_face1_(i+1) = delta_m_face1_(i) + dm_shell(i);
+    delta_m_face1(i+1) = delta_m_face1(i) + dm_shell(i);
   }
 
   
@@ -137,33 +166,28 @@ void Metric::Update() {
 #pragma omp simd
       for (int i=is; i<=ie; ++i) {
         const Real r = pcoord->x1v(i);
-        dm_shell(i) += phydro->w(IDN, k, j, i)/(r-2.0*bh_mass_) * vol(i) * mass_to_length;
+        dm_shell(i) += phydro->w(IDN, k, j, i)/(r-2.0*bh_mass) * vol(i) * mass_to_length;
       }
     }
   }
 
   
-  Psi_face1_(ie+1) = 0.0;
+  Psi_face1(ie+1) = 0.0;
 
   for (int i=ie; i>=is; --i) {
-    Psi_face1_(i) = Psi_face1_(i+1) + dm_shell(i);
+    Psi_face1(i) = Psi_face1(i+1) + dm_shell(i);
   }
 
   // inner radial ghost faces
   for (int i=is-1; i>=0; --i) {
-    delta_m_face1_(i) = delta_m_face1_(is);
-    Psi_face1_(i)     = Psi_face1_(is);
+    delta_m_face1(i) = delta_m_face1(is);
+    Psi_face1(i)     = Psi_face1(is);
   }
   
   // outer radial ghost faces
   for (int i=ie+2; i<=nc1; ++i) {
-    delta_m_face1_(i) = delta_m_face1_(ie+1);
-    Psi_face1_(i)     = Psi_face1_(ie+1);
-  }
-  
-  for (int i=0; i<nc1; ++i) {
-    Psi_(i) = 0.5*(Psi_face1_(i) + Psi_face1_(i+1));
-    delta_m_(i) = 0.5*(delta_m_face1_(i) + delta_m_face1_(i+1));
+    delta_m_face1(i) = delta_m_face1(ie+1);
+    Psi_face1(i)     = Psi_face1(ie+1);
   }
   
 }
@@ -238,6 +262,9 @@ void Metric::Face1Metric(const int k, const int j, const int il, const int iu,
                                 AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {
   // Extract geometric quantities that do not depend on r
   Coordinates *pcoord = pmy_block->pcoord;
+
+  const auto &Psi_face1 = PsiFace1();
+  const auto &delta_m_face1 = DeltaMFace1();
   
   const Real theta = pcoord->x2v(j);
   const Real phi = pcoord->x3v(k);
@@ -251,8 +278,8 @@ void Metric::Face1Metric(const int k, const int j, const int il, const int iu,
     Real g00, g01, g02, g03;
     Real g11, g12, g13, g22, g23, g33;
 
-    Real Psi = Psi_face1_(i);
-    Real dm = delta_m_face1_(i);
+    Real Psi = Psi_face1(i);
+    Real dm = delta_m_face1(i);
 
     ConstructCovariantMetric(r, theta, phi, Psi, dm,
         g00, g01, g02, g03,
@@ -279,6 +306,7 @@ void Metric::Face2Metric(const int k, const int j, const int il, const int iu,
   // Extract geometric quantities that do not depend on r
   Coordinates *pcoord = pmy_block->pcoord;
   
+
   const Real theta = pcoord->x2f(j);
   const Real phi = pcoord->x3v(k);
   const bool pole = pcoord->IsPole(j);
@@ -292,8 +320,8 @@ void Metric::Face2Metric(const int k, const int j, const int il, const int iu,
     Real g00, g01, g02, g03;
     Real g11, g12, g13, g22, g23, g33;
     
-    Real Psi = Psi_(i);
-    Real dm = delta_m_(i);
+    Real Psi = CellPsi(i);
+    Real dm = CellDeltaM(i);
     
     ConstructCovariantMetric(r, theta, phi, Psi, dm,
         g00, g01, g02, g03,
@@ -351,8 +379,8 @@ void Metric::Face3Metric(const int k, const int j, const int il, const int iu,
     Real g00, g01, g02, g03;
     Real g11, g12, g13, g22, g23, g33;
     
-    Real Psi = Psi_(i);
-    Real dm = delta_m_(i);
+    Real Psi = CellPsi(i);
+    Real dm = CellDeltaM(i);
     
     ConstructCovariantMetric(r, theta, phi, Psi, dm, 
         g00, g01, g02, g03,
@@ -412,11 +440,14 @@ Real Metric::CellDensitizationFactor(int k, int j, int i) const {
 Real Metric::Face1DensitizationFactor(int k, int j, int i) const {
   Coordinates *pcoord = pmy_block->pcoord;
 
+  auto &Psi_face1 = PsiFace1();
+  auto &delta_m_face1 = DeltaMFace1();
+  
   const Real r = pcoord->x1f(i);
   const Real theta = pcoord->x2v(j);
   const Real phi = pcoord->x3v(k);
-  const Real Psi = Psi_face1_(i);
-  const Real dm = delta_m_face1_(i);
+  const Real Psi = Psi_face1(i);
+  const Real dm = delta_m_face1(i);
 
   Real g00, g01, g02, g03;
   Real g11, g12, g13, g22, g23, g33;
@@ -435,8 +466,8 @@ Real Metric::Face2DensitizationFactor(int k, int j, int i) const {
   const Real r = pcoord->x1v(i);
   const Real theta = pcoord->x2f(j);
   const Real phi = pcoord->x3v(k);
-  const Real Psi = Psi_(i);
-  const Real dm = delta_m_(i);
+  const Real Psi = CellPsi(i);
+  const Real dm = CellDeltaM(i);
 
   Real g00, g01, g02, g03;
   Real g11, g12, g13, g22, g23, g33;
@@ -455,8 +486,8 @@ Real Metric::Face3DensitizationFactor(int k, int j, int i) const {
   const Real r = pcoord->x1v(i);
   const Real theta = pcoord->x2v(j);
   const Real phi = pcoord->x3f(k);
-  const Real Psi = Psi_(i);
-  const Real dm = delta_m_(i);
+  const Real Psi = CellPsi(i);
+  const Real dm = CellDeltaM(i);
 
   Real g00, g01, g02, g03;
   Real g11, g12, g13, g22, g23, g33;
@@ -470,12 +501,20 @@ Real Metric::Face3DensitizationFactor(int k, int j, int i) const {
 
 
 void Metric::SetBlackHoleMass(Real mass){
-  bh_mass_ = mass;
+  BlackHoleMassStorage() = mass;
+}
+
+void Metric::SetBlackHoleSpin(Real spin){
+  BlackHoleSpinStorage() = spin;
 }
 
 
+
 Real Metric::GetBlackHoleMass() const {
-  return bh_mass_;
+  return BlackHoleMassStorage();
+}
+Real Metric::GetBlackHoleSpin() const {
+  return BlackHoleSpinStorage();
 }
 
 
@@ -544,7 +583,7 @@ void Metric::ConstructCellCovariantMetric(
   const Real theta = pcoord->x2v(j);
   const Real phi = pcoord->x3v(k);
   
-  ConstructCovariantMetric(r, theta, phi, Psi_(i), delta_m_(i),
+  ConstructCovariantMetric(r, theta, phi, CellPsi(i), CellDeltaM(i),
       g00, g01, g02, g03,
       g11, g12, g13, g22, g23, g33);
   
@@ -558,9 +597,10 @@ void Metric::ConstructCovariantMetric(
 
   const Real sintheta = std::sin(theta);
 
+  const Real bh_mass = GetBlackHoleMass();
   // const Real alpha = std::sqrt(1.0 - 2.0*bh_mass_/r);
   // const Real f = alpha*alpha;
-  const Real f = 1.0 - 2.0*bh_mass_/r;
+  const Real f = 1.0 - 2.0*bh_mass/r;
 
   g00 = -f + 2.0*dm/r + 2.0*f*Psi;
   g01 = 0.0;
