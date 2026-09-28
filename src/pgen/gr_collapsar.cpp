@@ -404,8 +404,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         << std::endl;
     ATHENA_ERROR(msg);
   }
-
-  pmetric->Update();
   
   // Convert primitive -> conserved
   AthenaArray<Real> bb;

@@ -83,19 +83,9 @@ void MonopoleGravity::Update(){
     dm_shell_global_(i) *= mass_to_length;
   }
   
-  std::cout << "pmonotgrav dm_shell:" << std::endl;
-  for(int i=0; i<nr_; ++i){
-    printf("ig, dm_shell = %5d %25.16e\n", i, dm_shell_global_(i));
-  }
-  
   delta_m_face_global_(0) = 0.0;
   for (int i=0; i<nr_; ++i) {
     delta_m_face_global_(i+1) = delta_m_face_global_(i) + dm_shell_global_(i);
-  }
-
-  std::cout << "pmonograv delta_m_face1:" << std::endl;
-  for(int i=0; i<=nr_; ++i){
-    printf("i, delta_m_face1 = %5d %25.16e\n", i, delta_m_face_global_(i));
   }
   
   dm_shell_global_.ZeroClear();
@@ -117,21 +107,35 @@ void MonopoleGravity::Update(){
       }
     }
   }
-
-  std::cout << "pmonograv integrant of Psi:" << std::endl;
-  for(int i=0; i<nr_; ++i){
-    printf("i, integr Psi = %5d %25.16e\n", i, dm_shell_global_(i));
-  }
   
   Psi_face_global_(nr_) = 0.0;
   for (int i=nr_-1; i>=0; --i) {
     Psi_face_global_(i) = Psi_face_global_(i+1) + dm_shell_global_(i);
   }
 
-  std::cout << "pmonotgrav Psi_face1:" << std::endl;
-  for(int i=0; i<=nr_; ++i){
-    printf("i, Psi = %5d %25.16e\n", i, Psi_face_global_(i));
+  // Provide global delta_m and Psi to MeshBlock-local storage
+  for (int b=0; b<pmy_mesh_->nblocal; ++b) {
+    MeshBlock *pmb = pmy_mesh_->my_blocks(b);
+    
+    auto &dm  = pmb->pmetric->DeltaMFace1();
+    auto &Psi = pmb->pmetric->PsiFace1();
+    
+    for (int i=0; i<=pmb->ncells1; ++i) {
+      int igf = pmb->loc.lx1 * pmb->block_size.nx1 + (i - pmb->is);
+      
+      if (igf < 0) {
+        dm(i)  = delta_m_face_global_(0);
+        Psi(i) = Psi_face_global_(0);
+      } else if (igf > nr_) {
+        dm(i)  = delta_m_face_global_(nr_);
+        Psi(i) = Psi_face_global_(nr_);
+      } else {
+        dm(i)  = delta_m_face_global_(igf);
+        Psi(i) = Psi_face_global_(igf);
+      }
+    }
   }
+  
 }
 
 
