@@ -204,7 +204,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
                           UserHistoryOperation::max);
   
   EnrollUserHistoryOutput(1, HistoryBlackHoleMassAccretionRate, "mdot_bh",
-                          UserHistoryOperation::sum);
+                          UserHistoryOperation::max);
 
   EnrollUserHistoryOutput(2, HistoryOuterMassFlux, "mdot_out",
                           UserHistoryOperation::sum);
