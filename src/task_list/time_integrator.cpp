@@ -2313,15 +2313,7 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
     ph->w.SwapAthenaArray(ph->w1);
     // r1/r_old for GR is currently unused:
     // ps->r.SwapAthenaArray(ps->r1);
-
-#if DYNAMIC_METRIC_ENABLED
-    if (TIME_METRIC_UPDATE) {
-      // update gravity from newly obtained primitive variables
-      pmb->pmetric->CommitBlackHoleMass();
-      pmb->pmetric->Update();
-    }
-#endif
-
+    
     return TaskStatus::success;
   }
   return TaskStatus::fail;

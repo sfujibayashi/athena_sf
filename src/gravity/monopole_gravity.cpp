@@ -39,6 +39,19 @@ MonopoleGravity::MonopoleGravity(Mesh *pm, ParameterInput *pin)
   dm_shell_global_.ZeroClear();
   delta_m_face_global_.ZeroClear();
   Psi_face_global_.ZeroClear();
+
+  
+  const Real bh_mass = GetBlackHoleMass();
+  const Real bh_spin = GetBlackHoleSpin();
+  
+  bh_mass_prev_    = bh_mass;
+  bh_mass_pending_ = bh_mass;
+  mdot_bh_         = 0.0;
+  
+  bh_spin_prev_    = bh_spin;
+  bh_spin_pending_ = bh_spin;
+  angdot_bh_       = 0.0;
+
 }
 
 MonopoleGravity::~MonopoleGravity() {
@@ -51,6 +64,7 @@ MonopoleGravity::~MonopoleGravity() {
 void MonopoleGravity::Update(){
 
   const Real bh_mass = GetBlackHoleMass();
+
   AthenaArray<Real> vol;
   vol.NewAthenaArray(pmy_mesh_->my_blocks(0)->ncells1);
   
@@ -160,4 +174,44 @@ Real MonopoleGravity::GetBlackHoleMass() const {
 }
 Real MonopoleGravity::GetBlackHoleSpin() const {
   return BlackHoleSpinStorage();
+}
+
+Real MonopoleGravity::BlackHoleMassAccretionRate() const {
+  
+
+  Real mdot = 0.0;
+  
+  // run over MeshBlocks
+  for (int b=0; b<pmy_mesh_->nblocal; ++b) {
+    MeshBlock *pmb = pmy_mesh_->my_blocks(b);
+    Coordinates *pcoord = pmb->pcoord;
+
+    // This MeshBlock does not touch the physical inner-x1 boundary.
+    if (pmb->pbval->block_bcs[BoundaryFace::inner_x1] == BoundaryFlag::block) {
+      continue;
+    }
+
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+        const Real area = pcoord->GetFace1Area(k, j, pmb->is);
+        
+        // inward flux is negative
+        mdot -= area * pmb->phydro->flux[X1DIR](IDN, k, j, pmb->is);
+      }
+    }
+  }
+  
+  // MPI Allreduce here
+  
+  const Real mass_to_length =
+    pmy_mesh_->punit->grav_const_code
+    / SQR(pmy_mesh_->punit->speed_of_light_code);
+  
+  return mass_to_length * mdot;
+  
+}
+
+
+void MonopoleGravity::CommitBlackHoleMass(int stage){
+  BlackHoleMassStorage() = bh_mass_pending_;
 }

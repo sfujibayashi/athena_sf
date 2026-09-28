@@ -239,6 +239,10 @@ class TimeIntegratorTaskList : public TaskList {
 
   bool CheckNextMainStage(int stage) const {return stage_wghts[stage%nstages].main_stage;}
 
+  bool TimeMetricUpdateEnabled() const {
+    return TIME_METRIC_UPDATE;
+  }
+
  private:
   bool ORBITAL_ADVECTION; // flag for orbital advection (true w/ , false w/o)
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)

@@ -27,6 +27,14 @@ public:
   ~MonopoleGravity();
   
   void Update();
+
+  Real bh_mass_prev_, bh_spin_prev_;
+  Real bh_mass_pending_, bh_spin_pending_;
+  Real mdot_bh_, angdot_bh_;
+
+  Real BlackHoleMassAccretionRate() const;
+  void SetPendingBlackHoleMass(Real mass);
+  void CommitBlackHoleMass(int stage);
   
 private:
   Mesh *pmy_mesh_;

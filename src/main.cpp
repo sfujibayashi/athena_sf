@@ -49,6 +49,8 @@
 #include "task_list/chem_rad_task_list.hpp"
 #include "utils/utils.hpp"
 
+#include "gravity/monopole_gravity.hpp"
+
 // MPI/OpenMP headers
 #ifdef MPI_PARALLEL
 #include <mpi.h>
@@ -512,6 +514,14 @@ int main(int argc, char *argv[]) {
     for (int stage=1; stage<=ptlist->nstages; ++stage) {
       ptlist->DoTaskListOneStage(pmesh, stage);
       if (ptlist->CheckNextMainStage(stage)) {
+        
+#if DYNAMIC_METRIC_ENABLED
+        if (ptlist->TimeMetricUpdateEnabled()) {
+          pmesh->pmonograv->CommitBlackHoleMass(stage);
+          pmesh->pmonograv->Update();
+        }
+#endif
+        
         if (SELF_GRAVITY_ENABLED == 1) // fft (0: discrete kernel, 1: continuous kernel)
           pmesh->pfgrd->Solve(stage, 0);
         else if (SELF_GRAVITY_ENABLED == 2) // multigrid
