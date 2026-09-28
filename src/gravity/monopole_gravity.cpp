@@ -1,14 +1,35 @@
-#include "monopole_gravity.hpp"
 
+// C++ headers
+#include <sstream>
+
+// Athena++ headers
+#include "monopole_gravity.hpp"
 #include "../mesh/mesh.hpp"
 #include "../hydro/hydro.hpp"
 #include "../metric/metric.hpp"
 #include "../coordinates/coordinates.hpp"
 #include "../parameter_input.hpp"
 
+namespace{
+
+  int GlobalRadialIndex(const MeshBlock *pmb, int i){
+    int ig = pmb->loc.lx1 * pmb->block_size.nx1 + (i - pmb->is);
+    return ig;
+  }
+  
+}
+
 MonopoleGravity::MonopoleGravity(Mesh *pm, ParameterInput *pin)
   : pmy_mesh_(pm) {
 
+  if (pm->multilevel) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in monopole_gravity.cpp" << std::endl
+        << "Multi-level is not supported."
+        << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  
   nr_ = pm->mesh_size.nx1;
 
   dm_shell_global_.NewAthenaArray(nr_);
@@ -26,10 +47,6 @@ MonopoleGravity::~MonopoleGravity() {
   psi_face_global_.DeleteAthenaArray();
 }
 
-int GlobalRadialIndex(MeshBlock *pmb, int i){
-  int ig = pmb->loc.lx1 * pmb->block_size.nx1 + (i - pmb->is);
-  return ig;
-}
 
 void MonopoleGravity::Update(){
 
@@ -64,5 +81,11 @@ void MonopoleGravity::Update(){
   for(int i=0; i<nr_; ++i){
     dm_shell_global_(i) *= mass_to_length;
   }
+  
+  std::cout << "pmonotgrav dm_shell:" << std::endl;
+  for(int i=0; i<nr_; ++i){
+    printf("ig, delta_m = %d %25.16e\n", i, dm_shell_global_(i));
+  }
+
 }
 

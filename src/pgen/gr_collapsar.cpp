@@ -39,6 +39,7 @@
 // progenitor-reader
 #include "../inputs/progenitor_reader.hpp"
 #include "../metric/metric.hpp"
+#include "../gravity/monopole_gravity.hpp"
 
 struct CollapsedProfile {
   int nface = 0;
@@ -404,19 +405,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ATHENA_ERROR(msg);
   }
   
-  if (initial_metric_update) {
-    // Calculate metric perturbation from primitive rho.
-    pmetric->Update();
-  }
-  
-
-  std::cout << "r=" << pcoord->x1v(is)
-            << " dm=" << pmetric->CellDeltaM(is)
-            << " Psi=" << pmetric->CellPsi(is)
-            << " q=" << pmetric->CellDensitizationFactor(0,0,is)
-            << std::endl;
-
-
   // Convert primitive -> conserved
   AthenaArray<Real> bb;
   bb.NewAthenaArray(3, ke+1, je+1, ie+1);
@@ -425,7 +413,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   peos->PrimitiveToConserved(
       phydro->w, bb, phydro->u, pcoord,
       is, ie, js, je, ks, ke);
-  //std::abort();
+
 }
 
 
