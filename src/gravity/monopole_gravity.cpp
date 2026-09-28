@@ -66,7 +66,7 @@ void MonopoleGravity::Update(){
   const Real bh_mass = GetBlackHoleMass();
 
   AthenaArray<Real> vol;
-  vol.NewAthenaArray(pmy_mesh_->my_blocks(0)->ncells1);
+  vol.NewAthenaArray(pmy_mesh_->block_size.nx1+2*NGHOST);
   
   dm_shell_global_.ZeroClear();
   
@@ -88,6 +88,15 @@ void MonopoleGravity::Update(){
       }
     }
   }
+
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE,
+                dm_shell_global_.data(),
+                nr_,
+                MPI_ATHENA_REAL,
+                MPI_SUM,
+                MPI_COMM_WORLD);
+#endif
   
   const Real mass_to_length =
     pmy_mesh_->punit->grav_const_code
@@ -121,6 +130,15 @@ void MonopoleGravity::Update(){
       }
     }
   }
+
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE,
+                dm_shell_global_.data(),
+                nr_,
+                MPI_ATHENA_REAL,
+                MPI_SUM,
+                MPI_COMM_WORLD);
+#endif
   
   Psi_face_global_(nr_) = 0.0;
   for (int i=nr_-1; i>=0; --i) {
@@ -200,7 +218,14 @@ Real MonopoleGravity::BlackHoleMassAccretionRate() const {
     }
   }
   
-  // MPI Allreduce here
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE,
+                &mdot,
+                1,
+                MPI_ATHENA_REAL,
+                MPI_SUM,
+                MPI_COMM_WORLD);
+#endif
   
   const Real mass_to_length =
     pmy_mesh_->punit->grav_const_code
