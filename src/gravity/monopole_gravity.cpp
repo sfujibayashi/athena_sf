@@ -212,6 +212,18 @@ Real MonopoleGravity::BlackHoleMassAccretionRate() const {
 }
 
 
-void MonopoleGravity::CommitBlackHoleMass(int stage){
+void MonopoleGravity::UpdateBlackHoleMass(int stage){
+   
+  mdot_bh_ = BlackHoleMassAccretionRate();
+
+  if (stage == 1) {
+    bh_mass_prev_ = GetBlackHoleMass();
+    bh_mass_pending_ = bh_mass_prev_ + 0.5*pmy_mesh_->dt*mdot_bh_;
+  }
+
+  if (stage == 2) {
+    bh_mass_pending_ = bh_mass_prev_ + pmy_mesh_->dt*mdot_bh_;
+  }
+
   BlackHoleMassStorage() = bh_mass_pending_;
 }

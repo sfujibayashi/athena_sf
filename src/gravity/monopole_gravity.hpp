@@ -33,8 +33,7 @@ public:
   Real mdot_bh_, angdot_bh_;
 
   Real BlackHoleMassAccretionRate() const;
-  void SetPendingBlackHoleMass(Real mass);
-  void CommitBlackHoleMass(int stage);
+  void UpdateBlackHoleMass(int stage);
   
 private:
   Mesh *pmy_mesh_;

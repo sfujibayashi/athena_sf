@@ -517,7 +517,7 @@ int main(int argc, char *argv[]) {
         
 #if DYNAMIC_METRIC_ENABLED
         if (ptlist->TimeMetricUpdateEnabled()) {
-          pmesh->pmonograv->CommitBlackHoleMass(stage);
+          pmesh->pmonograv->UpdateBlackHoleMass(stage);
           pmesh->pmonograv->Update();
         }
 #endif
