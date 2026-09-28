@@ -161,6 +161,26 @@ namespace {
     return mdot_out;
   }
 
+
+  Real HistorySumAbs2Mom(MeshBlock *pmb, int iout) {
+    // This block does not touch the physical outer-x1 boundary.
+    Real sum_2mom = 0.0;
+    
+    AthenaArray<Real> vol;
+    vol.NewAthenaArray(pmb->ie-pmb->is+1);
+
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+        pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+        for (int i=pmb->is; i<=pmb->ie; ++i) {
+          sum_2mom += vol(i) * std::abs(pmb->phydro->u(IM2,k,j,i));
+        }
+      }
+    }
+    
+    return sum_2mom;
+  }
+
 }
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
@@ -208,6 +228,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
   EnrollUserHistoryOutput(2, HistoryOuterMassFlux, "mdot_out",
                           UserHistoryOperation::sum);
+
+  // EnrollUserHistoryOutput(3, HistorySumAbs2Mom, "Abs 2-Mom",
+  //                         UserHistoryOperation::sum);
 
   //
   AllocateRealUserMeshDataField(2);
