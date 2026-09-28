@@ -151,10 +151,21 @@ void Metric::Update() {
     }
   }
 
+  std::cout << "pmetric dm_shell:" << std::endl;
+  for(int i=is; i<=ie; ++i){
+    printf("i, dm_shell = %5d %25.16e\n", i, dm_shell(i));
+  }
+
+
   delta_m_face1(is) = 0.0;
 
   for (int i=is; i<=ie; ++i) {
     delta_m_face1(i+1) = delta_m_face1(i) + dm_shell(i);
+  }
+
+  std::cout << "pmetric delta_m_face1:" << std::endl;
+  for(int i=is; i<=ie; ++i){
+    printf("i, delta_m_face1 = %5d %25.16e\n", i, delta_m_face1(i));
   }
 
   
@@ -171,12 +182,23 @@ void Metric::Update() {
     }
   }
 
+  std::cout << "pmetric integrant of Psi:" << std::endl;
+  for(int i=is; i<=ie; ++i){
+    printf("i, integr Psi = %5d %25.16e\n", i, dm_shell(i));
+  }
+
   
   Psi_face1(ie+1) = 0.0;
 
   for (int i=ie; i>=is; --i) {
     Psi_face1(i) = Psi_face1(i+1) + dm_shell(i);
   }
+
+  std::cout << "pmetric Psi_face1:" << std::endl;
+  for(int i=is; i<=ie; ++i){
+    printf("i, Psi = %5d %25.16e\n", i, Psi_face1(i));
+  }
+
 
   // inner radial ghost faces
   for (int i=is-1; i>=0; --i) {

@@ -1657,6 +1657,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
     if (initial_metric_update) {
       pmonograv->Update();
     }
+    std::abort();
 #endif
 
 

@@ -35,7 +35,16 @@ private:
 
   AthenaArray<Real> dm_shell_global_;
   AthenaArray<Real> delta_m_face_global_;
-  AthenaArray<Real> psi_face_global_;
+  AthenaArray<Real> Psi_face_global_;
+
+  Real GetBlackHoleMass() const;
+  Real GetBlackHoleSpin() const;
+
+  Real& BlackHoleMassStorage();
+  const Real& BlackHoleMassStorage() const;
+
+  Real& BlackHoleSpinStorage();
+  const Real& BlackHoleSpinStorage() const;
 
 };
 
