@@ -1670,7 +1670,6 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
            pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
       }
     }
-    std::abort();
 #endif
 
 

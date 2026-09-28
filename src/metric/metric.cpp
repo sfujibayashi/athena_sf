@@ -30,35 +30,35 @@ Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
 Metric::~Metric() {
 }
 
-Real Metric::BlackHoleMassAccretionRate(const AthenaArray<Real> &x1flux) const {
+// Real Metric::BlackHoleMassAccretionRate(const AthenaArray<Real> &x1flux) const {
   
-  MeshBlock *pmb = pmy_block;
-  Coordinates *pcoord = pmb->pcoord;
+//   MeshBlock *pmb = pmy_block;
+//   Coordinates *pcoord = pmb->pcoord;
 
-  // This MeshBlock does not touch the physical inner-x1 boundary.
-  if (pmb->pbval->block_bcs[BoundaryFace::inner_x1]
-      == BoundaryFlag::block) {
-    return 0.0;
-  }
+//   // This MeshBlock does not touch the physical inner-x1 boundary.
+//   if (pmb->pbval->block_bcs[BoundaryFace::inner_x1]
+//       == BoundaryFlag::block) {
+//     return 0.0;
+//   }
 
-  Real mdot = 0.0;
+//   Real mdot = 0.0;
 
-  for (int k=pmb->ks; k<=pmb->ke; ++k) {
-    for (int j=pmb->js; j<=pmb->je; ++j) {
-      const Real area = pcoord->GetFace1Area(k, j, pmb->is);
+//   for (int k=pmb->ks; k<=pmb->ke; ++k) {
+//     for (int j=pmb->js; j<=pmb->je; ++j) {
+//       const Real area = pcoord->GetFace1Area(k, j, pmb->is);
       
-      // inward flux is negative
-      mdot -= area * x1flux(IDN, k, j, pmb->is);
-    }
-  }
+//       // inward flux is negative
+//       mdot -= area * x1flux(IDN, k, j, pmb->is);
+//     }
+//   }
 
-  const Real mass_to_length =
-      pmb->pmy_mesh->punit->grav_const_code
-      / SQR(pmb->pmy_mesh->punit->speed_of_light_code);
+//   const Real mass_to_length =
+//       pmb->pmy_mesh->punit->grav_const_code
+//       / SQR(pmb->pmy_mesh->punit->speed_of_light_code);
 
-  return mass_to_length * mdot;
+//   return mass_to_length * mdot;
 
-}
+// }
 
 // void Metric::CommitBlackHoleMass(){
 //   BlackHoleMassStorage() = bh_mass_pending_;
@@ -92,111 +92,111 @@ Real Metric::CellDeltaM(int i) const {
 }
 
 
-// delta_m_ and Psi_ are derived from fluid distribution.
-void Metric::Update() {
+// // delta_m_ and Psi_ are derived from fluid distribution.
+// void Metric::Update() {
 
-  auto &Psi_face1 = PsiFace1();
-  auto &delta_m_face1 = DeltaMFace1();
+//   auto &Psi_face1 = PsiFace1();
+//   auto &delta_m_face1 = DeltaMFace1();
   
-  const Real bh_mass = GetBlackHoleMass();
+//   const Real bh_mass = GetBlackHoleMass();
 
-  Coordinates *pcoord = pmy_block->pcoord;
-  Hydro *phydro = pmy_block->phydro;
+//   Coordinates *pcoord = pmy_block->pcoord;
+//   Hydro *phydro = pmy_block->phydro;
 
-  const Real mass_to_length =
-    pmy_block->pmy_mesh->punit->grav_const_code
-    / SQR(pmy_block->pmy_mesh->punit->speed_of_light_code);
+//   const Real mass_to_length =
+//     pmy_block->pmy_mesh->punit->grav_const_code
+//     / SQR(pmy_block->pmy_mesh->punit->speed_of_light_code);
   
-  const int is = pmy_block->is;
-  const int ie = pmy_block->ie;
-  const int js = pmy_block->js;
-  const int je = pmy_block->je;
-  const int ks = pmy_block->ks;
-  const int ke = pmy_block->ke;
+//   const int is = pmy_block->is;
+//   const int ie = pmy_block->ie;
+//   const int js = pmy_block->js;
+//   const int je = pmy_block->je;
+//   const int ks = pmy_block->ks;
+//   const int ke = pmy_block->ke;
   
-  const int nc1 = pmy_block->ncells1;
-  //const int nc2 = pmy_block->ncells2;
-  //const int nc3 = pmy_block->ncells3;
+//   const int nc1 = pmy_block->ncells1;
+//   //const int nc2 = pmy_block->ncells2;
+//   //const int nc3 = pmy_block->ncells3;
 
-  AthenaArray<Real> dm_shell;
-  dm_shell.NewAthenaArray(nc1);
-  dm_shell.ZeroClear();
+//   AthenaArray<Real> dm_shell;
+//   dm_shell.NewAthenaArray(nc1);
+//   dm_shell.ZeroClear();
 
-  AthenaArray<Real> vol;
-  vol.NewAthenaArray(nc1);
+//   AthenaArray<Real> vol;
+//   vol.NewAthenaArray(nc1);
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      pcoord->CellVolume(k, j, is, ie, vol);
-#pragma omp simd
-      for (int i=is; i<=ie; ++i) {
-        dm_shell(i) += phydro->w(IDN, k, j, i) * vol(i) * mass_to_length;
-      }
-    }
-  }
+//   for (int k=ks; k<=ke; ++k) {
+//     for (int j=js; j<=je; ++j) {
+//       pcoord->CellVolume(k, j, is, ie, vol);
+// #pragma omp simd
+//       for (int i=is; i<=ie; ++i) {
+//         dm_shell(i) += phydro->w(IDN, k, j, i) * vol(i) * mass_to_length;
+//       }
+//     }
+//   }
 
-  std::cout << "pmetric dm_shell:" << std::endl;
-  for(int i=is; i<=ie; ++i){
-    printf("i, dm_shell = %5d %25.16e\n", i, dm_shell(i));
-  }
+//   std::cout << "pmetric dm_shell:" << std::endl;
+//   for(int i=is; i<=ie; ++i){
+//     printf("i, dm_shell = %5d %25.16e\n", i, dm_shell(i));
+//   }
 
 
-  delta_m_face1(is) = 0.0;
+//   delta_m_face1(is) = 0.0;
 
-  for (int i=is; i<=ie; ++i) {
-    delta_m_face1(i+1) = delta_m_face1(i) + dm_shell(i);
-  }
+//   for (int i=is; i<=ie; ++i) {
+//     delta_m_face1(i+1) = delta_m_face1(i) + dm_shell(i);
+//   }
 
-  std::cout << "pmetric delta_m_face1:" << std::endl;
-  for(int i=is; i<=ie; ++i){
-    printf("i, delta_m_face1 = %5d %25.16e\n", i, delta_m_face1(i));
-  }
-
-  
-  dm_shell.ZeroClear();
-
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      pcoord->CellVolume(k, j, is, ie, vol);
-#pragma omp simd
-      for (int i=is; i<=ie; ++i) {
-        const Real r = pcoord->x1v(i);
-        dm_shell(i) += phydro->w(IDN, k, j, i)/(r-2.0*bh_mass) * vol(i) * mass_to_length;
-      }
-    }
-  }
-
-  std::cout << "pmetric integrant of Psi:" << std::endl;
-  for(int i=is; i<=ie; ++i){
-    printf("i, integr Psi = %5d %25.16e\n", i, dm_shell(i));
-  }
+//   std::cout << "pmetric delta_m_face1:" << std::endl;
+//   for(int i=is; i<=ie; ++i){
+//     printf("i, delta_m_face1 = %5d %25.16e\n", i, delta_m_face1(i));
+//   }
 
   
-  Psi_face1(ie+1) = 0.0;
+//   dm_shell.ZeroClear();
 
-  for (int i=ie; i>=is; --i) {
-    Psi_face1(i) = Psi_face1(i+1) + dm_shell(i);
-  }
+//   for (int k=ks; k<=ke; ++k) {
+//     for (int j=js; j<=je; ++j) {
+//       pcoord->CellVolume(k, j, is, ie, vol);
+// #pragma omp simd
+//       for (int i=is; i<=ie; ++i) {
+//         const Real r = pcoord->x1v(i);
+//         dm_shell(i) += phydro->w(IDN, k, j, i)/(r-2.0*bh_mass) * vol(i) * mass_to_length;
+//       }
+//     }
+//   }
 
-  std::cout << "pmetric Psi_face1:" << std::endl;
-  for(int i=is; i<=ie; ++i){
-    printf("i, Psi = %5d %25.16e\n", i, Psi_face1(i));
-  }
+//   std::cout << "pmetric integrant of Psi:" << std::endl;
+//   for(int i=is; i<=ie; ++i){
+//     printf("i, integr Psi = %5d %25.16e\n", i, dm_shell(i));
+//   }
 
-
-  // inner radial ghost faces
-  for (int i=is-1; i>=0; --i) {
-    delta_m_face1(i) = delta_m_face1(is);
-    Psi_face1(i)     = Psi_face1(is);
-  }
   
-  // outer radial ghost faces
-  for (int i=ie+2; i<=nc1; ++i) {
-    delta_m_face1(i) = delta_m_face1(ie+1);
-    Psi_face1(i)     = Psi_face1(ie+1);
-  }
+//   Psi_face1(ie+1) = 0.0;
+
+//   for (int i=ie; i>=is; --i) {
+//     Psi_face1(i) = Psi_face1(i+1) + dm_shell(i);
+//   }
+
+//   std::cout << "pmetric Psi_face1:" << std::endl;
+//   for(int i=is; i<=ie; ++i){
+//     printf("i, Psi = %5d %25.16e\n", i, Psi_face1(i));
+//   }
+
+
+//   // inner radial ghost faces
+//   for (int i=is-1; i>=0; --i) {
+//     delta_m_face1(i) = delta_m_face1(is);
+//     Psi_face1(i)     = Psi_face1(is);
+//   }
   
-}
+//   // outer radial ghost faces
+//   for (int i=ie+2; i<=nc1; ++i) {
+//     delta_m_face1(i) = delta_m_face1(ie+1);
+//     Psi_face1(i)     = Psi_face1(ie+1);
+//   }
+  
+// }
 
 Real Metric::DetSpatialMetric(Real g11, Real g12, Real g13,
                               Real g22, Real g23, Real g33) const {

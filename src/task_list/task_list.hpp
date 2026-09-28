@@ -235,7 +235,7 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus SetBoundariesCRTC(MeshBlock *pmb, int stage);
   TaskStatus CRTCOpacity(MeshBlock *pmb, int stage);
 
-  TaskStatus IntegrateBlackHoleMass(MeshBlock *pmb, int stage);
+  // TaskStatus IntegrateBlackHoleMass(MeshBlock *pmb, int stage);
 
   bool CheckNextMainStage(int stage) const {return stage_wghts[stage%nstages].main_stage;}
 
