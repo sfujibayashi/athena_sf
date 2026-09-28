@@ -178,7 +178,6 @@ Real MonopoleGravity::GetBlackHoleSpin() const {
 
 Real MonopoleGravity::BlackHoleMassAccretionRate() const {
   
-
   Real mdot = 0.0;
   
   // run over MeshBlocks

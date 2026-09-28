@@ -961,10 +961,10 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     }
 
     TaskID hydro_done = INT_HYD;
-    if (DYNAMIC_METRIC_ENABLED && TIME_METRIC_UPDATE){
-      AddTask(INT_BH_MASS, INT_HYD);
-      hydro_done = INT_BH_MASS;
-    }
+    // if (DYNAMIC_METRIC_ENABLED && TIME_METRIC_UPDATE){
+    //   AddTask(INT_BH_MASS, INT_HYD);
+    //   hydro_done = INT_BH_MASS;
+    // }
     
     if (radiation_flag) {
       AddTask(CALC_RADFLX,NONE);
@@ -1619,11 +1619,11 @@ void TimeIntegratorTaskList::AddTask(const TaskID& id, const TaskID& dep) {
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&TimeIntegratorTaskList::CRTCOpacity);
     task_list_[ntasks].lb_time = true;
-  } else if (id == INT_BH_MASS) {
-    task_list_[ntasks].TaskFunc=
-        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
-        (&TimeIntegratorTaskList::IntegrateBlackHoleMass);
-    task_list_[ntasks].lb_time = false;
+  // } else if (id == INT_BH_MASS) {
+  //   task_list_[ntasks].TaskFunc=
+  //       static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+  //       (&TimeIntegratorTaskList::IntegrateBlackHoleMass);
+  //   task_list_[ntasks].lb_time = false;
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in AddTask" << std::endl
@@ -3125,35 +3125,35 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsCRTC(MeshBlock *pmb, int stage)
 }
 
 
-//----------------------------------------------------------------------------------------
-// Function to integrate BH mass
+// //----------------------------------------------------------------------------------------
+// // Function to integrate BH mass
 
-TaskStatus TimeIntegratorTaskList::IntegrateBlackHoleMass(MeshBlock *pmb, int stage) {
-  Hydro *ph = pmb->phydro;
+// TaskStatus TimeIntegratorTaskList::IntegrateBlackHoleMass(MeshBlock *pmb, int stage) {
+//   Hydro *ph = pmb->phydro;
   
-  const Real mdot_bh =
-    pmb->pmetric->BlackHoleMassAccretionRate(ph->flux[X1DIR]);
-  pmb->pmetric->mdot_bh_ = mdot_bh;
+//   const Real mdot_bh =
+//     pmb->pmetric->BlackHoleMassAccretionRate(ph->flux[X1DIR]);
+//   pmb->pmetric->mdot_bh_ = mdot_bh;
   
 
-  if (pmb->pmy_mesh->fluid_setup != FluidFormulation::evolve) return TaskStatus::next;
+//   if (pmb->pmy_mesh->fluid_setup != FluidFormulation::evolve) return TaskStatus::next;
 
-  if (stage <= nstages) {
-    if (stage_wghts[stage-1].main_stage) {
+//   if (stage <= nstages) {
+//     if (stage_wghts[stage-1].main_stage) {
       
-      if (stage == 1) {
-        pmb->pmetric->bh_mass_prev_ = pmb->pmetric->GetBlackHoleMass();
+//       if (stage == 1) {
+//         pmb->pmetric->bh_mass_prev_ = pmb->pmetric->GetBlackHoleMass();
         
-        pmb->pmetric->bh_mass_pending_ = pmb->pmetric->bh_mass_prev_
-          + 0.5 * pmb->pmy_mesh->dt * mdot_bh;
-      }
+//         pmb->pmetric->bh_mass_pending_ = pmb->pmetric->bh_mass_prev_
+//           + 0.5 * pmb->pmy_mesh->dt * mdot_bh;
+//       }
       
-      if (stage == 2) {
-        pmb->pmetric->bh_mass_pending_ = pmb->pmetric->bh_mass_prev_
-          + pmb->pmy_mesh->dt * mdot_bh;
-      }
-    }
-    return TaskStatus::next;
-  }
-  return TaskStatus::fail;
-}
+//       if (stage == 2) {
+//         pmb->pmetric->bh_mass_pending_ = pmb->pmetric->bh_mass_prev_
+//           + pmb->pmy_mesh->dt * mdot_bh;
+//       }
+//     }
+//     return TaskStatus::next;
+//   }
+//   return TaskStatus::fail;
+// }

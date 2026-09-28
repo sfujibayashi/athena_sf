@@ -410,7 +410,7 @@ const TaskID RECV_RADSH(73);
 
 const TaskID SRCTERM_IMRAD(74);
 
-const TaskID INT_BH_MASS(75);
+// const TaskID INT_BH_MASS(75);
 
 }  // namespace HydroIntegratorTaskNames
 #endif  // TASK_LIST_TASK_LIST_HPP_

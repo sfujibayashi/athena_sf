@@ -35,13 +35,13 @@ public:
 
   void Update();
 
-  Real bh_mass_prev_, bh_spin_prev_;
-  Real bh_mass_pending_, bh_spin_pending_;
-  Real mdot_bh_, angdot_bh_;
+  // Real bh_mass_prev_, bh_spin_prev_;
+  // Real bh_mass_pending_, bh_spin_pending_;
+  // Real mdot_bh_, angdot_bh_;
 
   Real BlackHoleMassAccretionRate(const AthenaArray<Real> &x1flux) const;
-  void SetPendingBlackHoleMass(Real mass);
-  void CommitBlackHoleMass();
+  // void SetPendingBlackHoleMass(Real mass);
+  // void CommitBlackHoleMass();
 
   void CellMetric(const int k, const int j,
                   const int il, const int iu,
@@ -63,9 +63,6 @@ public:
   Real Face2DensitizationFactor(int k, int j, int i) const;
   Real Face3DensitizationFactor(int k, int j, int i) const;
 
-  void SetBlackHoleMass(Real mass);
-  void SetBlackHoleSpin(Real spin);
-
   Real GetBlackHoleMass() const;
   Real GetBlackHoleSpin() const;
 
@@ -74,12 +71,6 @@ public:
   
   AthenaArray<Real>& DeltaMFace1();
   const AthenaArray<Real>& DeltaMFace1() const;
-  
-  Real& BlackHoleMassStorage();
-  const Real& BlackHoleMassStorage() const;
-
-  Real& BlackHoleSpinStorage();
-  const Real& BlackHoleSpinStorage() const;
   
   Real CellPsi(int i) const;
   Real CellDeltaM(int i) const;
@@ -100,9 +91,6 @@ public:
     int i,
     const AthenaArray<Real> &g,
     AthenaArray<Real> &g_inv) const;
-
-
-
 
 };
 

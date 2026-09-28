@@ -34,6 +34,9 @@ public:
 
   Real BlackHoleMassAccretionRate() const;
   void UpdateBlackHoleMass(int stage);
+
+  Real GetBlackHoleMass() const;
+  Real GetBlackHoleSpin() const;
   
 private:
   Mesh *pmy_mesh_;
@@ -43,9 +46,6 @@ private:
   AthenaArray<Real> dm_shell_global_;
   AthenaArray<Real> delta_m_face_global_;
   AthenaArray<Real> Psi_face_global_;
-
-  Real GetBlackHoleMass() const;
-  Real GetBlackHoleSpin() const;
 
   Real& BlackHoleMassStorage();
   const Real& BlackHoleMassStorage() const;

@@ -14,16 +14,16 @@
 Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
   : pmy_block(pmb) {
 
-  const Real bh_mass = GetBlackHoleMass();
-  const Real bh_spin = GetBlackHoleSpin();
+  // const Real bh_mass = GetBlackHoleMass();
+  // const Real bh_spin = GetBlackHoleSpin();
   
-  bh_mass_prev_    = bh_mass;
-  bh_mass_pending_ = bh_mass;
-  mdot_bh_         = 0.0;
+  // bh_mass_prev_    = bh_mass;
+  // bh_mass_pending_ = bh_mass;
+  // mdot_bh_         = 0.0;
   
-  bh_spin_prev_    = bh_spin;
-  bh_spin_pending_ = bh_spin;
-  angdot_bh_       = 0.0;
+  // bh_spin_prev_    = bh_spin;
+  // bh_spin_pending_ = bh_spin;
+  // angdot_bh_       = 0.0;
   
 }
 
@@ -60,9 +60,9 @@ Real Metric::BlackHoleMassAccretionRate(const AthenaArray<Real> &x1flux) const {
 
 }
 
-void Metric::CommitBlackHoleMass(){
-  BlackHoleMassStorage() = bh_mass_pending_;
-}
+// void Metric::CommitBlackHoleMass(){
+//   BlackHoleMassStorage() = bh_mass_pending_;
+// }
 
 
 AthenaArray<Real>& Metric::PsiFace1() {
@@ -79,22 +79,6 @@ AthenaArray<Real>& Metric::DeltaMFace1() {
 
 const AthenaArray<Real>& Metric::DeltaMFace1() const {
   return pmy_block->ruser_meshblock_data[1];
-}
-
-Real& Metric::BlackHoleMassStorage() {
-  return pmy_block->pmy_mesh->ruser_mesh_data[0](0);
-}
-
-const Real& Metric::BlackHoleMassStorage() const {
-  return pmy_block->pmy_mesh->ruser_mesh_data[0](0);
-}
-
-Real& Metric::BlackHoleSpinStorage() {
-  return pmy_block->pmy_mesh->ruser_mesh_data[1](0);
-}
-
-const Real& Metric::BlackHoleSpinStorage() const {
-  return pmy_block->pmy_mesh->ruser_mesh_data[1](0);
 }
 
 Real Metric::CellPsi(int i) const {
@@ -521,22 +505,11 @@ Real Metric::Face3DensitizationFactor(int k, int j, int i) const {
   return std::sqrt((-g00)*g11);
 }
 
-
-void Metric::SetBlackHoleMass(Real mass){
-  BlackHoleMassStorage() = mass;
-}
-
-void Metric::SetBlackHoleSpin(Real spin){
-  BlackHoleSpinStorage() = spin;
-}
-
-
-
 Real Metric::GetBlackHoleMass() const {
-  return BlackHoleMassStorage();
+  return pmy_block->pmy_mesh->ruser_mesh_data[0](0);
 }
 Real Metric::GetBlackHoleSpin() const {
-  return BlackHoleSpinStorage();
+  return pmy_block->pmy_mesh->ruser_mesh_data[1](0);
 }
 
 

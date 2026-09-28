@@ -136,7 +136,7 @@ namespace {
   }
   
   Real HistoryBlackHoleMassAccretionRate(MeshBlock *pmb, int iout) {
-    return pmb->pmetric->mdot_bh_;
+    return pmb->pmy_mesh->pmonograv->mdot_bh_;
   }
 
   Real HistoryOuterMassFlux(MeshBlock *pmb, int iout) {
