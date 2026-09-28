@@ -40,6 +40,7 @@
 #include "../inputs/progenitor_reader.hpp"
 #include "../metric/metric.hpp"
 #include "../gravity/monopole_gravity.hpp"
+#include "../inputs/outflow_boundary_data.hpp"
 
 struct CollapsedProfile {
   int nface = 0;
@@ -115,6 +116,10 @@ struct CollapsedProfile {
 };
 
 CollapsedProfile CollapseProgenitor(const ProgenitorProfile &progenitor, Real t0);
+
+void CollapsarInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
+                      Real time, Real dt,
+                      int il, int iu, int jl, int ju, int kl, int ku, int ngh);
 
 namespace {
   Real m_bh, a_bh;
@@ -208,15 +213,24 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     / punit->code_length_cgs, 2);
   
   printf("Black hole mass (cgs,code unit)=%15.7e, %15.7e\n",M_inner_cgs, m_bh_code);
-  pin->SetReal("coord", "m", m_bh_code);
+  // pin->SetReal("coord", "m", m_bh_code);
   // pin->SetReal("coord", "j", ang_bh_code);
   // m_bh_code = pin->GetReal("coord", "m");
 
-  std::cout << std::setprecision(17)
-            << "m_bh_code = " << m_bh_code
-            << "  m_from_pin = " << pin->GetReal("coord","m")
-            << std::endl;
+  // std::cout << std::setprecision(17)
+  //           << "m_bh_code = " << m_bh_code
+  //           << "  m_from_pin = " << pin->GetReal("coord","m")
+  //           << std::endl;
 
+  // inject BC
+  std::string fname =
+    pin->GetString("problem", "outflow_file");
+  
+  poutflow = new OutflowBoundaryData(fname);
+  
+  EnrollUserBoundaryFunction(BoundaryFace::inner_x1,
+                             CollapsarInnerX1);
+  
   // output
   AllocateUserHistoryOutput(3);
   
@@ -554,4 +568,10 @@ CollapsedProfile CollapseProgenitor(const ProgenitorProfile &progenitor, Real t0
   }
   
   return collapsed;
+}
+
+void CollapsarInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
+                      Real time, Real dt,
+                      int il, int iu, int jl, int ju, int kl, int ku, int ngh){
+  
 }

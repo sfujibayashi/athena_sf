@@ -68,6 +68,7 @@ class TurbulenceDriver;
 
 class Metric;
 class MonopoleGravity;
+class OutflowBoundaryData;
 
 FluidFormulation GetFluidFormulation(const std::string& input_string);
 
@@ -284,7 +285,9 @@ class Mesh {
   
   // monopole gravity for gr-dynamic
   MonopoleGravity *pmonograv;
-
+  // injection boundary condition
+  OutflowBoundaryData *poutflow;
+  
   // implicit radiation iteration
   IMRadiation *pimrad;
 
