@@ -109,9 +109,9 @@ void MonopoleGravity::Update(){
         for (int i=pmb->is; i<=pmb->ie; ++i) {
           
           int ig = GlobalRadialIndex(pmb, i);
-
+          
           const Real r = pmb->pcoord->x1v(i);
-          dm_shell_global_(i) += 
+          dm_shell_global_(ig) += 
             pmb->phydro->w(IDN,k,j,i)/(r-2.0*bh_mass) * vol(i) * mass_to_length;
         }
       }
@@ -124,8 +124,7 @@ void MonopoleGravity::Update(){
   }
   
   Psi_face_global_(nr_) = 0.0;
-
-  for (int i=nr_; i>=0; --i) {
+  for (int i=nr_-1; i>=0; --i) {
     Psi_face_global_(i) = Psi_face_global_(i+1) + dm_shell_global_(i);
   }
 
