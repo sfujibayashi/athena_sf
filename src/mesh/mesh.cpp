@@ -1656,6 +1656,19 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
 #if DYNAMIC_METRIC_ENABLED
     if (initial_metric_update) {
       pmonograv->Update();
+
+      // Convert primitive -> conserved after getting metric (it requires primitive rho)
+      for (int i=0; i<nblocal; ++i) {
+        MeshBlock *pmb = my_blocks(i);
+
+        AthenaArray<Real> bb;
+        bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
+        bb.ZeroClear();
+        
+        pmb->peos->PrimitiveToConserved(
+           pmb->phydro->w, bb, pmb->phydro->u, pmb->pcoord,
+           pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
+      }
     }
     std::abort();
 #endif
