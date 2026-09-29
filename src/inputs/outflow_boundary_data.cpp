@@ -1,8 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
 //========================================================================================
-//! \file progenitor_reader.cpp
-//! \brief Reader for standardized 1D progenitor profiles stored in HDF5.
+//! \file outflow_boundary_data.cpp
+//! \brief Outflow data to inject from the inner boundary.
 
 #include <cmath>
 #include <cstdio>
@@ -30,10 +30,19 @@ namespace {
   static constexpr Real c_table_    = 2.99792458e10;  // cm/s
   static constexpr Real G_table_    = 6.6740e-8;     // cgs
   static constexpr Real Msun_table_ = 1.989e33;     // g
+
+  static constexpr Real length_unit_table_ =
+    G_table_*Msun_table_/(c_table_*c_table_); // cm
+
   static constexpr Real time_unit_table_ =
     G_table_ * Msun_table_ /
     (c_table_ * c_table_ * c_table_);
-  
+
+  static constexpr Real rho_unit_table_ = 
+    Msun_table_/(length_unit_table_*length_unit_table_*length_unit_table_);
+
+  static constexpr Real press_unit_table_ = 
+    rho_unit_table_*c_table_*c_table_;
 }
 
 OutflowBoundaryData::OutflowBoundaryData(const std::string &filename){
@@ -63,8 +72,8 @@ OutflowState OutflowBoundaryData::Interpolate(Real time_cgs, Real theta) const {
   table_.interpolate_all(time_geo, theta, q);
 
   OutflowState state;
-  state.rho     = q[IRHO_OUT];
-  state.press   = q[IPRESS_OUT];
+  state.rho     = q[IRHO_OUT]*rho_unit_table_;
+  state.press   = q[IPRESS_OUT]*press_unit_table_;
   state.vx      = q[IVX_OUT];
   state.vy      = q[IVY_OUT];
   state.vz      = q[IVZ_OUT];
