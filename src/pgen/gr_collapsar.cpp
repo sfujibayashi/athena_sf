@@ -76,7 +76,11 @@ struct CollapsedProfile {
         ihi = i;
       }
     }
-    return mass_face[ilo]; // not interpolated for now.
+
+    Real w1 = (std::log(r)-std::log(radius_face[ilo]))/(std::log(radius_face[ihi]) - std::log(radius_face[ilo]));
+    Real w0 = 1.0 - w1;
+    
+    return std::exp(w0*std::log(mass_face[ilo]) + w1*std::log(mass_face[ihi])); //log-log interpolation
   }
 
   int FirstCellIndex(){
@@ -516,9 +520,13 @@ Real GetTimeFromBlackHoleMass(const ProgenitorProfile &progenitor, Real bh_mass)
   ilo = 0;
   ihi = nface-1;
   
-  if (bh_mass>=progenitor.mass_face[ihi]/Msun){
-    std::cout << "bh_mass is larger than the total mass of the star."<< std::endl;
-    return -1.0;
+  if(bh_mass>=progenitor.mass_face[ihi]/Msun){
+    std::stringstream msg;
+    msg << "### FATAL ERROR in GetTimeFromBlackHoleMass" << std::endl
+        << "Specified BH mass is larger than total stellar mass."
+        << "BH mass = " << bh_mass << "Mtot = " << progenitor.mass_face[ihi]/Msun
+        << std::endl;
+    ATHENA_ERROR(msg);
   }
   
   while(ihi-ilo>=2){
@@ -530,10 +538,13 @@ Real GetTimeFromBlackHoleMass(const ProgenitorProfile &progenitor, Real bh_mass)
     }
   }
   // Radius of enclosed mass = bh_mass
-  Real r_m0 = progenitor.radius_face[ilo]; // not interpolated for now.
+  Real w1 = (std::log(bh_mass)-std::log(progenitor.mass_face[ilo]))
+    /(std::log(progenitor.mass_face[ihi])-std::log(progenitor.mass_face[ilo]));
+  Real w0 = 1.0 - w1;
+  Real r_m0 = std::exp( w0*std::log(progenitor.radius_face[ilo]) + w1*std::log(progenitor.radius_face[ihi]) );
 
   // derive collapse parameter eta for which r(m) = 2*m.
-  Real eta = std::acos(4.0*G*bh_mass*Msun/(c*c) - 1.0);
+  Real eta = std::acos(4.0*G*bh_mass*Msun/(c*c*r_m0) - 1.0);
 
   // derive sound crossing time
   Real t_m0 = 0.0;
