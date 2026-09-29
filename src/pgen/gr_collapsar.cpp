@@ -115,6 +115,7 @@ struct CollapsedProfile {
   }
 };
 
+Real GetTimeFromBlackHoleMass(const ProgenitorProfile &progenitor, Real bh_mass);
 CollapsedProfile CollapseProgenitor(const ProgenitorProfile &progenitor, Real t0);
 
 void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
@@ -190,11 +191,21 @@ namespace {
 void Mesh::InitUserMeshData(ParameterInput *pin) {
 
   std::string filename = pin->GetString("problem", "progenitor_file");
-  Real t0 = pin->GetReal("problem", "t0");
 
+  const bool initialize_with_mass =
+    pin->GetOrAddBoolean("coord", "initialize_with_mass", true);
+
+  ProgenitorProfile progenitor = ReadProgenitorProfile(filename);
+
+  Real t0=0.0;
+  if(initialize_with_mass){
+    Real bh_mass_init = pin->GetReal("problem", "initial_bh_mass");
+    t0 = GetTimeFromBlackHoleMass(progenitor, bh_mass_init);
+  }else{
+    t0 = pin->GetReal("problem", "t0");
+  }
   gamma_gas = pin->GetReal("hydro", "gamma");
   
-  ProgenitorProfile progenitor = ReadProgenitorProfile(filename);
   
   collapsed = CollapseProgenitor(progenitor, t0);
   
@@ -493,8 +504,48 @@ Real GetCollapsedRadius(const Real t_collapse, const Real r0, const Real m){
   return r0*0.5*(1.0+std::cos(eta));
 }
 
-Real CollapseTimeFromBlackHoleMass(const ProgenitorProfile &progenitor, Real bh_mass){
+Real GetTimeFromBlackHoleMass(const ProgenitorProfile &progenitor, Real bh_mass){
+
+  const Real Msun = Constants::solar_mass_cgs;
+  const Real G = Constants::grav_const_cgs;
+  const Real c = Constants::speed_of_light_cgs;
   
+  // find radius for m=bh_mass  
+  const int nface = progenitor.nface;
+  int ilo, ihi;
+  ilo = 0;
+  ihi = nface-1;
+  
+  if (bh_mass>=progenitor.mass_face[ihi]/Msun){
+    std::cout << "bh_mass is larger than the total mass of the star."<< std::endl;
+    return -1.0;
+  }
+  
+  while(ihi-ilo>=2){
+    int i=(ihi+ilo)/2;
+    if ( progenitor.mass_face[i]/Msun <= bh_mass ){
+      ilo = i;
+    }else{
+      ihi = i;
+    }
+  }
+  // Radius of enclosed mass = bh_mass
+  Real r_m0 = progenitor.radius_face[ilo]; // not interpolated for now.
+
+  // derive collapse parameter eta for which r(m) = 2*m.
+  Real eta = std::acos(4.0*G*bh_mass*Msun/(c*c) - 1.0);
+
+  // derive sound crossing time
+  Real t_m0 = 0.0;
+  for(int i=0; i<ilo; ++i){
+    Real dr = progenitor.radius_face[i+1] - progenitor.radius_face[i];
+    Real dt = dr/progenitor.csound[i];
+    t_m0 += dt;
+  }
+
+  Real tau = t_m0 + std::sqrt(r_m0*r_m0*r_m0/(8.0*G*bh_mass*Msun)) * (eta + std::sin(eta));
+
+  return tau;
 }
 
 CollapsedProfile CollapseProgenitor(const ProgenitorProfile &progenitor, Real t0){
@@ -583,6 +634,7 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
   const Real code_rho_cgs = pmb->pmy_mesh->punit->code_density_cgs;
   const Real code_press_cgs = pmb->pmy_mesh->punit->code_pressure_cgs;
 
+  const Real vv_max = 1.0 - 1.0/(W_max*W_max);
   Real time_cgs = time * code_time_cgs;
 
   Real fac = 1.0;
@@ -600,9 +652,9 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
   
   // set primitive variables in inlet ghost zones
   for (int k=kl; k<=ku; ++k) {
-    Real phi = pmb->pcoord->x3v(k);
-    Real cosphi = std::cos(phi);
-    Real sinphi = std::sin(phi);
+    // Real phi = pmb->pcoord->x3v(k);
+    // Real cosphi = std::cos(phi);
+    // Real sinphi = std::sin(phi);
     for (int j=jl; j<=ju; ++j) {
       Real theta = pmb->pcoord->x2v(j);
 
@@ -618,7 +670,7 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
 
       Real costheta = std::cos(theta_interp);
       Real sintheta = std::sin(theta_interp);
-      Real sin2theta = sintheta*sintheta;
+      // Real sin2theta = sintheta*sintheta;
       
       OutflowState state = pmb->pmy_mesh->poutflow->Interpolate(time_interp, theta_interp);
 
@@ -653,7 +705,7 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
       for (int n=1; n<=ngh; ++n) {
         int i = il - n;
         Real r = pmb->pcoord->x1v(i);
-        Real r2=r*r;
+        // Real r2=r*r;
         
         // Construct metric
         Real g00, g01, g02, g03;
@@ -671,14 +723,14 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
         Real vv = g11*v1*v1 + g22*v2*v2 + g33*v3*v3
            + 2.0*(g12*v1*v2 + g13*v1*v3 + g23*v2*v3);
 
-        if (vv >= 1.0){
-          std::cout << "Warning: v^2 > 1.0."
+        if (vv > vv_max){
+          std::cout << "Warning: v^2 > v2_max." << vv
                     << " at t=" << time_interp << "theta=" << theta_interp << std::endl;
-          vv = 1.0 - 1.0/(W_max*W_max);
-          Real norm = 1.0/std::sqrt(vv);
-          v1 *= norm;
-          v2 *= norm;
-          v3 *= norm;
+          const Real factor = std::sqrt(vv_max/vv);
+          v1 *= factor;
+          v2 *= factor;
+          v3 *= factor;
+          vv = vv_max;
         }
         // lorentz factor
         Real W = 1.0/std::sqrt(1.0-vv);
