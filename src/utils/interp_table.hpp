@@ -24,6 +24,7 @@ class InterpTable2D {
 
   void SetSize(const int nvar, const int nx2, const int nx1);
   Real interpolate(int nvar, Real x2, Real x1);
+  void interpolate_all(Real x3, Real x2, Real *out) const;
   int nvar();
   AthenaArray<Real> data;
   void SetX1lim(Real x1min, Real x1max);

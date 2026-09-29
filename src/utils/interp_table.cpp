@@ -96,6 +96,38 @@ Real InterpTable2D::interpolate(int var, Real x2, Real x1) {
   return out;
 }
 
+//! Bilinear interpolation for all existing variables
+void InterpTable2D::interpolate_all(Real x2, Real x1, Real *out) const {
+  Real x = (x2 - x2min_) * x2norm_;
+  Real y = (x1 - x1min_) * x1norm_;
+
+  int xil = static_cast<int>(x); // lower x index
+  int yil = static_cast<int>(y); // lower y index
+  
+  if (xil < 0) { // below xmin
+    xil = 0;
+  } else if (xil >= nx1_ - 1) { // above xmax
+    xil = nx1_ - 2;
+  }
+  Real xrl = 1 + xil - x;  // x residual
+
+  if (yil < 0) { // below ymin
+    yil = 0;
+  } else if (yil >= nx2_ - 1) { // above ymax
+    yil = nx2_ - 2;
+  }
+  Real yrl = 1 + yil - y;  // y residual
+
+  // Sample from the 4 nearest data points and weight appropriately
+  // data is an attribute of the eos class
+  for (int n = 0; n < nvar_; ++n) {
+    out[n] =   xrl  *  yrl  *data(n, xil , yil )
+           +   xrl  *(1-yrl)*data(n, xil ,yil+1)
+           + (1-xrl)*  yrl  *data(n,xil+1, yil )
+           + (1-xrl)*(1-yrl)*data(n,xil+1,yil+1);
+  }
+}
+
 //! A contructor that sets the size of the table with number of variables nvar
 //! and dimensions nx3 x nx2 x nx1 (interpolated dimensions)
 InterpTable3D::InterpTable3D(const int nvar, const int nx3, const int nx2, const int nx1) {
