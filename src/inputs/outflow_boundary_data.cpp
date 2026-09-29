@@ -5,10 +5,12 @@
 //! \brief Reader for standardized 1D progenitor profiles stored in HDF5.
 
 #include <cmath>
+#include <cstdio>
 #include <cstddef>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "../athena.hpp"
 #include "../defs.hpp"
@@ -23,20 +25,42 @@
 
 #include <hdf5.h>
 
+
+namespace {
+  static constexpr Real c_table_    = 2.99792458e10;  // cm/s
+  static constexpr Real G_table_    = 6.6740e-8;     // cgs
+  static constexpr Real Msun_table_ = 1.989e33;     // g
+  static constexpr Real time_unit_table_ =
+    G_table_ * Msun_table_ /
+    (c_table_ * c_table_ * c_table_);
+  
+}
+
 OutflowBoundaryData::OutflowBoundaryData(const std::string &filename){
   
   const char *var_names[NVAR_OUT] = {"rho", "press", "vx", "vy", "vz", "ye", "entropy"};
 
   HDF5TableLoader(filename.c_str(), &table_, NVAR_OUT, var_names, "time_lim", "theta_lim");
+
+  table_.GetX1lim(theta_min, theta_max);
+  table_.GetX2lim(time_min, time_max);
+  
+  int nvar_tmp;
+  table_.GetSize(nvar_tmp, ntime, ntheta);
+  std::cout << "Nvar = " << nvar_tmp 
+    << ", Ntime = " << ntime
+    << ", Ntheta = " << ntheta << std::endl;
 }
 
 OutflowBoundaryData::~OutflowBoundaryData() {
 }
 
-OutflowState OutflowBoundaryData::Interpolate(Real time, Real theta) const {
+OutflowState OutflowBoundaryData::Interpolate(Real time_cgs, Real theta) const {
 
+  Real time_geo = time_cgs/time_unit_table_;
+  
   Real q[NVAR_OUT];
-  table_.interpolate_all(time, theta, q);
+  table_.interpolate_all(time_geo, theta, q);
 
   OutflowState state;
   state.rho     = q[IRHO_OUT];
@@ -50,4 +74,21 @@ OutflowState OutflowBoundaryData::Interpolate(Real time, Real theta) const {
   return state;
 }
 
+Real OutflowBoundaryData::GetTimeMin() const {
+  return time_min*time_unit_table_;
+}
+
+Real OutflowBoundaryData::GetTimeMax() const {
+  return time_max*time_unit_table_;
+}
+
+Real OutflowBoundaryData::GetThetaMin() const {
+  return theta_min;
+}
+
+Real OutflowBoundaryData::GetThetaMax() const {
+  return theta_max;
+}
+
 #endif  // HDF5OUTPUT
+

@@ -35,8 +35,17 @@ public:
   ~OutflowBoundaryData();
   
   OutflowState Interpolate(Real time, Real theta) const;
-  
+
+  Real GetTimeMin() const;
+  Real GetTimeMax() const;
+  Real GetThetaMin() const;
+  Real GetThetaMax() const;
+
 private:
+  int ntime, ntheta;
+  Real time_min, time_max;
+  Real theta_min, theta_max;
+  
   InterpTable2D table_;
 };
 

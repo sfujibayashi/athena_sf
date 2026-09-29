@@ -117,20 +117,18 @@ struct CollapsedProfile {
 
 CollapsedProfile CollapseProgenitor(const ProgenitorProfile &progenitor, Real t0);
 
-void CollapsarInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
+void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
                       Real time, Real dt,
                       int il, int iu, int jl, int ju, int kl, int ku, int ngh);
 
 namespace {
-  Real m_bh, a_bh;
   CollapsedProfile collapsed;  
   Real gamma_gas;
 
-  Real Mout;
+  Real timescale_cut;
 
   // Real HistoryBlackHoleMass(MeshBlock *pmb, int iout);
   // Real HistoryBlackHoleMassAccretionRate(MeshBlock *pmb, int iout);
-
   
   Real HistoryBlackHoleMass(MeshBlock *pmb, int iout) {
     const Real mass_to_length =
@@ -225,11 +223,12 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // inject BC
   std::string fname =
     pin->GetString("problem", "outflow_file");
-  
   poutflow = new OutflowBoundaryData(fname);
+
+  timescale_cut = pin->GetReal("problem", "timescale_cut");
   
   EnrollUserBoundaryFunction(BoundaryFace::inner_x1,
-                             CollapsarInnerX1);
+                             InjectionInnerX1);
   
   // output
   AllocateUserHistoryOutput(3);
@@ -570,8 +569,99 @@ CollapsedProfile CollapseProgenitor(const ProgenitorProfile &progenitor, Real t0
   return collapsed;
 }
 
-void CollapsarInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
+void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
                       Real time, Real dt,
                       int il, int iu, int jl, int ju, int kl, int ku, int ngh){
+
+  Real time_cgs = pmb->pmy_mesh->punit->code_time_cgs;
+
+  Real fac = 1.0;
+  Real time_interp = time_cgs;
+
+  // Avoid extrapolation
+  // should determine how we will deal with after running out of data.
+  if      ( time_cgs > pmb->pmy_mesh->poutflow->GetTimeMax() ){
+    time_interp = pmb->pmy_mesh->poutflow->GetTimeMax();
+    fac = std::exp(- (time_cgs-pmb->pmy_mesh->poutflow->GetTimeMax())/timescale_cut );
+  }else if( time_cgs < pmb->pmy_mesh->poutflow->GetTimeMin() ){
+    time_interp = pmb->pmy_mesh->poutflow->GetTimeMin();
+    fac = 1.0;
+  }
   
+  // set primitive variables in inlet ghost zones
+  for (int k=kl; k<=ku; ++k) {
+    Real phi = pmb->pcoord->x3v(k);
+    Real cosphi = std::cos(phi);
+    Real sinphi = std::sin(phi);
+    for (int j=jl; j<=ju; ++j) {
+      Real theta = pmb->pcoord->x2v(j);
+      Real costheta = std::cos(theta);
+      Real sintheta = std::sin(theta);
+      Real sin2theta = sintheta*sintheta;
+
+      // Avoid extrapolation.
+      // We rotate the data with theta_max/min assuming v^r,theta,phi do not depend on theta
+      // in angle range theta_max < theta < pi/2.
+      Real theta_interp = theta;
+      if      (theta < pmb->pmy_mesh->poutflow->GetThetaMin()){
+        theta_interp = pmb->pmy_mesh->poutflow->GetThetaMin();
+      }else if(theta > pmb->pmy_mesh->poutflow->GetThetaMax()){
+        theta_interp = pmb->pmy_mesh->poutflow->GetThetaMax();
+      }
+      
+      OutflowState state = pmb->pmy_mesh->poutflow->Interpolate(time_interp, theta_interp);
+
+      // Cartesian to spherical-polar matrix.
+      Real m1_x = sintheta*cosphi;
+      Real m1_y = sintheta*sinphi;
+      Real m1_z = costheta;
+      
+      // should be divided by r additionally.
+      Real m2_x = costheta*cosphi;
+      Real m2_y = costheta*sinphi;
+      Real m2_z = -sintheta;
+
+      // should be divided by r additionally.
+      Real m3_x = -sinphi/sintheta;
+      Real m3_y = cosphi; 
+      Real m3_z = -sintheta;
+
+#pragma omp simd
+      for (int i=1; i<=ngh; ++i) {
+        Real r = pmb->pcoord->x1v(i);
+        Real r2=r*r;
+        
+        Real v1 = m1_x*state.vx + m1_y*state.vy + m1_z*state.vz;
+        Real v2 =(m2_x*state.vx + m2_y*state.vy + m2_z*state.vz)/r;
+        Real v3 =(m3_x*state.vx + m3_y*state.vy + m3_z*state.vz)/(r*sintheta);
+        
+        // Construct metric
+        Real dm  = pmb->pmetric->CellDeltaM(i);
+        Real Psi = pmb->pmetric->CellPsi(i);
+
+        Real g00, g01, g02, g03;
+        Real g11, g12, g13, g22, g23, g33;
+        pmb->pmetric->ConstructCovariantMetric(r,theta,phi,Psi,dm,
+                                          g00, g01, g02, g03,
+                                          g11, g12, g13, g22, g23, g33);
+        Real alpha = std::sqrt(-g00);
+
+        Real vv = g11*v1*v1 + g22*v2*v2 + g33*v3*v3
+           + 2.0*(g12*v1*v2 + g13*v1*v3 + g23*v2*v3);
+        // lorentz factor
+        Real W = 1.0/std::sqrt(1.0-vv);
+
+        // Athena's primitive.
+        Real uu1 = W/alpha * v1;
+        Real uu2 = W/alpha * v2;
+        Real uu3 = W/alpha * v3;
+
+        pmb->phydro->w(IDN,k,j,il-i) = state.rho * fac;
+        pmb->phydro->w(IPR,k,j,il-i) = state.press * fac;
+        pmb->phydro->w(IVX,k,j,il-i) = uu1;
+        pmb->phydro->w(IVY,k,j,il-i) = uu2;
+        pmb->phydro->w(IVZ,k,j,il-i) = uu3;
+      }
+    }
+  }
 }
