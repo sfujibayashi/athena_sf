@@ -1058,10 +1058,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 
 #if DYNAMIC_METRIC_ENABLED
   pmonograv = new MonopoleGravity(this, pin);
-#else
-  pmonograv = nullptr;
 #endif
-  poutflow = nullptr;
 }
 
 //----------------------------------------------------------------------------------------
