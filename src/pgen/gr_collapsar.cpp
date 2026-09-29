@@ -77,10 +77,18 @@ struct CollapsedProfile {
       }
     }
 
-    Real w1 = (std::log(r)-std::log(radius_face[ilo]))/(std::log(radius_face[ihi]) - std::log(radius_face[ilo]));
-    Real w0 = 1.0 - w1;
-    
-    return std::exp(w0*std::log(mass_face[ilo]) + w1*std::log(mass_face[ihi])); //log-log interpolation
+    Real mass;
+    if (radius_face[ilo] <= 0.0){
+      Real w1 = (r-radius_face[ilo])/(radius_face[ihi] - radius_face[ilo]);
+      Real w0 = 1.0 - w1;
+      mass = w0*mass_face[ilo] + w1*mass_face[ihi]; // linear-linear interpolation
+    }else{
+      Real w1 = (std::log(r)-std::log(radius_face[ilo]))/(std::log(radius_face[ihi]) - std::log(radius_face[ilo]));
+      Real w0 = 1.0 - w1;
+      mass = std::exp(w0*std::log(mass_face[ilo]) + w1*std::log(mass_face[ihi])); //log-log interpolation
+    }
+
+    return mass;
   }
 
   int FirstCellIndex(){
@@ -510,41 +518,43 @@ Real GetCollapsedRadius(const Real t_collapse, const Real r0, const Real m){
 
 Real GetTimeFromBlackHoleMass(const ProgenitorProfile &progenitor, Real bh_mass){
 
-  const Real Msun = Constants::solar_mass_cgs;
   const Real G = Constants::grav_const_cgs;
   const Real c = Constants::speed_of_light_cgs;
+  const Real Msun = Constants::solar_mass_cgs;
   
+  const Real m_bh_cgs = bh_mass * Msun;
+
   // find radius for m=bh_mass  
   const int nface = progenitor.nface;
   int ilo, ihi;
   ilo = 0;
   ihi = nface-1;
   
-  if(bh_mass>=progenitor.mass_face[ihi]/Msun){
+  if(m_bh_cgs>=progenitor.mass_face[ihi]){
     std::stringstream msg;
     msg << "### FATAL ERROR in GetTimeFromBlackHoleMass" << std::endl
         << "Specified BH mass is larger than total stellar mass."
-        << "BH mass = " << bh_mass << "Mtot = " << progenitor.mass_face[ihi]/Msun
+        << "BH mass = " << m_bh_cgs << "Mtot = " << progenitor.mass_face[ihi]
         << std::endl;
     ATHENA_ERROR(msg);
   }
   
   while(ihi-ilo>=2){
     int i=(ihi+ilo)/2;
-    if ( progenitor.mass_face[i]/Msun <= bh_mass ){
+    if ( progenitor.mass_face[i] <= m_bh_cgs ){
       ilo = i;
     }else{
       ihi = i;
     }
   }
-  // Radius of enclosed mass = bh_mass
-  Real w1 = (std::log(bh_mass)-std::log(progenitor.mass_face[ilo]))
+  // Radius of enclosed mass = m_bh_cgs
+  Real w1 = (std::log(m_bh_cgs)-std::log(progenitor.mass_face[ilo]))
     /(std::log(progenitor.mass_face[ihi])-std::log(progenitor.mass_face[ilo]));
   Real w0 = 1.0 - w1;
   Real r_m0 = std::exp( w0*std::log(progenitor.radius_face[ilo]) + w1*std::log(progenitor.radius_face[ihi]) );
 
   // derive collapse parameter eta for which r(m) = 2*m.
-  Real eta = std::acos(4.0*G*bh_mass*Msun/(c*c*r_m0) - 1.0);
+  Real eta = std::acos(4.0*G*m_bh_cgs/(c*c*r_m0) - 1.0);
 
   // derive sound crossing time
   Real t_m0 = 0.0;
@@ -553,8 +563,9 @@ Real GetTimeFromBlackHoleMass(const ProgenitorProfile &progenitor, Real bh_mass)
     Real dt = dr/progenitor.csound[i];
     t_m0 += dt;
   }
+  t_m0 += (r_m0 - progenitor.radius_face[ilo])/ progenitor.csound[ilo];
 
-  Real tau = t_m0 + std::sqrt(r_m0*r_m0*r_m0/(8.0*G*bh_mass*Msun)) * (eta + std::sin(eta));
+  Real tau = t_m0 + std::sqrt(r_m0*r_m0*r_m0/(8.0*G*m_bh_cgs)) * (eta + std::sin(eta));
 
   return tau;
 }
