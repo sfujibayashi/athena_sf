@@ -133,7 +133,11 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     MGCRDiffusionCoeffBoundaryFunction_{nullptr, nullptr, nullptr,
                                         nullptr, nullptr, nullptr},
     MGGravitySourceMaskFunction_{}, MGCRDiffusionSourceMaskFunction_{},
-    MGCRDiffusionCoeffMaskFunction_{} {
+    MGCRDiffusionCoeffMaskFunction_{},
+    // new classes
+    pmonograv(nullptr),
+    poutflow(nullptr)
+{
   std::stringstream msg;
   BoundaryFlag block_bcs[6];
   std::int64_t nbmax;
@@ -619,10 +623,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   
 #if DYNAMIC_METRIC_ENABLED
   pmonograv = new MonopoleGravity(this, pin);
-#else
-  pmonograv = nullptr;
 #endif
-  poutflow = nullptr;
 }
 
 //----------------------------------------------------------------------------------------
@@ -690,7 +691,11 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     MGCRDiffusionCoeffBoundaryFunction_{nullptr, nullptr, nullptr,
                                         nullptr, nullptr, nullptr},
     MGGravitySourceMaskFunction_{}, MGCRDiffusionSourceMaskFunction_{},
-    MGCRDiffusionCoeffMaskFunction_{} {
+    MGCRDiffusionCoeffMaskFunction_{},
+    // new classes
+    pmonograv(nullptr),
+    poutflow(nullptr)
+{
   std::stringstream msg;
   BoundaryFlag block_bcs[6];
   IOWrapperSizeT *offset{};
