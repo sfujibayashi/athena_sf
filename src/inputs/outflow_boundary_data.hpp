@@ -1,21 +1,43 @@
+#ifndef INPUTS_OUTFLOW_BOUNDARY_DATA_HPP_
+#define INPUTS_OUTFLOW_BOUNDARY_DATA_HPP_
+
+#include <string>
+#include <vector>
+
+#include "../athena.hpp" // Real
+#include "../utils/interp_table.hpp" // InterpTable2D
+
+struct OutflowState {
+  Real rho;
+  Real press;
+  Real vx;
+  Real vy;
+  Real vz;
+  Real ye;
+  Real entropy;
+};
+
+enum {
+  IRHO_OUT = 0,
+  IPRESS_OUT,
+  IVX_OUT,
+  IVY_OUT,
+  IVZ_OUT,
+  IYE_OUT,
+  IENTROPY_OUT,
+  NVAR_OUT
+};
+
 class OutflowBoundaryData {
+
 public:
   OutflowBoundaryData(const std::string &filename);
   ~OutflowBoundaryData();
   
-  Real InterpolateRho(Real time, Real theta) const;
-  Real InterpolatePress(Real time, Real theta) const;
-  // ...
+  OutflowState Interpolate(Real time, Real theta) const;
   
 private:
-  int nt_, nth_;
-  
-  std::vector<Real> time_;
-  std::vector<Real> theta_;
-  
-  AthenaArray<Real> rho_;
-  AthenaArray<Real> press_;
-  AthenaArray<Real> vx_;
-  AthenaArray<Real> vy_;
-  AthenaArray<Real> vz_;
+  InterpTable2D table_;
 };
+
+#endif

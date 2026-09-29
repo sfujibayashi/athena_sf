@@ -62,6 +62,7 @@
 #include "meshblock_tree.hpp"
 
 #include "../gravity/monopole_gravity.hpp"
+#include "../inputs/outflow_boundary_data.hpp"
 
 // MPI/OpenMP header
 #ifdef MPI_PARALLEL
@@ -621,6 +622,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
 #else
   pmonograv = nullptr;
 #endif
+  poutflow = nullptr;
 }
 
 //----------------------------------------------------------------------------------------
@@ -1054,12 +1056,14 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 #else
   pmonograv = nullptr;
 #endif
+  poutflow = nullptr;
 }
 
 //----------------------------------------------------------------------------------------
 //! destructor
 
 Mesh::~Mesh() {
+  delete poutflow;
   delete pmonograv;
   delete punit;
   for (int b=0; b<nblocal; ++b)
