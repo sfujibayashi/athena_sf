@@ -344,7 +344,7 @@ Outputs::Outputs(Mesh *pm, ParameterInput *pin) {
           // Check if we want to include the mesh data in the output
           op.include_mesh_data = pin->GetOrAddBoolean(op.block_name, "mesh_data", true);
           if (op.data_format.empty()) {
-            std::cout << "No data_format specified in output block '"
+            if(Globals::my_rank==0)std::cout << "No data_format specified in output block '"
                       << op.block_name << "', using default" << std::endl;
             if (H5_DOUBLE_PRECISION_ENABLED) {
               pnew_type = new ATHDF5Output<double>(op);
@@ -360,7 +360,7 @@ Outputs::Outputs(Mesh *pm, ParameterInput *pin) {
                   << "output block '" << op.block_name << "'" << std::endl;
               ATHENA_ERROR(msg);
             }
-            std::cout << "Using fp16 data format for HDF5 output in block '"
+            if(Globals::my_rank==0) std::cout << "Using fp16 data format for HDF5 output in block '"
                       << op.block_name << "'" << std::endl;
             pnew_type = new ATHDF5Output<fp16_t>(op);
 #else
@@ -370,11 +370,11 @@ Outputs::Outputs(Mesh *pm, ParameterInput *pin) {
             ATHENA_ERROR(msg);
 #endif
           } else if (type_string_check(base_type::F, 32, op)) {
-            std::cout << "Using float data format for HDF5 output in block '"
+            if(Globals::my_rank==0) std::cout << "Using float data format for HDF5 output in block '"
                       << op.block_name << "'" << std::endl;
             pnew_type = new ATHDF5Output<float>(op);
           } else if (type_string_check(base_type::F, 64, op)) {
-            std::cout << "Using double data format for HDF5 output in block '"
+            if(Globals::my_rank==0) std::cout << "Using double data format for HDF5 output in block '"
                       << op.block_name << "'" << std::endl;
             pnew_type = new ATHDF5Output<double>(op);
           } else if (type_string_check(base_type::F, 128, op)) {
