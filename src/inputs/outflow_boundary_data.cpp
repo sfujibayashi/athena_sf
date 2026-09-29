@@ -16,6 +16,7 @@
 #include "../defs.hpp"
 #include "outflow_boundary_data.hpp"
 #include "hdf5_reader.hpp"
+#include "../globals.hpp"
 
 #ifndef HDF5OUTPUT
 #error "gr_collapsar with outflow injection requires HDF5 support"
@@ -56,9 +57,11 @@ OutflowBoundaryData::OutflowBoundaryData(const std::string &filename){
   
   int nvar_tmp;
   table_.GetSize(nvar_tmp, ntime, ntheta);
-  std::cout << "Nvar = " << nvar_tmp 
-    << ", Ntime = " << ntime
-    << ", Ntheta = " << ntheta << std::endl;
+  if (Globals::my_rank == 0) {
+    std::cout << "Nvar = " << nvar_tmp 
+	      << ", Ntime = " << ntime
+	      << ", Ntheta = " << ntheta << std::endl;
+  }
 }
 
 OutflowBoundaryData::~OutflowBoundaryData() {

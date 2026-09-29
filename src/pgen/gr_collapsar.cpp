@@ -234,7 +234,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     * std::pow(Constants::grav_const_cgs / SQR(Constants::speed_of_light_cgs)
     / punit->code_length_cgs, 2);
   
-  printf("Black hole mass (cgs,code unit)=%15.7e, %15.7e\n",M_inner_cgs, m_bh_code);
+  if (Globals::my_rank == 0) {
+    printf("Black hole mass (cgs,code unit)=%15.7e, %15.7e\n",M_inner_cgs, m_bh_code);
+  }
   // pin->SetReal("coord", "m", m_bh_code);
   // pin->SetReal("coord", "j", ang_bh_code);
   // m_bh_code = pin->GetReal("coord", "m");
@@ -447,7 +449,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         phydro->w1(IVX,k,j,i) = uu1;
         phydro->w1(IVY,k,j,i) = uu2;
         phydro->w1(IVZ,k,j,i) = uu3;
-        printf("i, rho, press, uu1 = %5d %12.4e %12.4e %12.4e\n", i, rho_code, press_code, uu1);
+        //printf("i, rho, press, uu1 = %5d %12.4e %12.4e %12.4e\n", i, rho_code, press_code, uu1);
       }
     }
   }
