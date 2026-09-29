@@ -134,6 +134,8 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
                       Real time, Real dt,
                       int il, int iu, int jl, int ju, int kl, int ku, int ngh);
 
+Real LogarithmicX1(Real x, RegionSize rs);
+
 namespace {
   CollapsedProfile collapsed;  
   Real gamma_gas;
@@ -197,11 +199,30 @@ namespace {
     
     return sum_2mom;
   }
-
 }
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
 
+  // cell size
+  if (mesh_size.x1min <= 0.0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in Mesh::InitUserMeshData" << std::endl
+        << "Logarithmic x1 grid requires x1min > 0." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  EnrollUserMeshGenerator(X1DIR, LogarithmicX1);
+
+  const Real x1rat =
+    std::pow(mesh_size.x1max/mesh_size.x1min,
+	     1.0/static_cast<Real>(mesh_size.nx1));
+  
+  if (Globals::my_rank == 0) {
+    std::cout << "effective x1rat = "
+	      << std::setprecision(17) << x1rat << std::endl;
+  }
+
+  // Collapsed progenitor
   std::string filename = pin->GetString("problem", "progenitor_file");
 
   const bool initialize_with_mass =
@@ -213,12 +234,14 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   if(initialize_with_mass){
     Real bh_mass_init = pin->GetReal("problem", "initial_bh_mass");
     t0 = GetTimeFromBlackHoleMass(progenitor, bh_mass_init);
+    if(Globals::my_rank==0) std::cout << "BH mass is specified to " << bh_mass_init << " Msun." << std::endl;
   }else{
     t0 = pin->GetReal("problem", "t0");
+    if(Globals::my_rank==0) std::cout << "Time is specified." << std::endl;
   }
+  if(Globals::my_rank==0) std::cout << "t0 = " << t0 << " s." << std::endl;
+
   gamma_gas = pin->GetReal("hydro", "gamma");
-  
-  
   collapsed = CollapseProgenitor(progenitor, t0);
   
   Real rin_code = mesh_size.x1min;
@@ -246,17 +269,26 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   //           << "  m_from_pin = " << pin->GetReal("coord","m")
   //           << std::endl;
 
-  // inject BC
-  std::string fname =
-    pin->GetString("problem", "outflow_file");
-  poutflow = new OutflowBoundaryData(fname);
-
-  timescale_cut = pin->GetReal("problem", "timescale_cut");
-  W_max = pin->GetReal("problem", "W_max");
-  
-  EnrollUserBoundaryFunction(BoundaryFace::inner_x1,
-                             InjectionInnerX1);
-  
+  if (mesh_bcs[BoundaryFace::inner_x1] == BoundaryFlag::user) {
+    if(Globals::my_rank == 0) {
+      std::cout << "Injecting BC with outflow_file..." << std::endl;
+    }
+    // injecting BC
+    std::string fname = pin->GetString("problem", "outflow_file");
+    poutflow = new OutflowBoundaryData(fname);
+    
+    timescale_cut = pin->GetReal("problem", "timescale_cut");
+    W_max = pin->GetReal("problem", "W_max");
+    
+    EnrollUserBoundaryFunction(BoundaryFace::inner_x1,
+			       InjectionInnerX1);
+  }else{
+    if(Globals::my_rank == 0) {
+      std::cout << "ix1_bc = "
+		<< GetBoundaryString(mesh_bcs[BoundaryFace::inner_x1])
+		<< std::endl;
+    }
+  }
   // output
   AllocateUserHistoryOutput(3);
   
@@ -772,4 +804,10 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
       }
     }
   }
+}
+
+
+Real LogarithmicX1(Real x, RegionSize rs) {
+  return rs.x1min
+    * std::pow(rs.x1max/rs.x1min, x);
 }
