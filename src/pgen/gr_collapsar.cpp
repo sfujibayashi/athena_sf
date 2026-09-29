@@ -688,11 +688,11 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
         Real uu2 = W * v2;
         Real uu3 = W * v3;
         
-        pmb->phydro->w(IDN,k,j,i) = state.rho/code_rho_cgs * fac;
-        pmb->phydro->w(IPR,k,j,i) = state.press/code_press_cgs * fac;
-        pmb->phydro->w(IVX,k,j,i) = uu1;
-        pmb->phydro->w(IVY,k,j,i) = uu2;
-        pmb->phydro->w(IVZ,k,j,i) = uu3;
+        prim(IDN,k,j,i) = state.rho/code_rho_cgs * fac;
+        prim(IPR,k,j,i) = state.press/code_press_cgs * fac;
+        prim(IVX,k,j,i) = uu1;
+        prim(IVY,k,j,i) = uu2;
+        prim(IVZ,k,j,i) = uu3;
       }
     }
   }
