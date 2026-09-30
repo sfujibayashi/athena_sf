@@ -13,8 +13,18 @@ struct OutflowState {
   Real vx;
   Real vy;
   Real vz;
+  
   Real ye;
   Real entropy;
+  Real alpha;
+  Real h;
+  Real hut;
+  Real psi;
+  Real qe;
+  Real rho_star;
+  Real temp;
+  Real ut;
+  Real w;
 };
 
 enum {
@@ -25,6 +35,15 @@ enum {
   IVZ_OUT,
   IYE_OUT,
   IENTROPY_OUT,
+  IALPHA_OUT,
+  IENTHALPY_OUT,
+  IHUT_OUT,
+  IPSI_OUT,
+  IQE_OUT,
+  IRHOSTAR_OUT,
+  IUT_OUT,
+  ITEMP_OUT,
+  IW_OUT,
   NVAR_OUT
 };
 
@@ -35,17 +54,26 @@ public:
   ~OutflowBoundaryData();
   
   OutflowState Interpolate(Real time, Real theta) const;
+  OutflowState GetState(int it, int j) const;
+  
+  void Analyze() const;
 
   Real GetTimeMin() const;
   Real GetTimeMax() const;
   Real GetThetaMin() const;
   Real GetThetaMax() const;
 
+  Real GetNTheta() const;
+  Real GetNTime() const;
+
 private:
   int ntime, ntheta;
   Real time_min, time_max;
   Real theta_min, theta_max;
-  
+
+  Real r_ext_;
+  Real h_min_global_;
+
   InterpTable2D table_;
 };
 
