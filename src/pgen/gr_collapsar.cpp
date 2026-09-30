@@ -199,6 +199,250 @@ namespace {
     
     return sum_2mom;
   }
+
+  Real HistoryEjectaMassGeom(MeshBlock *pmb, int iout) {
+    
+    Real Mej = 0.0;
+    
+    AthenaArray<Real> vol;
+    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
+    
+    AthenaArray<Real> g, gi;
+    g.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
+    gi.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
+    
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+	pmb->pcoord->CellMetric(k, j, pmb->is, pmb->ie, g, gi);
+	for (int i=pmb->is; i<=pmb->ie; ++i) {
+	  Real uu1 = pmb->phydro->w(IVX,k,j,i);
+	  Real uu2 = pmb->phydro->w(IVY,k,j,i);
+	  Real uu3 = pmb->phydro->w(IVZ,k,j,i);
+
+	  Real tmp =
+	    g(I11,i)*uu1*uu1
+	    + 2.0*g(I12,i)*uu1*uu2
+	    + 2.0*g(I13,i)*uu1*uu3
+	    + g(I22,i)*uu2*uu2
+	    + 2.0*g(I23,i)*uu2*uu3
+	    + g(I33,i)*uu3*uu3;
+
+	  Real W = std::sqrt(1.0 + tmp);
+
+	  Real alpha = std::sqrt(-1.0 / gi(I00,i));
+
+	  Real u_t = -alpha*W + g(I01,i)*uu1 + g(I02,i)*uu2 + g(I03,i)*uu3;
+
+	  if(u_t+1.0 < 0.0){
+	    Mej += vol(i)*pmb->phydro->u(IDN,k,j,i);
+	  }
+	}
+      }
+    }
+
+    Real Mej_msun = Mej/pmb->pmy_mesh->punit->solar_mass_code;
+    return Mej_msun;
+  }
+
+  Real HistoryEjectaEnergyGeom(MeshBlock *pmb, int iout) {
+    
+    Real Eej = 0.0;
+    
+    AthenaArray<Real> vol;
+    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
+    
+    AthenaArray<Real> g, gi;
+    g.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
+    gi.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
+    
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+	pmb->pcoord->CellMetric(k, j, pmb->is, pmb->ie, g, gi);
+	for (int i=pmb->is; i<=pmb->ie; ++i) {
+	  Real uu1 = pmb->phydro->w(IVX,k,j,i);
+	  Real uu2 = pmb->phydro->w(IVY,k,j,i);
+	  Real uu3 = pmb->phydro->w(IVZ,k,j,i);
+
+	  Real tmp =
+	    g(I11,i)*uu1*uu1
+	    + 2.0*g(I12,i)*uu1*uu2
+	    + 2.0*g(I13,i)*uu1*uu3
+	    + g(I22,i)*uu2*uu2
+	    + 2.0*g(I23,i)*uu2*uu3
+	    + g(I33,i)*uu3*uu3;
+
+	  Real W = std::sqrt(1.0 + tmp);
+
+	  Real alpha = std::sqrt(-1.0 / gi(I00,i));
+
+	  Real u_t = -alpha*W + g(I01,i)*uu1 + g(I02,i)*uu2 + g(I03,i)*uu3;
+
+	  if(u_t+1.0 < 0.0){
+	    Eej += vol(i)*pmb->phydro->u(IDN,k,j,i)*(-u_t-1.0);
+	  }
+	}
+      }
+    }
+
+    Real Eej_erg = Eej* SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      / pmb->pmy_mesh->punit->erg_code;
+    return Eej_erg;
+  }
+
+  Real HistoryEjectaMassBern(MeshBlock *pmb, int iout) {
+    
+    Real Mej = 0.0;
+    
+    AthenaArray<Real> vol;
+    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
+    
+    AthenaArray<Real> g, gi;
+    g.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
+    gi.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
+    
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+	pmb->pcoord->CellMetric(k, j, pmb->is, pmb->ie, g, gi);
+	for (int i=pmb->is; i<=pmb->ie; ++i) {
+	  Real rho = pmb->phydro->w(IDN,k,j,i);
+	  Real uu1 = pmb->phydro->w(IVX,k,j,i);
+	  Real uu2 = pmb->phydro->w(IVY,k,j,i);
+	  Real uu3 = pmb->phydro->w(IVZ,k,j,i);
+
+	  Real tmp =
+	    g(I11,i)*uu1*uu1
+	    + 2.0*g(I12,i)*uu1*uu2
+	    + 2.0*g(I13,i)*uu1*uu3
+	    + g(I22,i)*uu2*uu2
+	    + 2.0*g(I23,i)*uu2*uu3
+	    + g(I33,i)*uu3*uu3;
+
+	  Real W = std::sqrt(1.0 + tmp);
+
+	  Real alpha = std::sqrt(-1.0 / gi(I00,i));
+
+	  Real u_t = -alpha*W;
+	  Real press = pmb->phydro->w(IPR,k,j,i);
+	  Real enthalpy = 1.0 + gamma_gas/(gamma_gas-1.0) * press/rho;
+	  if(enthalpy*u_t+1.0 < 0.0){
+	    Mej += vol(i)*pmb->phydro->u(IDN,k,j,i);
+	  }
+	}
+      }
+    }
+    Real Mej_msun = Mej/pmb->pmy_mesh->punit->solar_mass_code;
+    return Mej_msun;
+  }
+
+  Real HistoryEjectaEnergyBern(MeshBlock *pmb, int iout) {
+    
+    Real Eej = 0.0;
+    
+    AthenaArray<Real> vol;
+    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
+    
+    AthenaArray<Real> g, gi;
+    g.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
+    gi.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
+    
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+	pmb->pcoord->CellMetric(k, j, pmb->is, pmb->ie, g, gi);
+	for (int i=pmb->is; i<=pmb->ie; ++i) {
+	  Real rho = pmb->phydro->w(IDN,k,j,i);
+	  Real uu1 = pmb->phydro->w(IVX,k,j,i);
+	  Real uu2 = pmb->phydro->w(IVY,k,j,i);
+	  Real uu3 = pmb->phydro->w(IVZ,k,j,i);
+
+	  Real tmp =
+	    g(I11,i)*uu1*uu1
+	    + 2.0*g(I12,i)*uu1*uu2
+	    + 2.0*g(I13,i)*uu1*uu3
+	    + g(I22,i)*uu2*uu2
+	    + 2.0*g(I23,i)*uu2*uu3
+	    + g(I33,i)*uu3*uu3;
+
+	  Real W = std::sqrt(1.0 + tmp);
+
+	  Real alpha = std::sqrt(-1.0 / gi(I00,i));
+
+	  Real u_t = -alpha*W;
+	  Real press = pmb->phydro->w(IPR,k,j,i);
+	  Real enthalpy = 1.0 + gamma_gas/(gamma_gas-1.0) * press/rho;
+	  if(enthalpy*u_t+1.0 < 0.0){
+	    Eej += vol(i)*pmb->phydro->u(IDN,k,j,i)*(-enthalpy*u_t-1.0);
+	  }
+	}
+      }
+    }
+    
+    Real Eej_erg = Eej* SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      / pmb->pmy_mesh->punit->erg_code;
+    return Eej_erg;
+  }
+
+  Real HistoryEjectaMassBind(MeshBlock *pmb, int iout) {
+    
+    Real Mej = 0.0;
+    
+    AthenaArray<Real> vol;
+    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
+    
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+	for (int i=pmb->is; i<=pmb->ie; ++i) {
+
+	  const Real rho_ut = pmb->phydro->u(IDN,k,j,i);
+	  const Real Tt_t   = pmb->phydro->u(IEN,k,j,i);
+	  
+	  const Real ebind = -Tt_t/rho_ut-1.0;
+	  
+	  if(ebind > 0.0){
+	    Mej += vol(i)*pmb->phydro->u(IDN,k,j,i);
+	  }
+	}
+      }
+    }
+    
+    Real Mej_msun = Mej/pmb->pmy_mesh->punit->solar_mass_code;
+    return Mej_msun;
+  }
+
+  Real HistoryEjectaEnergyBind(MeshBlock *pmb, int iout) {
+    
+    Real Eej = 0.0;
+    
+    AthenaArray<Real> vol;
+    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
+    
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+	for (int i=pmb->is; i<=pmb->ie; ++i) {
+
+	  const Real rho_ut = pmb->phydro->u(IDN,k,j,i);
+	  const Real Tt_t   = pmb->phydro->u(IEN,k,j,i);
+	  
+	  const Real ebind = -Tt_t/rho_ut-1.0;
+	  
+	  if(ebind > 0.0){
+	    Eej += vol(i)*pmb->phydro->u(IDN,k,j,i)*ebind;
+	  }
+	}
+      }
+    }
+    
+    Real Eej_erg = Eej* SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      / pmb->pmy_mesh->punit->erg_code;
+    return Eej_erg;
+  }
+
+
 }
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
@@ -292,7 +536,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     }
   }
   // output
-  AllocateUserHistoryOutput(3);
+  AllocateUserHistoryOutput(9);
   
   EnrollUserHistoryOutput(0, HistoryBlackHoleMass, "m_bh",
                           UserHistoryOperation::max);
@@ -303,8 +547,23 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(2, HistoryOuterMassFlux, "mdot_out",
                           UserHistoryOperation::sum);
 
-  // EnrollUserHistoryOutput(3, HistorySumAbs2Mom, "Abs 2-Mom",
-  //                         UserHistoryOperation::sum);
+  EnrollUserHistoryOutput(3, HistoryEjectaMassGeom, "ejecta_mass(geom)",
+                          UserHistoryOperation::sum);
+
+  EnrollUserHistoryOutput(4, HistoryEjectaEnergyGeom, "ejecta_energy(geom)",
+                          UserHistoryOperation::sum);
+
+  EnrollUserHistoryOutput(5, HistoryEjectaMassBern, "ejecta_mass(bern)",
+                          UserHistoryOperation::sum);
+
+  EnrollUserHistoryOutput(6, HistoryEjectaEnergyBern, "ejecta_energy(bern)",
+                          UserHistoryOperation::sum);
+
+  EnrollUserHistoryOutput(7, HistoryEjectaMassBind, "ejecta_mass(bind)",
+                          UserHistoryOperation::sum);
+
+  EnrollUserHistoryOutput(8, HistoryEjectaEnergyBind, "ejecta_energy(bind)",
+                          UserHistoryOperation::sum);
 
   //
   AllocateRealUserMeshDataField(2);
