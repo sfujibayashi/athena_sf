@@ -276,6 +276,8 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     // injecting BC
     std::string fname = pin->GetString("problem", "outflow_file");
     poutflow = new OutflowBoundaryData(fname);
+
+    poutflow->Analyze();
     
     timescale_cut = pin->GetReal("problem", "timescale_cut");
     W_max = pin->GetReal("problem", "W_max");
@@ -317,6 +319,21 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   ruser_mesh_data[1](0) = ang_bh_code;
 }
 
+void Mesh::UserWorkInLoop(void) {
+
+  // write criteria for termination
+  bool terminate = false;   
+  if (terminate) {
+    tlim = time + dt;
+
+    if (Globals::my_rank == 0) {
+      std::cout << "Termination condition satisfied." << std::endl;
+    }
+  }
+  
+}
+
+
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   AllocateUserOutputVariables(9);
   
@@ -343,18 +360,8 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
 }
 
 void MeshBlock::UserWorkInLoop(void) {
-
-  // write criteria for termination
-  bool terminate = false;   
-  if (terminate) {
-    tlim = time + dt;
-
-    if (Globals::my_rank == 0) {
-      std::cout << "Termination condition satisfied." << std::endl;
-    }
-  }
-  
 }
+
 
 void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
   
