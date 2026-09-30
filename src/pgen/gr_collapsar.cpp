@@ -344,6 +344,16 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
 
 void MeshBlock::UserWorkInLoop(void) {
 
+  // write criteria for termination
+  bool terminate = false;   
+  if (terminate) {
+    tlim = time + dt;
+
+    if (Globals::my_rank == 0) {
+      std::cout << "Termination condition satisfied." << std::endl;
+    }
+  }
+  
 }
 
 void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
