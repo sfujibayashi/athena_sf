@@ -180,7 +180,29 @@ namespace {
     return mdot_out;
   }
 
-
+  enum EjectaHistoryCache {
+    HCYCLE = 0,
+    
+    MGEOM,
+    EGEOM,
+    MBERN,
+    EBERN,
+    MBIND,
+    EBIND,
+    
+    MGEOM_OUT,
+    MBAL,
+    
+    MTEXP,
+    MTEXP2,
+    
+    MR2,
+    MRVR,
+    MVR2,
+    
+    NEJECTA_CACHE
+  };
+  
   Real HistorySumAbs2Mom(MeshBlock *pmb, int iout) {
     // This block does not touch the physical outer-x1 boundary.
     Real sum_2mom = 0.0;
@@ -200,246 +222,194 @@ namespace {
     return sum_2mom;
   }
 
-  Real HistoryEjectaMassGeom(MeshBlock *pmb, int iout) {
+  void UpdateEjectaHistoryCache(MeshBlock *pmb) {
+    AthenaArray<Real> &cache = pmb->ruser_meshblock_data[2];
     
-    Real Mej = 0.0;
+    const int ncycle = pmb->pmy_mesh->ncycle;
+    
+    // Already evaluated at this timestep
+    if (cache(HCYCLE) == static_cast<Real>(ncycle)) {
+      return;
+    }
+    
+    for (int n=1; n<NEJECTA_CACHE; ++n) {
+      cache(n) = 0.0;
+    }
     
     AthenaArray<Real> vol;
-    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
+    vol.NewAthenaArray(pmb->ncells1);
     
     AthenaArray<Real> g, gi;
-    g.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
-    gi.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
+    g.NewAthenaArray(NMETRIC, pmb->ncells1);
+    gi.NewAthenaArray(NMETRIC, pmb->ncells1);
+    
+    // Example; make this an input parameter later
+    const Real chiP_cut = 1.0e-2;
     
     for (int k=pmb->ks; k<=pmb->ke; ++k) {
       for (int j=pmb->js; j<=pmb->je; ++j) {
+	
 	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+	
 	pmb->pcoord->CellMetric(k, j, pmb->is, pmb->ie, g, gi);
-	for (int i=pmb->is; i<=pmb->ie; ++i) {
-	  Real uu1 = pmb->phydro->w(IVX,k,j,i);
-	  Real uu2 = pmb->phydro->w(IVY,k,j,i);
-	  Real uu3 = pmb->phydro->w(IVZ,k,j,i);
 
-	  Real tmp =
+	for (int i=pmb->is; i<=pmb->ie; ++i) {
+
+	  const Real rho = pmb->phydro->w(IDN,k,j,i);
+	  const Real press = pmb->phydro->w(IPR,k,j,i);
+
+	  const Real uu1 = pmb->phydro->w(IVX,k,j,i);
+	  const Real uu2 = pmb->phydro->w(IVY,k,j,i);
+	  const Real uu3 = pmb->phydro->w(IVZ,k,j,i);
+
+	  const Real usq =
 	    g(I11,i)*uu1*uu1
 	    + 2.0*g(I12,i)*uu1*uu2
 	    + 2.0*g(I13,i)*uu1*uu3
 	    + g(I22,i)*uu2*uu2
 	    + 2.0*g(I23,i)*uu2*uu3
 	    + g(I33,i)*uu3*uu3;
+	
+	  const Real W = std::sqrt(1.0 + usq);
+	  const Real alpha = std::sqrt(-1.0/gi(I00,i));
 
-	  Real W = std::sqrt(1.0 + tmp);
+	  const Real u_t = -alpha*W + g(I01,i)*uu1 + g(I02,i)*uu2 + g(I03,i)*uu3;
 
-	  Real alpha = std::sqrt(-1.0 / gi(I00,i));
+	  const Real h = 1.0 + gamma_gas/(gamma_gas-1.0)*press/rho;
 
-	  Real u_t = -alpha*W + g(I01,i)*uu1 + g(I02,i)*uu2 + g(I03,i)*uu3;
+	  const Real rho_ut = pmb->phydro->u(IDN,k,j,i);
 
-	  if(u_t+1.0 < 0.0){
-	    Mej += vol(i)*pmb->phydro->u(IDN,k,j,i);
+	  const Real Tt_t = pmb->phydro->u(IEN,k,j,i);
+
+	  if (rho_ut <= 0.0) continue;
+	
+	  const Real dm = vol(i)*rho_ut;
+
+	  // Three definitions of specific ejecta energy
+	  const Real egeom = -u_t - 1.0;
+	  const Real ebern = -h*u_t - 1.0;
+	  const Real ebind = -Tt_t/rho_ut - 1.0;
+
+	  // --------------------------------------------------
+	  // Ejecta masses and energies
+	  // --------------------------------------------------
+
+	  if (egeom > 0.0) {
+	    cache(MGEOM) += dm;
+	    cache(EGEOM) += dm*egeom;
+	  }
+	
+	  if (ebern > 0.0) {
+	    cache(MBERN) += dm;
+	    cache(EBERN) += dm*ebern;
+	  }
+	
+	  if (ebind > 0.0) {
+	    cache(MBIND) += dm;
+	    cache(EBIND) += dm*ebind;
+	  }
+	
+	  // --------------------------------------------------
+	  // Homology diagnostics:
+	  // geodesically-unbound outward matter
+	  // --------------------------------------------------
+	
+	  if (egeom > 0.0) {
+	  
+	    // dr/dt; beta^r = 0 in the present metric
+	    const Real vr = alpha*uu1/W;
+	  
+	    if (vr > 0.0) {
+	      cache(MGEOM_OUT) += dm;
+
+	      const Real v2 =
+                1.0 - 1.0/(W*W);
+
+	      if (v2 > 0.0) {
+		const Real chiP =
+                  press/(rho*v2);
+
+		if (chiP < chiP_cut) {
+		  cache(MBAL) += dm;
+		}
+	      }
+
+	      const Real r = pmb->pcoord->x1v(i);
+
+	      const Real texp = r/vr;
+
+	      cache(MTEXP)  += dm*texp;
+	      cache(MTEXP2) += dm*texp*texp;
+	    
+	      cache(MR2)  += dm*r*r;
+	      cache(MRVR) += dm*r*vr;
+	      cache(MVR2) += dm*vr*vr;
+	    }
 	  }
 	}
       }
     }
+    
+    cache(HCYCLE) = static_cast<Real>(ncycle);
+  }
+  
 
-    Real Mej_msun = Mej/pmb->pmy_mesh->punit->solar_mass_code;
-    return Mej_msun;
+  Real HistoryEjectaMassGeom(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
+
+    const Real M =
+      pmb->ruser_meshblock_data[2](MGEOM);
+    
+    return M / pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryEjectaEnergyGeom(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
     
-    Real Eej = 0.0;
+    const Real E =
+      pmb->ruser_meshblock_data[2](EGEOM);
     
-    AthenaArray<Real> vol;
-    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
-    
-    AthenaArray<Real> g, gi;
-    g.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
-    gi.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
-    
-    for (int k=pmb->ks; k<=pmb->ke; ++k) {
-      for (int j=pmb->js; j<=pmb->je; ++j) {
-	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
-	pmb->pcoord->CellMetric(k, j, pmb->is, pmb->ie, g, gi);
-	for (int i=pmb->is; i<=pmb->ie; ++i) {
-	  Real uu1 = pmb->phydro->w(IVX,k,j,i);
-	  Real uu2 = pmb->phydro->w(IVY,k,j,i);
-	  Real uu3 = pmb->phydro->w(IVZ,k,j,i);
-
-	  Real tmp =
-	    g(I11,i)*uu1*uu1
-	    + 2.0*g(I12,i)*uu1*uu2
-	    + 2.0*g(I13,i)*uu1*uu3
-	    + g(I22,i)*uu2*uu2
-	    + 2.0*g(I23,i)*uu2*uu3
-	    + g(I33,i)*uu3*uu3;
-
-	  Real W = std::sqrt(1.0 + tmp);
-
-	  Real alpha = std::sqrt(-1.0 / gi(I00,i));
-
-	  Real u_t = -alpha*W + g(I01,i)*uu1 + g(I02,i)*uu2 + g(I03,i)*uu3;
-
-	  if(u_t+1.0 < 0.0){
-	    Eej += vol(i)*pmb->phydro->u(IDN,k,j,i)*(-u_t-1.0);
-	  }
-	}
-      }
-    }
-
-    Real Eej_erg = Eej* SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+    return E * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       / pmb->pmy_mesh->punit->erg_code;
-    return Eej_erg;
   }
 
   Real HistoryEjectaMassBern(MeshBlock *pmb, int iout) {
-    
-    Real Mej = 0.0;
-    
-    AthenaArray<Real> vol;
-    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
-    
-    AthenaArray<Real> g, gi;
-    g.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
-    gi.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
-    
-    for (int k=pmb->ks; k<=pmb->ke; ++k) {
-      for (int j=pmb->js; j<=pmb->je; ++j) {
-	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
-	pmb->pcoord->CellMetric(k, j, pmb->is, pmb->ie, g, gi);
-	for (int i=pmb->is; i<=pmb->ie; ++i) {
-	  Real rho = pmb->phydro->w(IDN,k,j,i);
-	  Real uu1 = pmb->phydro->w(IVX,k,j,i);
-	  Real uu2 = pmb->phydro->w(IVY,k,j,i);
-	  Real uu3 = pmb->phydro->w(IVZ,k,j,i);
+    UpdateEjectaHistoryCache(pmb);
 
-	  Real tmp =
-	    g(I11,i)*uu1*uu1
-	    + 2.0*g(I12,i)*uu1*uu2
-	    + 2.0*g(I13,i)*uu1*uu3
-	    + g(I22,i)*uu2*uu2
-	    + 2.0*g(I23,i)*uu2*uu3
-	    + g(I33,i)*uu3*uu3;
-
-	  Real W = std::sqrt(1.0 + tmp);
-
-	  Real alpha = std::sqrt(-1.0 / gi(I00,i));
-
-	  Real u_t = -alpha*W;
-	  Real press = pmb->phydro->w(IPR,k,j,i);
-	  Real enthalpy = 1.0 + gamma_gas/(gamma_gas-1.0) * press/rho;
-	  if(enthalpy*u_t+1.0 < 0.0){
-	    Mej += vol(i)*pmb->phydro->u(IDN,k,j,i);
-	  }
-	}
-      }
-    }
-    Real Mej_msun = Mej/pmb->pmy_mesh->punit->solar_mass_code;
-    return Mej_msun;
+    const Real M =
+      pmb->ruser_meshblock_data[2](MBERN);
+    
+    return M / pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryEjectaEnergyBern(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
     
-    Real Eej = 0.0;
+    const Real E =
+      pmb->ruser_meshblock_data[2](EBERN);
     
-    AthenaArray<Real> vol;
-    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
-    
-    AthenaArray<Real> g, gi;
-    g.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
-    gi.NewAthenaArray(NMETRIC, pmb->ie + NGHOST + 1);
-    
-    for (int k=pmb->ks; k<=pmb->ke; ++k) {
-      for (int j=pmb->js; j<=pmb->je; ++j) {
-	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
-	pmb->pcoord->CellMetric(k, j, pmb->is, pmb->ie, g, gi);
-	for (int i=pmb->is; i<=pmb->ie; ++i) {
-	  Real rho = pmb->phydro->w(IDN,k,j,i);
-	  Real uu1 = pmb->phydro->w(IVX,k,j,i);
-	  Real uu2 = pmb->phydro->w(IVY,k,j,i);
-	  Real uu3 = pmb->phydro->w(IVZ,k,j,i);
-
-	  Real tmp =
-	    g(I11,i)*uu1*uu1
-	    + 2.0*g(I12,i)*uu1*uu2
-	    + 2.0*g(I13,i)*uu1*uu3
-	    + g(I22,i)*uu2*uu2
-	    + 2.0*g(I23,i)*uu2*uu3
-	    + g(I33,i)*uu3*uu3;
-
-	  Real W = std::sqrt(1.0 + tmp);
-
-	  Real alpha = std::sqrt(-1.0 / gi(I00,i));
-
-	  Real u_t = -alpha*W;
-	  Real press = pmb->phydro->w(IPR,k,j,i);
-	  Real enthalpy = 1.0 + gamma_gas/(gamma_gas-1.0) * press/rho;
-	  if(enthalpy*u_t+1.0 < 0.0){
-	    Eej += vol(i)*pmb->phydro->u(IDN,k,j,i)*(-enthalpy*u_t-1.0);
-	  }
-	}
-      }
-    }
-    
-    Real Eej_erg = Eej* SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+    return E * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       / pmb->pmy_mesh->punit->erg_code;
-    return Eej_erg;
   }
 
   Real HistoryEjectaMassBind(MeshBlock *pmb, int iout) {
-    
-    Real Mej = 0.0;
-    
-    AthenaArray<Real> vol;
-    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
-    
-    for (int k=pmb->ks; k<=pmb->ke; ++k) {
-      for (int j=pmb->js; j<=pmb->je; ++j) {
-	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
-	for (int i=pmb->is; i<=pmb->ie; ++i) {
+    UpdateEjectaHistoryCache(pmb);
 
-	  const Real rho_ut = pmb->phydro->u(IDN,k,j,i);
-	  const Real Tt_t   = pmb->phydro->u(IEN,k,j,i);
-	  
-	  const Real ebind = -Tt_t/rho_ut-1.0;
-	  
-	  if(ebind > 0.0){
-	    Mej += vol(i)*pmb->phydro->u(IDN,k,j,i);
-	  }
-	}
-      }
-    }
+    const Real M =
+      pmb->ruser_meshblock_data[2](MBIND);
     
-    Real Mej_msun = Mej/pmb->pmy_mesh->punit->solar_mass_code;
-    return Mej_msun;
+    return M / pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryEjectaEnergyBind(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
     
-    Real Eej = 0.0;
+    const Real E =
+      pmb->ruser_meshblock_data[2](EBIND);
     
-    AthenaArray<Real> vol;
-    vol.NewAthenaArray(pmb->ie + NGHOST + 1);
-    
-    for (int k=pmb->ks; k<=pmb->ke; ++k) {
-      for (int j=pmb->js; j<=pmb->je; ++j) {
-	pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
-	for (int i=pmb->is; i<=pmb->ie; ++i) {
-
-	  const Real rho_ut = pmb->phydro->u(IDN,k,j,i);
-	  const Real Tt_t   = pmb->phydro->u(IEN,k,j,i);
-	  
-	  const Real ebind = -Tt_t/rho_ut-1.0;
-	  
-	  if(ebind > 0.0){
-	    Eej += vol(i)*pmb->phydro->u(IDN,k,j,i)*ebind;
-	  }
-	}
-      }
-    }
-    
-    Real Eej_erg = Eej* SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+    return E * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       / pmb->pmy_mesh->punit->erg_code;
-    return Eej_erg;
+
   }
 
 
@@ -607,15 +577,22 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   SetUserOutputVariableName(8, "q");
 
   //
-  AllocateRealUserMeshBlockDataField(2);
+  AllocateRealUserMeshBlockDataField(3);
   
-  // for Psi_face1
+  // [0] for Psi_face1
   ruser_meshblock_data[0].NewAthenaArray(ncells1 + 1);
-  // for delta_m_face1
+  // [1] for delta_m_face1
   ruser_meshblock_data[1].NewAthenaArray(ncells1 + 1);
 
+  // [2] ejecta/history diagnostics cache
+  ruser_meshblock_data[2].NewAthenaArray(NEJECTA_CACHE);
+  
   ruser_meshblock_data[0].ZeroClear();
   ruser_meshblock_data[1].ZeroClear();
+  ruser_meshblock_data[2].ZeroClear();
+  
+  ruser_meshblock_data[2](HCYCLE) = -1.0;
+  
 }
 
 void MeshBlock::UserWorkInLoop(void) {
