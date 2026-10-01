@@ -1674,6 +1674,12 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         pmb->peos->PrimitiveToConserved(
            pmb->phydro->w, bb, pmb->phydro->u, pmb->pcoord,
            pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
+
+#if NSCALARS > 0
+	pmb->peos->PassiveScalarPrimitiveToConserved(
+           pmb->pscalars->r, pmb->phydro->u, pmb->pscalars->s, pmb->pcoord,
+           pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
+#endif
       }
     }
 #endif

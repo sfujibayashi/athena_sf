@@ -372,6 +372,19 @@ ProgenitorProfile ReadProgenitorProfile(const std::string &filename) {
 		<< xsum_min << " -- " << xsum_max
 		<< std::endl;
     }
+
+    for (std::size_t i=0; i<ncell; ++i) {
+      Real xsum = 0.0;
+      for (int n=0; n<NPROG_SPECIES; ++n) {
+	xsum += profile.x[n][i];
+      }
+
+      for (int n=0; n<NPROG_SPECIES; ++n) {
+	profile.x[n][i] /= xsum;
+      }
+      
+    }
+    
   }
 
   // Standard format is center -> surface.

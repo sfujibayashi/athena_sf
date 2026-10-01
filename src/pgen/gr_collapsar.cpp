@@ -59,6 +59,10 @@ struct CollapsedProfile {
 
   std::vector<Real> jrot;
 
+  
+  std::vector<Real> ye;
+  std::array<std::vector<Real>, ProgenitorSpecies::NPROG_SPECIES> x;
+  
   Real EnclosedMass(Real r){
     int ilo, ihi;
     ilo = 0;
@@ -143,6 +147,59 @@ namespace {
   Real timescale_cut;
   Real W_max;
 
+  
+  enum ScalarIndex {
+    IYE = 0,
+    IXINJ,
+    
+    IXNEUT,
+    IXH1,
+    IXHE3,
+    IXHE4,
+    IXC12,
+    IXN14,
+    IXO16,
+    IXNE20,
+    IXMG24,
+    IXSI28,
+    IXS32,
+    IXAR36,
+    IXCA40,
+    IXTI44,
+    IXCR48,
+    IXCR56,
+    IXFE52,
+    IXFE54,
+    IXFE56,
+    IXNI56,
+    
+    NSCALAR_REQUIRED
+  };
+  
+  const int prog_to_scalar[ProgenitorSpecies::NPROG_SPECIES] = {
+    IXNEUT,  // IPROG_NEUT
+    IXH1,    // IPROG_PROT
+    IXH1,    // IPROG_H1
+    IXHE3,   // IPROG_HE3
+    IXHE4,   // IPROG_HE4
+    IXC12,   // IPROG_C12
+    IXN14,   // IPROG_N14
+    IXO16,   // IPROG_O16
+    IXNE20,  // IPROG_NE20
+    IXMG24,  // IPROG_MG24
+    IXSI28,  // IPROG_SI28
+    IXS32,   // IPROG_S32
+    IXAR36,  // IPROG_AR36
+    IXCA40,  // IPROG_CA40
+    IXTI44,  // IPROG_TI44
+    IXCR48,  // IPROG_CR48
+    IXCR56,  // IPROG_CR56
+    IXFE52,  // IPROG_FE52
+    IXFE54,  // IPROG_FE54
+    IXFE56,  // IPROG_FE56
+    IXNI56   // IPROG_NI56
+  };
+  
   // Real HistoryBlackHoleMass(MeshBlock *pmb, int iout);
   // Real HistoryBlackHoleMassAccretionRate(MeshBlock *pmb, int iout);
   
@@ -696,28 +753,43 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         int ind = collapsed.CellIndexFromRadius(rad_cgs);
         
         Real rho_cgs, press_cgs, uu1, uu2, uu3;
+	Real ye, xinj, xprog[ProgenitorSpecies::NPROG_SPECIES];
         uu2 = 0.0;
         uu3 = 0.0;
+	xinj = 0.0;
         if( ind>=collapsed.ncell ){
           // outside the star atmosphere
           rho_cgs = rho_atmos;
           press_cgs = press_atmos;
           uu1 = 0.0;
+	  ye = collapsed.ye[collapsed.ncell-1];
+	  for(int n=0; n<ProgenitorSpecies::NPROG_SPECIES; ++n){
+	    xprog[n] = collapsed.x[n][collapsed.ncell-1];
+	  }
         }else if (ind==collapsed.ncell-1){
           // between the last cell center and stellar surface
           rho_cgs   = collapsed.rho[ind];
           press_cgs = collapsed.press[ind];
           uu1 = collapsed.ur[ind] / Constants::speed_of_light_cgs;
+	  ye = collapsed.ye[ind];
+	  for(int n=0; n<ProgenitorSpecies::NPROG_SPECIES; ++n){
+	    xprog[n] = collapsed.x[n][ind];
+	  }
         }else if (ind<0){
           rho_cgs = collapsed.rho[ind_first];
           press_cgs= collapsed.press[ind_first];
           uu1 = collapsed.ur[ind_first]/Constants::speed_of_light_cgs;
+          ye = collapsed.ye[ind_first];
         } else {
           Real xx1 = (rad_cgs-collapsed.radius[ind])/(collapsed.radius[ind+1]-collapsed.radius[ind]);
           Real xx0 = 1.0-xx1;
           rho_cgs  = xx0*collapsed.rho[ind] + xx1*collapsed.rho[ind+1];
           press_cgs= xx0*collapsed.press[ind] + xx1*collapsed.press[ind+1];
           uu1 = (xx0*collapsed.ur[ind] + xx1*collapsed.ur[ind+1])/Constants::speed_of_light_cgs;
+	  ye = xx0*collapsed.ye[ind] + xx1*collapsed.ye[ind+1];
+	  for(int n=0; n<ProgenitorSpecies::NPROG_SPECIES; ++n){
+	    xprog[n] = xx0*collapsed.x[n][ind] + xx1*collapsed.x[n][ind+1];
+	  }
         }
         Real rho_code = rho_cgs/pmy_mesh->punit->code_density_cgs;
         Real press_code = press_cgs/pmy_mesh->punit->code_pressure_cgs;
@@ -735,6 +807,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         phydro->w1(IVY,k,j,i) = uu2;
         phydro->w1(IVZ,k,j,i) = uu3;
         //printf("i, rho, press, uu1 = %5d %12.4e %12.4e %12.4e\n", i, rho_code, press_code, uu1);
+
+	// pscalars
+	pscalars->r(IYE,k,j,i) = ye;
+	pscalars->r(IXINJ,k,j,i) = 0.0;
+	for (int n = IXNEUT; n < NSCALAR_REQUIRED; ++n) {
+	  pscalars->r(n,k,j,i) = 0.0;
+	}
+	for (int n = 0; n < ProgenitorSpecies::NPROG_SPECIES; ++n) {
+	  pscalars->r(prog_to_scalar[n],k,j,i) += xprog[n];
+	}
       }
     }
   }
@@ -761,6 +843,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   peos->PrimitiveToConserved(
       phydro->w, bb, phydro->u, pcoord,
       is, ie, js, je, ks, ke);
+
+#if NSCALARS > 0
+  peos->PassiveScalarPrimitiveToConserved(
+    pscalars->r, phydro->u, pscalars->s, pcoord,
+    is, ie, js, je, ks, ke);
+#endif
 
 }
 
@@ -880,6 +968,8 @@ CollapsedProfile CollapseProgenitor(const ProgenitorProfile &progenitor, Real t0
   collapsed.mass = progenitor.mass;
   collapsed.jrot = progenitor.jrot;
 
+  collapsed.ye = progenitor.ye;
+  collapsed.x = progenitor.x;
 
   t_m0[0] = 0.0;
 
@@ -1055,6 +1145,15 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
         prim(IVX,k,j,i) = uu1;
         prim(IVY,k,j,i) = uu2;
         prim(IVZ,k,j,i) = uu3;
+
+	
+#if NSCALARS > 0
+	pmb->pscalars->r(IYE,k,j,i)   = state.ye;
+	pmb->pscalars->r(IXINJ,k,j,i) = 1.0;
+	for (int n=IXNEUT; n<NSCALAR_REQUIRED; ++n) {
+	  pmb->pscalars->r(n,k,j,i) = 0.0;
+	}
+#endif
       }
     }
   }
