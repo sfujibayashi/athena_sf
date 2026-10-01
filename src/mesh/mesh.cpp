@@ -1660,9 +1660,9 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
     pin->GetOrAddBoolean("coord", "initial_metric_update", true);
   
 #if DYNAMIC_METRIC_ENABLED
-    if (initial_metric_update) {
+    if (res_flag==0 and initial_metric_update) {
       pmonograv->Update();
-
+      
       // Convert primitive -> conserved after getting metric (it requires primitive rho)
       for (int i=0; i<nblocal; ++i) {
         MeshBlock *pmb = my_blocks(i);
