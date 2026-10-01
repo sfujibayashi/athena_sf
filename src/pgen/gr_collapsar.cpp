@@ -852,7 +852,8 @@ Real GetTimeFromBlackHoleMass(const ProgenitorProfile &progenitor, Real bh_mass)
   }
   t_m0 += (r_m0 - progenitor.radius_face[ilo])/ progenitor.csound[ilo];
 
-  Real tau = t_m0 + std::sqrt(r_m0*r_m0*r_m0/(8.0*G*m_bh_cgs)) * (eta + std::sin(eta));
+  Real t_ff = std::sqrt(r_m0*r_m0*r_m0/(8.0*G*m_bh_cgs)) * (eta + std::sin(eta));
+  Real tau = t_m0 + t_ff;
 
   return tau;
 }
