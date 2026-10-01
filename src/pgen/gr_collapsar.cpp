@@ -246,6 +246,8 @@ namespace {
     EBERN,
     MBIND,
     EBIND,
+
+    RMAX,
     
     MGEOM_OUT,
     MBAL,
@@ -401,8 +403,11 @@ namespace {
 	      cache(MR2)  += dm*r*r;
 	      cache(MRVR) += dm*r*vr;
 	      cache(MVR2) += dm*vr*vr;
+
+	      cache(RMAX) = std::max(cache(RMAX), r);
 	    }
 	  }
+
 	}
       }
     }
@@ -467,6 +472,15 @@ namespace {
     return E * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       / pmb->pmy_mesh->punit->erg_code;
 
+  }
+
+  
+  Real HistoryEjectaMaxRadius(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
+    
+    Real r_max = pmb->ruser_meshblock_data[2](RMAX);
+    return r_max*pmb->pmy_mesh->punit->code_length_cgs;
+    
   }
 
 
@@ -563,7 +577,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     }
   }
   // output
-  AllocateUserHistoryOutput(9);
+  AllocateUserHistoryOutput(10);
   
   EnrollUserHistoryOutput(0, HistoryBlackHoleMass, "m_bh",
                           UserHistoryOperation::max);
@@ -592,6 +606,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(8, HistoryEjectaEnergyBind, "ejecta_energy(bind)",
                           UserHistoryOperation::sum);
 
+  EnrollUserHistoryOutput(9, HistoryEjectaMaxRadius, "maximum radius",
+                          UserHistoryOperation::max);
+
   //
   AllocateRealUserMeshDataField(2);
   // BH mass
@@ -608,7 +625,19 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 void Mesh::UserWorkInLoop(void) {
 
   // write criteria for termination
-  bool terminate = false;   
+  bool terminate = false;
+
+  const Real rstop = 0.95 * mesh_size.x1max;
+  
+  Real rejecta_max = 0.0;
+  for (int b=0; b<nblocal; ++b) {
+    MeshBlock *pmb = my_blocks(b);
+    UpdateEjectaHistoryCache(pmb);
+    rejecta_max = std::max(rejecta_max, pmb->ruser_meshblock_data[2](RMAX));
+  }
+
+  if (rejecta_max > rstop) terminate = true;
+  
   if (terminate) {
     tlim = time + dt;
 
@@ -808,6 +837,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         phydro->w1(IVZ,k,j,i) = uu3;
         //printf("i, rho, press, uu1 = %5d %12.4e %12.4e %12.4e\n", i, rho_code, press_code, uu1);
 
+#if NSCALARS > 0
 	// pscalars
 	pscalars->r(IYE,k,j,i) = ye;
 	pscalars->r(IXINJ,k,j,i) = 0.0;
@@ -817,6 +847,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 	for (int n = 0; n < ProgenitorSpecies::NPROG_SPECIES; ++n) {
 	  pscalars->r(prog_to_scalar[n],k,j,i) += xprog[n];
 	}
+#endif
       }
     }
   }
