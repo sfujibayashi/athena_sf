@@ -253,6 +253,23 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
           else
             pmb->precon->PiecewiseParabolicX2(k, j, il, iu, w, bcc, wlb_, wr_);
         }
+
+        // Capture the actual PLM output and limiter scratch arrays before any
+        // scalar reconstruction reuses Reconstruction's scratch storage.  This
+        // distinguishes a bad hydro slope from later buffer corruption.
+        if (pmb->gid == 0 && k == ks && order == 2 && j >= js && j <= js+1) {
+          const int side = j-js;
+          const int vars[2] = {IDN, IPR};
+          for (int nv=0; nv<2; ++nv) {
+            const int n = vars[nv];
+            polar_debug_.face_plm_after_hydro[side][nv][0] = wlb_(n,is);
+            polar_debug_.face_plm_after_hydro[side][nv][1] = wr_(n,is);
+            polar_debug_.face_plm_scratch[side][nv][0] = pmb->precon->scr1_ni_(n,is);
+            polar_debug_.face_plm_scratch[side][nv][1] = pmb->precon->scr2_ni_(n,is);
+            polar_debug_.face_plm_scratch[side][nv][2] = pmb->precon->scr3_ni_(n,is);
+            polar_debug_.face_plm_scratch[side][nv][3] = pmb->precon->scr4_ni_(n,is);
+          }
+        }
 #if EOS_SCALAR_INPUT_ENABLED
         // scalar: current row
         if (order == 1) {
@@ -262,7 +279,88 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
         }
 #endif
 
+        if (pmb->gid == 0 && k == ks && order == 2 && j >= js && j <= js+1) {
+          const int side = j-js;
+          const int vars[2] = {IDN, IPR};
+          for (int nv=0; nv<2; ++nv) {
+            const int n = vars[nv];
+            polar_debug_.face_plm_after_scalars[side][nv][0] = wlb_(n,is);
+            polar_debug_.face_plm_after_scalars[side][nv][1] = wr_(n,is);
+          }
+        }
+
         pmb->pcoord->CenterWidth2(k, j, il, iu, dxw_);
+
+        // Preserve the exact untransformed PLM inputs and reconstruct the scalar
+        // limiter arithmetic for the two cells adjacent to the known failing face.
+        // Nothing is printed here; AddFluxDivergence reports this buffer only if the
+        // corresponding active-cell density update is non-positive.
+        if (pmb->gid == 0 && k == ks && j == js+1 && order == 2) {
+          Coordinates *pco = pmb->pcoord;
+          polar_debug_.face_order = order;
+          polar_debug_.face_characteristic_projection =
+              pmb->precon->characteristic_projection_;
+          polar_debug_.face_minmod = pmb->precon->minmod_;
+          for (int n=0; n<NWAVE; ++n) {
+            polar_debug_.face_wl_pre[n] = wl_(n,is);
+            polar_debug_.face_wr_pre[n] = wr_(n,is);
+          }
+
+          const int vars[2] = {IDN, IPR};
+          const int cells[2] = {js, js+1};
+          for (int side=0; side<2; ++side) {
+            const int jc = cells[side];
+            const Real cf = pco->dx2v(jc)/(pco->x2f(jc+1)-pco->x2v(jc));
+            const Real cb = pco->dx2v(jc-1)/(pco->x2v(jc)-pco->x2f(jc));
+            const Real dxF = pco->dx2f(jc)/pco->dx2v(jc);
+            const Real dxB = pco->dx2f(jc)/pco->dx2v(jc-1);
+            const Real dxp = (pco->x2f(jc+1)-pco->x2v(jc))/pco->dx2f(jc);
+            const Real dxm = (pco->x2v(jc)-pco->x2f(jc))/pco->dx2f(jc);
+            polar_debug_.face_stencil_geom[side][0] = cf;
+            polar_debug_.face_stencil_geom[side][1] = cb;
+            polar_debug_.face_stencil_geom[side][2] = dxF;
+            polar_debug_.face_stencil_geom[side][3] = dxB;
+            polar_debug_.face_stencil_geom[side][4] = dxp;
+            polar_debug_.face_stencil_geom[side][5] = dxm;
+
+            for (int nv=0; nv<2; ++nv) {
+              const int n = vars[nv];
+              const Real qm = w(n,k,jc-1,is);
+              const Real qc = w(n,k,jc,is);
+              const Real qp = w(n,k,jc+1,is);
+              const Real dwl = qc-qm;
+              const Real dwr = qp-qc;
+              const Real dqB = dwl*dxB;
+              const Real dqF = dwr*dxF;
+              Real dwm = 0.0;
+              if (!pmb->precon->characteristic_projection_) {
+                if (pmb->precon->minmod_) {
+                  if (dwl*dwr > 0.0) {
+                    const Real dwlw = dwl*dxB;
+                    const Real dwrw = dwr*dxF;
+                    dwm = (dwlw >= 0.0) ? std::min(dwlw,dwrw)
+                                         : std::max(dwlw,dwrw);
+                  }
+                } else {
+                  const Real dq2 = dqF*dqB;
+                  dwm = dq2*(cf*dqB+cb*dqF)
+                        /(SQR(dqB)+SQR(dqF)+dq2*(cf+cb-2.0));
+                  if (dq2 <= 0.0) dwm = 0.0;
+                }
+              }
+              polar_debug_.face_stencil_q[side][nv][0] = qm;
+              polar_debug_.face_stencil_q[side][nv][1] = qc;
+              polar_debug_.face_stencil_q[side][nv][2] = qp;
+              polar_debug_.face_stencil_calc[side][nv][0] = dwl;
+              polar_debug_.face_stencil_calc[side][nv][1] = dwr;
+              polar_debug_.face_stencil_calc[side][nv][2] = dqB;
+              polar_debug_.face_stencil_calc[side][nv][3] = dqF;
+              polar_debug_.face_stencil_calc[side][nv][4] = dwm;
+              polar_debug_.face_stencil_calc[side][nv][5] = qc-dxm*dwm;
+              polar_debug_.face_stencil_calc[side][nv][6] = qc+dxp*dwm;
+            }
+          }
+        }
 #if !MAGNETIC_FIELDS_ENABLED  // Hydro:
 #if EOS_SCALAR_INPUT_ENABLED
         RiemannSolver(k, j, il, iu, IVY, wl_, wr_, x2flux, dxw_, &rl_, &rr_);
@@ -274,6 +372,99 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
         // flx(IBZ) = (v2*b1 - v1*b2) =  EMFZ
         RiemannSolver(k, j, il, iu, IVY, b2, wl_, wr_, x2flux, e1x2, e3x2, w_x2f, dxw_);
 #endif
+
+        // Save the exact, locally transformed HLLC inputs at the upper x2 face of the
+        // first active polar cell.  RiemannSolver() transforms wl_/wr_ in place in GR.
+        if (pmb->gid == 0 && k == ks && j == js+1) {
+          polar_debug_.face_valid = true;
+          polar_debug_.face_cycle = pmb->pmy_mesh->ncycle;
+          polar_debug_.face_time = pmb->pmy_mesh->time;
+          for (int n=0; n<NWAVE; ++n) {
+            polar_debug_.face_wl[n] = wl_(n,is);
+            polar_debug_.face_wr[n] = wr_(n,is);
+          }
+
+          const Real gamma_prime = pmb->peos->GetGamma()
+                                   /(pmb->peos->GetGamma() - 1.0);
+          const Real ul0 = std::sqrt(1.0 + SQR(wl_(IVX,is)) + SQR(wl_(IVY,is))
+                                     + SQR(wl_(IVZ,is)));
+          const Real ur0 = std::sqrt(1.0 + SQR(wr_(IVX,is)) + SQR(wr_(IVY,is))
+                                     + SQR(wr_(IVZ,is)));
+          const Real wgas_l = wl_(IDN,is) + gamma_prime*wl_(IPR,is);
+          const Real wgas_r = wr_(IDN,is) + gamma_prime*wr_(IPR,is);
+          polar_debug_.hllc_wgas_l = wgas_l;
+          polar_debug_.hllc_wgas_r = wgas_r;
+          polar_debug_.hllc_cs2_l = pmb->peos->GetGamma()*wl_(IPR,is)/wgas_l;
+          polar_debug_.hllc_cs2_r = pmb->peos->GetGamma()*wr_(IPR,is)/wgas_r;
+          polar_debug_.hllc_cons_d_l = wl_(IDN,is)*ul0;
+          polar_debug_.hllc_cons_d_r = wr_(IDN,is)*ur0;
+          pmb->peos->SoundSpeedsSR(wgas_l, wl_(IPR,is), wl_(IVY,is)/ul0, SQR(ul0),
+                                   &polar_debug_.lambda_p_l,
+                                   &polar_debug_.lambda_m_l);
+          pmb->peos->SoundSpeedsSR(wgas_r, wr_(IPR,is), wr_(IVY,is)/ur0, SQR(ur0),
+                                   &polar_debug_.lambda_p_r,
+                                   &polar_debug_.lambda_m_r);
+
+          const Real lambda_l = std::min(polar_debug_.lambda_m_l,
+                                         polar_debug_.lambda_m_r);
+          const Real lambda_r = std::max(polar_debug_.lambda_p_l,
+                                         polar_debug_.lambda_p_r);
+          polar_debug_.hllc_lambda_l = lambda_l;
+          polar_debug_.hllc_lambda_r = lambda_r;
+          Real cons_l[NWAVE], cons_r[NWAVE], flux_l[NWAVE], flux_r[NWAVE];
+          const int ivx = IVY;
+          const int ivy = IVX + ((ivx-IVX)+1)%3;
+          const int ivz = IVX + ((ivx-IVX)+2)%3;
+          for (int n=0; n<NWAVE; ++n) {
+            cons_l[n] = cons_r[n] = flux_l[n] = flux_r[n] = 0.0;
+          }
+          cons_l[IDN] = wl_(IDN,is)*ul0;
+          cons_l[IEN] = wgas_l*SQR(ul0)-wl_(IPR,is);
+          cons_l[ivx] = wgas_l*wl_(ivx,is)*ul0;
+          cons_l[ivy] = wgas_l*wl_(ivy,is)*ul0;
+          cons_l[ivz] = wgas_l*wl_(ivz,is)*ul0;
+          flux_l[IDN] = wl_(IDN,is)*wl_(ivx,is);
+          flux_l[IEN] = wgas_l*ul0*wl_(ivx,is);
+          flux_l[ivx] = wgas_l*SQR(wl_(ivx,is))+wl_(IPR,is);
+          flux_l[ivy] = wgas_l*wl_(ivy,is)*wl_(ivx,is);
+          flux_l[ivz] = wgas_l*wl_(ivz,is)*wl_(ivx,is);
+          cons_r[IDN] = wr_(IDN,is)*ur0;
+          cons_r[IEN] = wgas_r*SQR(ur0)-wr_(IPR,is);
+          cons_r[ivx] = wgas_r*wr_(ivx,is)*ur0;
+          cons_r[ivy] = wgas_r*wr_(ivy,is)*ur0;
+          cons_r[ivz] = wgas_r*wr_(ivz,is)*ur0;
+          flux_r[IDN] = wr_(IDN,is)*wr_(ivx,is);
+          flux_r[IEN] = wgas_r*ur0*wr_(ivx,is);
+          flux_r[ivx] = wgas_r*SQR(wr_(ivx,is))+wr_(IPR,is);
+          flux_r[ivy] = wgas_r*wr_(ivy,is)*wr_(ivx,is);
+          flux_r[ivz] = wgas_r*wr_(ivz,is)*wr_(ivx,is);
+          const Real inv_dlambda = 1.0/(lambda_r-lambda_l);
+          Real cons_hll[NWAVE], flux_hll[NWAVE];
+          for (int n=0; n<NWAVE; ++n) {
+            cons_hll[n] = (lambda_r*cons_r[n]-lambda_l*cons_l[n]
+                           +flux_l[n]-flux_r[n])*inv_dlambda;
+            flux_hll[n] = (lambda_r*flux_l[n]-lambda_l*flux_r[n]
+                           +lambda_l*lambda_r*(cons_r[n]-cons_l[n]))*inv_dlambda;
+          }
+          const Real contact_b = -(cons_hll[IEN]+flux_hll[ivx]);
+          const Real contact_disc = SQR(contact_b)
+                                    -4.0*flux_hll[IEN]*cons_hll[ivx];
+          polar_debug_.hllc_contact_discriminant = contact_disc;
+          Real lambda_star;
+          if (std::abs(flux_hll[IEN]) > TINY_NUMBER) {
+            lambda_star = -2.0*cons_hll[ivx]
+                          /(contact_b-std::sqrt(contact_disc));
+          } else {
+            lambda_star = -cons_hll[ivx]/contact_b;
+          }
+          polar_debug_.hllc_lambda_star = lambda_star;
+          polar_debug_.hllc_pgas_star =
+              -flux_hll[IEN]*lambda_star+flux_hll[ivx];
+          polar_debug_.hllc_cons_d_lstar =
+              cons_l[IDN]*(lambda_l-wl_(ivx,is)/ul0)/(lambda_l-lambda_star);
+          polar_debug_.hllc_cons_d_rstar =
+              cons_r[IDN]*(lambda_r-wr_(ivx,is)/ur0)/(lambda_r-lambda_star);
+        }
 
         if (order == 4) {
           for (int n=0; n<NWAVE; n++) {

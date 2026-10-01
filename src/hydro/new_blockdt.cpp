@@ -62,6 +62,10 @@ void Hydro::NewBlockTimeStep() {
   Real min_dt_parabolic  = real_max;
   Real min_dt_user  = real_max;
 
+  // Diagnostic target: first active polar cell in gid 0.
+  const bool debug_block = (pmb->gid == 0);
+  polar_debug_.cfl_valid = false;
+
   Real cspeed = 0.0;
   if(NR_RADIATION_ENABLED)
     cspeed = pmb->pnrrad->reduced_c;
@@ -76,6 +80,11 @@ void Hydro::NewBlockTimeStep() {
       pmb->pcoord->CenterWidth1(k, j, is, ie, dt1);
       pmb->pcoord->CenterWidth2(k, j, is, ie, dt2);
       pmb->pcoord->CenterWidth3(k, j, is, ie, dt3);
+
+      if (debug_block && k == ks && j == js) {
+        polar_debug_.center_width1 = dt1(is);
+        polar_debug_.center_width2 = dt2(is);
+      }
 
       // Newtonian case: divide cell widths by maximum characteristic speed
       if (!RELATIVISTIC_DYNAMICS) {
@@ -149,6 +158,48 @@ void Hydro::NewBlockTimeStep() {
           dt1(i) /= speed1;
           dt2(i) /= speed2;
           dt3(i) /= speed3;
+
+          if (debug_block && k == ks && j == js && i == is) {
+            Coordinates *pco = pmb->pcoord;
+            const Real vol = pco->GetCellVolume(k, j, i);
+            const Real a1_l = pco->GetFace1Area(k, j, i);
+            const Real a1_r = pco->GetFace1Area(k, j, i+1);
+            const Real a2_l = pco->GetFace2Area(k, j, i);
+            const Real a2_r = pco->GetFace2Area(k, j+1, i);
+            const Real rate1 = std::max(a1_l, a1_r)*speed1/vol;
+            const Real rate2 = std::max(a2_l, a2_r)*speed2/vol;
+
+            polar_debug_.cfl_valid = true;
+            polar_debug_.cfl_cycle = pmb->pmy_mesh->ncycle;
+            polar_debug_.cfl_time = pmb->pmy_mesh->time;
+            polar_debug_.r = pco->x1v(i);
+            polar_debug_.theta = pco->x2v(j);
+            polar_debug_.dtheta = pco->dx2f(j);
+            polar_debug_.g00 = g_(I00,i);
+            polar_debug_.g02 = g_(I02,i);
+            polar_debug_.g22 = g_(I22,i);
+            polar_debug_.gi00 = gi_(I00,i);
+            polar_debug_.gi02 = gi_(I02,i);
+            polar_debug_.gi22 = gi_(I22,i);
+            polar_debug_.speed1 = speed1;
+            polar_debug_.speed2 = speed2;
+            polar_debug_.dt1_raw = dt1(i);
+            polar_debug_.dt2_raw = dt2(i);
+            polar_debug_.rho = w(IDN,k,j,i);
+            polar_debug_.press = w(IPR,k,j,i);
+            polar_debug_.u1 = w(IVX,k,j,i);
+            polar_debug_.u2 = w(IVY,k,j,i);
+            polar_debug_.u3 = w(IVZ,k,j,i);
+            polar_debug_.volume = vol;
+            polar_debug_.area1_l = a1_l;
+            polar_debug_.area1_r = a1_r;
+            polar_debug_.area2_l = a2_l;
+            polar_debug_.area2_r = a2_r;
+            polar_debug_.fv_dt1_raw = 1.0/rate1;
+            polar_debug_.fv_dt2_raw = 1.0/rate2;
+            polar_debug_.fv_dt_multid_scaled =
+                pmb->pmy_mesh->cfl_number/(rate1 + rate2);
+          }
         }
       }
 
@@ -176,6 +227,10 @@ void Hydro::NewBlockTimeStep() {
     }
   }
 
+  if (polar_debug_.cfl_valid) {
+    polar_debug_.block_dt_raw = min_dt_hyperbolic;
+  }
+
   // calculate the timestep limited by the diffusion processes
   if (hdif.hydro_diffusion_defined) {
     Real min_dt_vis, min_dt_cnd;
@@ -199,6 +254,9 @@ void Hydro::NewBlockTimeStep() {
   } // passive scalar diffusion
 
   min_dt_hyperbolic *= pmb->pmy_mesh->cfl_number;
+  if (polar_debug_.cfl_valid) {
+    polar_debug_.block_dt_scaled = min_dt_hyperbolic;
+  }
   // scale the theoretical stability limit by a safety factor = the hyperbolic CFL limit
   // (user-selected or automaticlaly enforced). May add independent parameter "cfl_diff"
   // in the future (with default = cfl_number).
