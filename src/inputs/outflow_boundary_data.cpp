@@ -157,7 +157,7 @@ Real OutflowBoundaryData::GetNTheta() const {
   return ntheta;
 }
 
-void OutflowBoundaryData::Analyze() const {
+void OutflowBoundaryData::Analyze(Real gamma_ad) const {
   const Real dtheta = 0.5*M_PI/(Real)ntheta;
   const Real dt = (time_max - time_min)/(Real)(ntime-1);
   const Real dt_cgs = dt*time_unit_table_;
@@ -190,6 +190,8 @@ void OutflowBoundaryData::Analyze() const {
       << std::setw(16) << "psi_av"
       << std::setw(16) << "psi_min"
       << std::setw(16) << "psi_max"
+      << std::setw(16) << "<h(NR)-h_min>"
+      << std::setw(16) << "<h-1>"
       << "\n";
   
   Real Mej_geom = 0.0;
@@ -214,6 +216,10 @@ void OutflowBoundaryData::Analyze() const {
     Real Edot_geom = 0.0;
     Real Edot_bern = 0.0;
     Real Edot_bind = 0.0;
+
+    Real dhNR_av = 0.0;
+    Real dhAth_av = 0.0;
+    
     for(int j=0; j<ntheta; ++j){
       Real theta_c = 0.5*dtheta + dtheta * (Real)j;
       Real theta_d = theta_c - 0.5*dtheta;
@@ -241,6 +247,14 @@ void OutflowBoundaryData::Analyze() const {
       if( ebind > 0.0 and vr>0.0){
 	Mdot_bind += dM_dt_face;
 	Edot_bind += dM_dt_face*ebind;
+
+	Real dhNR  = state.h - h_min_global_;
+	dhNR_av += dhNR*dM_dt_face;
+	
+	Real press = state.press;
+	Real rho   = state.rho;
+	Real dhAth = gamma_ad/(gamma_ad-1.0) * press/rho/(c_table_*c_table_);
+	dhAth_av += dhAth*dM_dt_face;
       }
       
       alpha_av += dOmega * state.alpha;
@@ -250,6 +264,8 @@ void OutflowBoundaryData::Analyze() const {
       psi_av += dOmega * state.psi;
       psi_min = std::min(psi_min, state.psi);
       psi_max = std::max(psi_max, state.psi);
+
+
     }
     alpha_av /= (4.0*M_PI);
     psi_av /= (4.0*M_PI);
@@ -261,6 +277,11 @@ void OutflowBoundaryData::Analyze() const {
     Eej_bern += Edot_bern * dt_cgs;
     Eej_bind += Edot_bind * dt_cgs;
 
+    if(Mdot_bind > 0.0){
+      dhNR_av /= Mdot_bind;
+      dhAth_av /= Mdot_bind;
+    }
+    
     ofs << std::scientific << std::setprecision(8)
 	<< " "
 	<< std::setw(16) << t*time_unit_table_
@@ -282,6 +303,8 @@ void OutflowBoundaryData::Analyze() const {
 	<< std::setw(16) << psi_av
 	<< std::setw(16) << psi_min
 	<< std::setw(16) << psi_max
+	<< std::setw(16) << dhNR_av
+	<< std::setw(16) << dhAth_av
 	<< "\n";
   }
   std::cout << std::setprecision(5)

@@ -56,7 +56,7 @@ public:
   OutflowState Interpolate(Real time, Real theta) const;
   OutflowState GetState(int it, int j) const;
   
-  void Analyze() const;
+  void Analyze(Real gamma_ad) const;
 
   Real GetTimeMin() const;
   Real GetTimeMax() const;

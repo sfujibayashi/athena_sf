@@ -621,7 +621,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     std::string fname = pin->GetString("problem", "outflow_file");
     poutflow = new OutflowBoundaryData(fname);
 
-    if(Globals::my_rank==0)poutflow->Analyze();
+    if(Globals::my_rank==0)poutflow->Analyze(gamma_gas);
     
     timescale_cut = pin->GetReal("problem", "timescale_cut");
     W_max = pin->GetReal("problem", "W_max");
