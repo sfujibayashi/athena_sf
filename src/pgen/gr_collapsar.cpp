@@ -483,8 +483,67 @@ namespace {
     
   }
 
+  bool EjectaReachedRadius(MeshBlock *pmb, Real rstop) {
 
-}
+    // This MeshBlock does not reach rstop.
+    if (pmb->pcoord->x1v(pmb->ie) < rstop) {
+      return false;
+    }
+
+    AthenaArray<Real> g, gi;
+    g.NewAthenaArray(NMETRIC, pmb->ncells1);
+    gi.NewAthenaArray(NMETRIC, pmb->ncells1);
+
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+
+	pmb->pcoord->CellMetric(
+				k, j, pmb->is, pmb->ie, g, gi);
+
+	// Search from outside inward.
+	for (int i=pmb->ie; i>=pmb->is; --i) {
+
+	  const Real r = pmb->pcoord->x1v(i);
+
+	  if (r < rstop) {
+	    break;
+	  }
+
+	  const Real uu1 = pmb->phydro->w(IVX,k,j,i);
+	  const Real uu2 = pmb->phydro->w(IVY,k,j,i);
+	  const Real uu3 = pmb->phydro->w(IVZ,k,j,i);
+
+	  const Real usq =
+            g(I11,i)*uu1*uu1
+	    + 2.0*g(I12,i)*uu1*uu2
+	    + 2.0*g(I13,i)*uu1*uu3
+	    + g(I22,i)*uu2*uu2
+	    + 2.0*g(I23,i)*uu2*uu3
+	    + g(I33,i)*uu3*uu3;
+
+	  const Real W = std::sqrt(1.0 + usq);
+	  const Real alpha = std::sqrt(-1.0/gi(I00,i));
+
+	  const Real u_t =
+            -alpha*W
+	    + g(I01,i)*uu1
+	    + g(I02,i)*uu2
+	    + g(I03,i)*uu3;
+
+	  const Real egeom = -u_t - 1.0;
+	  const Real vr = alpha*uu1/W;
+
+	  if (egeom > 0.0 && vr > 0.0) {
+	    return true;
+	  }
+	}
+      }
+    }
+
+    return false;
+  }
+
+} // namespace
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
 
@@ -628,15 +687,23 @@ void Mesh::UserWorkInLoop(void) {
   bool terminate = false;
 
   const Real rstop = 0.95 * mesh_size.x1max;
-  
-  Real rejecta_max = 0.0;
-  for (int b=0; b<nblocal; ++b) {
-    MeshBlock *pmb = my_blocks(b);
-    UpdateEjectaHistoryCache(pmb);
-    rejecta_max = std::max(rejecta_max, pmb->ruser_meshblock_data[2](RMAX));
-  }
+   
+  int reached = 0;
 
-  if (rejecta_max > rstop) terminate = true;
+  for (int b=0; b<nblocal; ++b) {
+    if (EjectaReachedRadius(my_blocks(b), rstop)) {
+      reached = 1;
+      break;
+    }
+  }
+  
+
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, &reached, 1,
+                MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+#endif
+
+  if (reached) terminate = true;
   
   if (terminate) {
     tlim = time + dt;
