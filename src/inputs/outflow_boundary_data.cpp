@@ -294,8 +294,6 @@ void OutflowBoundaryData::Analyze() const {
 	    << " E(bern) = " << Eej_bern << " erg"
 	    << " E(bind) = " << Eej_bind << " erg" << std::endl;
 
-  std::abort();
-
 }
 
 #endif  // HDF5OUTPUT
