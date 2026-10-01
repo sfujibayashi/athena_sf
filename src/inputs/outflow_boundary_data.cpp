@@ -159,7 +159,9 @@ Real OutflowBoundaryData::GetNTheta() const {
 
 void OutflowBoundaryData::Analyze() const {
   const Real dtheta = 0.5*M_PI/(Real)ntheta;
-  const Real dt = (time_max - time_min)/(Real)ntime;
+  const Real dt = (time_max - time_min)/(Real)(ntime-1);
+  const Real dt_cgs = dt*time_unit_table_;
+  const Real c2 = c_table_*c_table_;
 
   std::ofstream ofs("outflow_analysis.dat");
   ofs << "#";
@@ -223,9 +225,9 @@ void OutflowBoundaryData::Analyze() const {
       Real vr = state.vx * std::sin(theta_c) + state.vz * std::cos(theta_c);
       Real dM_dt_face = dS * state.rho_star * vr*c_table_;
       
-      Real egeom = (-state.ut-1.0);
-      Real ebern = (-state.hut-h_min_global_);
-      Real ebind = state.alpha*state.qe - h_min_global_;
+      Real egeom = (-state.ut-1.0)*c2;
+      Real ebern = (-state.hut-h_min_global_)*c2;
+      Real ebind = (state.alpha*state.qe - h_min_global_)*c2;
 
       if( egeom > 0.0 and vr>0.0){
 	Mdot_geom += dM_dt_face;
@@ -252,28 +254,28 @@ void OutflowBoundaryData::Analyze() const {
     alpha_av /= (4.0*M_PI);
     psi_av /= (4.0*M_PI);
 
-    Mej_geom += Mdot_geom * dt;
-    Mej_bern += Mdot_bern * dt;
-    Mej_bind += Mdot_bind * dt;
-    Eej_geom += Edot_geom * dt;
-    Eej_bern += Edot_bern * dt;
-    Eej_bind += Edot_bind * dt;
+    Mej_geom += Mdot_geom * dt_cgs;
+    Mej_bern += Mdot_bern * dt_cgs;
+    Mej_bind += Mdot_bind * dt_cgs;
+    Eej_geom += Edot_geom * dt_cgs;
+    Eej_bern += Edot_bern * dt_cgs;
+    Eej_bind += Edot_bind * dt_cgs;
 
     ofs << std::scientific << std::setprecision(8)
 	<< " "
 	<< std::setw(16) << t*time_unit_table_
-	<< std::setw(16) << Mdot_geom / time_unit_table_/Msun_table_
-	<< std::setw(16) << Mej_geom * time_unit_table_/Msun_table_
-	<< std::setw(16) << Edot_geom / time_unit_table_*c_table_*c_table_
-	<< std::setw(16) << Eej_geom * time_unit_table_*c_table_*c_table_
-	<< std::setw(16) << Mdot_bern / time_unit_table_/Msun_table_
-	<< std::setw(16) << Mej_bern * time_unit_table_/Msun_table_
-	<< std::setw(16) << Edot_bern / time_unit_table_*c_table_*c_table_
-	<< std::setw(16) << Eej_bern * time_unit_table_*c_table_*c_table_
-	<< std::setw(16) << Mdot_bind / time_unit_table_/Msun_table_
-	<< std::setw(16) << Mej_bind * time_unit_table_/Msun_table_
-	<< std::setw(16) << Edot_bind / time_unit_table_*c_table_*c_table_
-	<< std::setw(16) << Eej_bind * time_unit_table_*c_table_*c_table_
+	<< std::setw(16) << Mdot_geom /Msun_table_
+	<< std::setw(16) << Mej_geom /Msun_table_
+	<< std::setw(16) << Edot_geom 
+	<< std::setw(16) << Eej_geom 
+	<< std::setw(16) << Mdot_bern /Msun_table_
+	<< std::setw(16) << Mej_bern /Msun_table_
+	<< std::setw(16) << Edot_bern 
+	<< std::setw(16) << Eej_bern 
+	<< std::setw(16) << Mdot_bind /Msun_table_
+	<< std::setw(16) << Mej_bind /Msun_table_
+	<< std::setw(16) << Edot_bind 
+	<< std::setw(16) << Eej_bind 
 	<< std::setw(16) << alpha_av
 	<< std::setw(16) << alpha_min
 	<< std::setw(16) << alpha_max
@@ -288,9 +290,9 @@ void OutflowBoundaryData::Analyze() const {
 	    << " Mej(bind) = " << Mej_bind/Msun_table_ << " Msun" << std::endl;
 
   std::cout << std::setprecision(5)
-	    << " E(geom) = " << Eej_geom * time_unit_table_*c_table_*c_table_ << " erg"
-	    << " E(bern) = " << Eej_bern * time_unit_table_*c_table_*c_table_ << " erg"
-	    << " E(bind) = " << Eej_bind * time_unit_table_*c_table_*c_table_ << " erg" << std::endl;
+	    << " E(geom) = " << Eej_geom << " erg"
+	    << " E(bern) = " << Eej_bern << " erg"
+	    << " E(bind) = " << Eej_bind << " erg" << std::endl;
 
   std::abort();
 
