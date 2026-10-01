@@ -9,9 +9,11 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "../athena.hpp"
 #include "../defs.hpp"
+#include "../globals.hpp"
 #include "progenitor_reader.hpp"
 
 #ifdef HDF5OUTPUT
@@ -20,152 +22,179 @@
 
 namespace {
 
-//----------------------------------------------------------------------------------------
-// Check whether a dataset exists.
-
-bool DatasetExists(hid_t file, const std::string &name) {
-  return (H5Lexists(file, name.c_str(), H5P_DEFAULT) > 0);
-}
-
-//----------------------------------------------------------------------------------------
-// Read a rank-1 HDF5 dataset.
-// HDF5 performs conversion to native double; values are then cast to Real.
-
-std::vector<Real> Read1DRealDataset(hid_t file,
-                                    const std::string &filename,
-                                    const std::string &name,
-                                    std::size_t expected_size = 0) {
-  hid_t dataset = H5Dopen(file, name.c_str(), H5P_DEFAULT);
-  if (dataset < 0) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
-        << "Could not open dataset '" << name << "' in file '"
-        << filename << "'." << std::endl;
-    ATHENA_ERROR(msg);
+  //----------------------------------------------------------------------------------------
+  // Check whether a dataset exists.
+  
+  bool DatasetExists(hid_t file, const std::string &name) {
+    return (H5Lexists(file, name.c_str(), H5P_DEFAULT) > 0);
   }
 
-  hid_t dataspace = H5Dget_space(dataset);
-  if (dataspace < 0) {
-    H5Dclose(dataset);
+  //----------------------------------------------------------------------------------------
+  // Read a rank-1 HDF5 dataset.
+  // HDF5 performs conversion to native double; values are then cast to Real.
 
-    std::stringstream msg;
-    msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
-        << "Could not obtain dataspace for dataset '" << name
-        << "' in file '" << filename << "'." << std::endl;
-    ATHENA_ERROR(msg);
-  }
+  std::vector<Real> Read1DRealDataset(hid_t file,
+				      const std::string &filename,
+				      const std::string &name,
+				      std::size_t expected_size = 0) {
+    hid_t dataset = H5Dopen(file, name.c_str(), H5P_DEFAULT);
+    if (dataset < 0) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
+	  << "Could not open dataset '" << name << "' in file '"
+	  << filename << "'." << std::endl;
+      ATHENA_ERROR(msg);
+    }
 
-  const int rank = H5Sget_simple_extent_ndims(dataspace);
-  if (rank != 1) {
-    H5Sclose(dataspace);
-    H5Dclose(dataset);
+    hid_t dataspace = H5Dget_space(dataset);
+    if (dataspace < 0) {
+      H5Dclose(dataset);
 
-    std::stringstream msg;
-    msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
-        << "Dataset '" << name << "' in file '" << filename
-        << "' must have rank 1, but rank is " << rank << "."
-        << std::endl;
-    ATHENA_ERROR(msg);
-  }
+      std::stringstream msg;
+      msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
+	  << "Could not obtain dataspace for dataset '" << name
+	  << "' in file '" << filename << "'." << std::endl;
+      ATHENA_ERROR(msg);
+    }
 
-  hsize_t dims[1];
-  H5Sget_simple_extent_dims(dataspace, dims, nullptr);
+    const int rank = H5Sget_simple_extent_ndims(dataspace);
+    if (rank != 1) {
+      H5Sclose(dataspace);
+      H5Dclose(dataset);
 
-  const std::size_t n = static_cast<std::size_t>(dims[0]);
+      std::stringstream msg;
+      msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
+	  << "Dataset '" << name << "' in file '" << filename
+	  << "' must have rank 1, but rank is " << rank << "."
+	  << std::endl;
+      ATHENA_ERROR(msg);
+    }
 
-  if (expected_size != 0 && n != expected_size) {
-    H5Sclose(dataspace);
-    H5Dclose(dataset);
+    hsize_t dims[1];
+    H5Sget_simple_extent_dims(dataspace, dims, nullptr);
 
-    std::stringstream msg;
-    msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
-        << "Dataset '" << name << "' in file '" << filename
-        << "' has length " << n
-        << ", while expected length is " << expected_size << "."
-        << std::endl;
-    ATHENA_ERROR(msg);
-  }
+    const std::size_t n = static_cast<std::size_t>(dims[0]);
 
-  std::vector<double> buffer(n);
+    if (expected_size != 0 && n != expected_size) {
+      H5Sclose(dataspace);
+      H5Dclose(dataset);
 
-  const herr_t status =
+      std::stringstream msg;
+      msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
+	  << "Dataset '" << name << "' in file '" << filename
+	  << "' has length " << n
+	  << ", while expected length is " << expected_size << "."
+	  << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    std::vector<double> buffer(n);
+
+    const herr_t status =
       H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL,
               H5P_DEFAULT, buffer.data());
 
-  H5Sclose(dataspace);
-  H5Dclose(dataset);
+    H5Sclose(dataspace);
+    H5Dclose(dataset);
 
-  if (status < 0) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
-        << "Failed to read dataset '" << name << "' from file '"
-        << filename << "'." << std::endl;
-    ATHENA_ERROR(msg);
-  }
-
-  std::vector<Real> result(n);
-  for (std::size_t i = 0; i < n; ++i) {
-    result[i] = static_cast<Real>(buffer[i]);
-  }
-
-  return result;
-}
-
-//----------------------------------------------------------------------------------------
-// Check that all values in an array are finite.
-
-void CheckFinite(const std::vector<Real> &data,
-                 const std::string &filename,
-                 const std::string &name) {
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    if (!std::isfinite(data[i])) {
+    if (status < 0) {
       std::stringstream msg;
       msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
-          << "Non-finite value found in dataset '" << name
-          << "' in file '" << filename << "' at index " << i << "."
-          << std::endl;
+	  << "Failed to read dataset '" << name << "' from file '"
+	  << filename << "'." << std::endl;
       ATHENA_ERROR(msg);
     }
+
+    std::vector<Real> result(n);
+    for (std::size_t i = 0; i < n; ++i) {
+      result[i] = static_cast<Real>(buffer[i]);
+    }
+
+    return result;
   }
-}
 
-//----------------------------------------------------------------------------------------
-// Check radial ordering.
+  //----------------------------------------------------------------------------------------
+  // Check that all values in an array are finite.
 
-void CheckMonotonic(const std::vector<Real> &data,
-                    const std::string &filename,
-                    const std::string &name) {
-  for (std::size_t i = 1; i < data.size(); ++i) {
-    if (!(data[i] > data[i-1])) {
-      std::stringstream msg;
-      msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
-          << "Dataset '" << name << "' in file '" << filename
-          << "' must be strictly increasing (center -> surface)." << std::endl
-          << "At indices " << i-1 << " and " << i << ": "
-          << data[i-1] << ", " << data[i] << std::endl;
-      ATHENA_ERROR(msg);
+  void CheckFinite(const std::vector<Real> &data,
+		   const std::string &filename,
+		   const std::string &name) {
+    for (std::size_t i = 0; i < data.size(); ++i) {
+      if (!std::isfinite(data[i])) {
+	std::stringstream msg;
+	msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
+	    << "Non-finite value found in dataset '" << name
+	    << "' in file '" << filename << "' at index " << i << "."
+	    << std::endl;
+	ATHENA_ERROR(msg);
+      }
     }
   }
-}
 
-//----------------------------------------------------------------------------------------
-// Check quantities that must be positive.
+  //----------------------------------------------------------------------------------------
+  // Check radial ordering.
 
-void CheckPositive(const std::vector<Real> &data,
-                   const std::string &filename,
-                   const std::string &name) {
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    if (!(data[i] > 0.0)) {
-      std::stringstream msg;
-      msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
-          << "Dataset '" << name << "' in file '" << filename
-          << "' contains a non-positive value at index " << i
-          << ": " << data[i] << std::endl;
-      ATHENA_ERROR(msg);
+  void CheckMonotonic(const std::vector<Real> &data,
+		      const std::string &filename,
+		      const std::string &name) {
+    for (std::size_t i = 1; i < data.size(); ++i) {
+      if (!(data[i] > data[i-1])) {
+	std::stringstream msg;
+	msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
+	    << "Dataset '" << name << "' in file '" << filename
+	    << "' must be strictly increasing (center -> surface)." << std::endl
+	    << "At indices " << i-1 << " and " << i << ": "
+	    << data[i-1] << ", " << data[i] << std::endl;
+	ATHENA_ERROR(msg);
+      }
     }
   }
-}
 
+  //----------------------------------------------------------------------------------------
+  // Check quantities that must be positive.
+
+  void CheckPositive(const std::vector<Real> &data,
+		     const std::string &filename,
+		     const std::string &name) {
+    for (std::size_t i = 0; i < data.size(); ++i) {
+      if (!(data[i] > 0.0)) {
+	std::stringstream msg;
+	msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
+	    << "Dataset '" << name << "' in file '" << filename
+	    << "' contains a non-positive value at index " << i
+	    << ": " << data[i] << std::endl;
+	ATHENA_ERROR(msg);
+      }
+    }
+  }
+
+  const char *composition_names[NPROG_SPECIES] = {
+    "/neut",
+    "/prot",
+    "/h1",
+    "/he3",
+    "/he4",
+    "/c12",
+    "/n14",
+    "/o16",
+    "/ne20",
+    "/mg24",
+    "/si28",
+    "/s32",
+    "/ar36",
+    "/ca40",
+    "/ti44",
+    "/cr48",
+    "/cr56",
+    "/fe52",
+    "/fe54",
+    "/fe56",
+    "/ni56"
+  };
+  
+  static_assert(sizeof(composition_names)/sizeof(composition_names[0])== NPROG_SPECIES,
+		"composition_names and NPROG_SPECIES are inconsistent");
+  
 }  // namespace
 
 //----------------------------------------------------------------------------------------
@@ -273,6 +302,35 @@ ProgenitorProfile ReadProgenitorProfile(const std::string &filename) {
     profile.temp = Read1DRealDataset(file, filename, "/temp", ncell);
   }
 
+  // compositon
+  int ncomp_found = 0;
+  for (int n=0; n<NPROG_SPECIES; ++n) {
+    if (DatasetExists(file, composition_names[n])) {
+      ++ncomp_found;
+    }
+  }
+
+  if (ncomp_found != 0 && ncomp_found != NPROG_SPECIES) {
+    H5Fclose(file);
+
+    std::stringstream msg;
+    msg << "### FATAL ERROR in ReadProgenitorProfile" << std::endl
+	<< "Incomplete nuclear composition in file '"
+	<< filename << "'." << std::endl
+	<< "Found " << ncomp_found << " of "
+	<< NPROG_SPECIES << " species." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  profile.has_composition = (ncomp_found == NPROG_SPECIES);
+
+  if (profile.has_composition) {
+    for (int n=0; n<NPROG_SPECIES; ++n) {
+      profile.x[n] =
+	Read1DRealDataset(file, filename,composition_names[n], ncell);
+    }
+  }
+  
   H5Fclose(file);
 
   // Basic validation
@@ -293,6 +351,27 @@ ProgenitorProfile ReadProgenitorProfile(const std::string &filename) {
   }
   if (profile.has_temp) {
     CheckFinite(profile.temp, filename, "/temp");
+  }
+  
+  if (profile.has_composition) {
+    Real xsum_min = 1.0e99;
+    Real xsum_max = -1.0e99;
+    for (std::size_t i=0; i<ncell; ++i) {
+      Real xsum = 0.0;
+      
+      for (int n=0; n<NPROG_SPECIES; ++n) {
+	xsum += profile.x[n][i];
+      }
+      
+      xsum_min = std::min(xsum_min, xsum);
+      xsum_max = std::max(xsum_max, xsum);
+    }
+    
+    if(Globals::my_rank==0){
+      std::cout << "Progenitor composition: sum X = "
+		<< xsum_min << " -- " << xsum_max
+		<< std::endl;
+    }
   }
 
   // Standard format is center -> surface.

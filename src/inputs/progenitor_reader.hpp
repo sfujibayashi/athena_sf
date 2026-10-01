@@ -34,8 +34,34 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <array>
 
 #include "../athena.hpp"
+
+enum ProgenitorSpecies {
+  IPROG_NEUT = 0,
+  IPROG_PROT,
+  IPROG_H1,
+  IPROG_HE3,
+  IPROG_HE4,
+  IPROG_C12,
+  IPROG_N14,
+  IPROG_O16,
+  IPROG_NE20,
+  IPROG_MG24,
+  IPROG_SI28,
+  IPROG_S32,
+  IPROG_AR36,
+  IPROG_CA40,
+  IPROG_TI44,
+  IPROG_CR48,
+  IPROG_CR56,
+  IPROG_FE52,
+  IPROG_FE54,
+  IPROG_FE56,
+  IPROG_NI56,
+  NPROG_SPECIES
+};
 
 struct ProgenitorProfile {
   std::vector<Real> mass_face;
@@ -53,10 +79,13 @@ struct ProgenitorProfile {
   std::vector<Real> ye;
   std::vector<Real> temp;
 
+  std::array<std::vector<Real>, NPROG_SPECIES> x;
+
   bool has_jrot = false;
   bool has_omega = false;
   bool has_ye = false;
   bool has_temp = false;
+  bool has_composition = false;
 
   int ncell;
   int nface; // ncell + 1
