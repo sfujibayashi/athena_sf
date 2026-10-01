@@ -876,6 +876,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           press_cgs= collapsed.press[ind_first];
           uu1 = collapsed.ur[ind_first]/Constants::speed_of_light_cgs;
           ye = collapsed.ye[ind_first];
+	  for(int n=0; n<ProgenitorSpecies::NPROG_SPECIES; ++n){
+	    xprog[n] = collapsed.x[n][ind_first];
+	  }
         } else {
           Real xx1 = (rad_cgs-collapsed.radius[ind])/(collapsed.radius[ind+1]-collapsed.radius[ind]);
           Real xx0 = 1.0-xx1;
