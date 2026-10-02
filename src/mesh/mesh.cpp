@@ -754,24 +754,49 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   hdos += sizeof(IOWrapperSizeT);   // (this updated value is never used)
 
   delete [] headerdata;
-
+  
   const int remove_inner_blocks =
     pin->GetOrAddInteger("restart_mesh", "remove_inner_blocks", 0);
   
   const int add_outer_blocks =
     pin->GetOrAddInteger("restart_mesh", "add_outer_blocks", 0);
-  if (Globals::my_rank == 0 and (remove_inner_blocks!=0 or add_outer_blocks!=0) ) {
+
+  bool modify_blocks = false;
+  if (remove_inner_blocks!=0 or add_outer_blocks!=0) {
+    modify_blocks = true;
+  }
+
+  const int old_nbtotal = nbtotal;
+  const int old_root_level = root_level;
+  const RegionSize old_mesh_size = mesh_size;
+  
+  if (Globals::my_rank == 0 and modify_blocks ) {
     std::cout << "restart mesh modification:"
 	      << " remove_inner_blocks=" << remove_inner_blocks
 	      << " add_outer_blocks=" << add_outer_blocks
 	      << std::endl;
+
+    std::cout << "old restart mesh:"
+	      << " nbtotal=" << old_nbtotal
+	      << " root_level=" << old_root_level
+	      << " nx1=" << old_mesh_size.nx1
+	      << " x1min=" << old_mesh_size.x1min
+	      << " x1max=" << old_mesh_size.x1max
+	      << std::endl;
+  
   }
   
-  // initialize
-  loclist = new LogicalLocation[nbtotal];
-  offset = new IOWrapperSizeT[nbtotal];
-  costlist = new double[nbtotal];
-  ranklist = new int[nbtotal];
+  // // initialize
+  // loclist = new LogicalLocation[nbtotal];
+  // offset = new IOWrapperSizeT[nbtotal];
+  // costlist = new double[nbtotal];
+  // ranklist = new int[nbtotal];
+  // nslist = new int[Globals::nranks];
+  // nblist = new int[Globals::nranks];
+
+  LogicalLocation *old_loclist = new LogicalLocation[old_nbtotal];
+  offset = new IOWrapperSizeT[old_nbtotal];
+  double *old_costlist = new double[old_nbtotal];
   nslist = new int[Globals::nranks];
   nblist = new int[Globals::nranks];
 
@@ -784,6 +809,58 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   nrbx2 = mesh_size.nx2/block_size.nx2;
   nrbx3 = mesh_size.nx3/block_size.nx3;
 
+  const int old_nrbx1 = old_mesh_size.nx1 / block_size.nx1;
+  
+  if (Globals::my_rank == 0) {
+    std::cout << "old_nrbx1=" << old_nrbx1
+	      << " block_nx1=" << block_size.nx1
+	      << std::endl;
+  }
+  
+  const Real q = std::pow(old_mesh_size.x1max/old_mesh_size.x1min,
+			  1.0/static_cast<Real>(old_mesh_size.nx1));
+
+  const int nremove_cells = remove_inner_blocks * block_size.nx1;
+
+  const int nadd_cells = add_outer_blocks * block_size.nx1;
+
+  mesh_size = old_mesh_size;
+  mesh_size.x1min = old_mesh_size.x1min * std::pow(q, nremove_cells);
+  mesh_size.x1max = old_mesh_size.x1max * std::pow(q, nadd_cells);
+
+  mesh_size.nx1 = old_mesh_size.nx1 - nremove_cells + nadd_cells;
+
+  if (Globals::my_rank == 0) {
+    std::cout << "new mesh:"
+	      << " nx1=" << mesh_size.nx1
+	      << " x1min=" << mesh_size.x1min
+	      << " x1max=" << mesh_size.x1max
+	      << " q=" << q
+	      << std::endl;
+  }
+
+  nrbx1 = mesh_size.nx1 / block_size.nx1;
+  
+  std::int64_t nbmax = nrbx1;
+  nbmax = std::max(nbmax, static_cast<std::int64_t>(nrbx2));
+  nbmax = std::max(nbmax, static_cast<std::int64_t>(nrbx3));
+  
+  root_level = 0;
+  while ((1LL << root_level) < nbmax) {
+    ++root_level;
+  }
+  
+  current_level = root_level;
+
+  if (Globals::my_rank == 0) {
+    std::cout << "new root grid:"
+	      << " nrbx1=" << nrbx1
+	      << " nrbx2=" << nrbx2
+	      << " nrbx3=" << nrbx3
+	      << " root_level=" << root_level
+	      << std::endl;
+  }
+  
   // initialize user-enrollable functions
   if (mesh_size.x1rat != 1.0) {
     use_uniform_meshgen_fn_[X1DIR] = false;
@@ -863,51 +940,106 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 
   // read the ID list
   listsize = sizeof(LogicalLocation)+sizeof(Real);
+
   //allocate the idlist buffer
-  char *idlist = new char[listsize*nbtotal];
+  // char *idlist = new char[listsize*nbtotal];
+  // if (Globals::my_rank == 0) { // only the master process reads the ID list
+  //   if (resfile.Read(idlist, listsize, nbtotal) != static_cast<unsigned int>(nbtotal)) {
+  //     msg << "### FATAL ERROR in Mesh constructor" << std::endl
+  //         << "The restart file is broken." << std::endl;
+  //     ATHENA_ERROR(msg);
+  //   }
+  // }
+
+  char *idlist = new char[listsize*old_nbtotal];
   if (Globals::my_rank == 0) { // only the master process reads the ID list
-    if (resfile.Read(idlist, listsize, nbtotal) != static_cast<unsigned int>(nbtotal)) {
+    if (resfile.Read(idlist, listsize, old_nbtotal) != static_cast<unsigned int>(old_nbtotal)) {
       msg << "### FATAL ERROR in Mesh constructor" << std::endl
           << "The restart file is broken." << std::endl;
       ATHENA_ERROR(msg);
     }
   }
+
+
 #ifdef MPI_PARALLEL
   // then broadcast the ID list
-  MPI_Bcast(idlist, listsize*nbtotal, MPI_BYTE, 0, MPI_COMM_WORLD);
+  // MPI_Bcast(idlist, listsize*nbtotal, MPI_BYTE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(idlist, listsize*old_nbtotal, MPI_BYTE, 0, MPI_COMM_WORLD);
 #endif
 
   int os = 0;
-  for (int i=0; i<nbtotal; i++) {
-    std::memcpy(&(loclist[i]), &(idlist[os]), sizeof(LogicalLocation));
+  // for (int i=0; i<nbtotal; i++) {
+  //   std::memcpy(&(loclist[i]), &(idlist[os]), sizeof(LogicalLocation));
+  //   os += sizeof(LogicalLocation);
+  //   std::memcpy(&(costlist[i]), &(idlist[os]), sizeof(double));
+  //   os += sizeof(double);
+  //   if (loclist[i].level > current_level) current_level = loclist[i].level;
+  // }
+  for (int i=0; i<old_nbtotal; i++) {
+    std::memcpy(&(old_loclist[i]), &(idlist[os]), sizeof(LogicalLocation));
     os += sizeof(LogicalLocation);
-    std::memcpy(&(costlist[i]), &(idlist[os]), sizeof(double));
+    std::memcpy(&(old_costlist[i]), &(idlist[os]), sizeof(double));
     os += sizeof(double);
-    if (loclist[i].level > current_level) current_level = loclist[i].level;
+    if (old_loclist[i].level > current_level) current_level = old_loclist[i].level;
   }
   delete [] idlist;
 
+  if (Globals::my_rank == 0) {
+    for (int i=0; i<old_nbtotal; ++i) {
+      std::cout
+	<< "old gid=" << i
+	<< " level=" << old_loclist[i].level
+	<< " lx1=" << old_loclist[i].lx1
+	<< " lx2=" << old_loclist[i].lx2
+	<< " lx3=" << old_loclist[i].lx3
+	<< std::endl;
+    }
+  }
+
+  
   if (!adaptive) max_level = current_level;
 
   // calculate the header offset and seek
-  headeroffset += headersize + udsize + listsize*nbtotal;
+  headeroffset += headersize + udsize + listsize*old_nbtotal;
   if (Globals::my_rank != 0)
     resfile.Seek(headeroffset);
 
-  // rebuild the Block Tree
-  tree.CreateRootGrid();
-  for (int i=0; i<nbtotal; i++)
-    tree.AddMeshBlockWithoutRefine(loclist[i]);
+  // // rebuild the Block Tree
+  // tree.CreateRootGrid();
+  // for (int i=0; i<nbtotal; i++)
+  //   tree.AddMeshBlockWithoutRefine(loclist[i]);
   int nnb;
-  // check the tree structure, and assign GID
-  tree.GetMeshBlockList(loclist, nullptr, nnb);
-  if (nnb != nbtotal) {
-    msg << "### FATAL ERROR in Mesh constructor" << std::endl
-        << "Tree reconstruction failed. The total numbers of the blocks do not match. ("
-        << nbtotal << " != " << nnb << ")" << std::endl;
-    ATHENA_ERROR(msg);
-  }
+  // // check the tree structure, and assign GID
+  // tree.GetMeshBlockList(loclist, nullptr, nnb);
 
+  // build the NEW root grid
+  tree.CreateRootGrid();
+
+  tree.CountMeshBlock(nbtotal);
+
+  loclist = new LogicalLocation[nbtotal];
+  tree.GetMeshBlockList(loclist, nullptr, nbtotal);
+  if (Globals::my_rank == 0) {
+    std::cout << "new nbtotal=" << nbtotal << std::endl;
+    
+    for (int i=0; i<nbtotal; ++i) {
+      std::cout
+	<< "new gid=" << i
+	<< " level=" << loclist[i].level
+	<< " lx1=" << loclist[i].lx1
+	<< " lx2=" << loclist[i].lx2
+	<< " lx3=" << loclist[i].lx3
+	<< std::endl;
+    }
+  }
+  
+  // if (nnb != nbtotal) {
+  //   msg << "### FATAL ERROR in Mesh constructor" << std::endl
+  //       << "Tree reconstruction failed. The total numbers of the blocks do not match. ("
+  //       << nbtotal << " != " << nnb << ")" << std::endl;
+  //   ATHENA_ERROR(msg);
+  // }
+  
 #ifdef MPI_PARALLEL
   if (nbtotal < Globals::nranks) {
     if (mesh_test == 0) {
@@ -924,6 +1056,49 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     }
   }
 #endif
+
+  int *old_gid_for_new_gid = new int[nbtotal];
+
+  costlist = new double[nbtotal];
+  ranklist = new int[nbtotal];
+  
+  for (int i=0; i<nbtotal; ++i) {
+    old_gid_for_new_gid[i] = -1;
+
+    const std::int64_t old_lx1 =
+      loclist[i].lx1 + remove_inner_blocks;
+
+    for (int j=0; j<old_nbtotal; ++j) {
+      if (old_loclist[j].lx1 == old_lx1 &&
+	  old_loclist[j].lx2 == loclist[i].lx2 &&
+	  old_loclist[j].lx3 == loclist[i].lx3) {
+	
+	old_gid_for_new_gid[i] = j;
+	break;
+      }
+    }
+    
+    const int old_gid = old_gid_for_new_gid[i];
+    
+    if (old_gid >= 0) {
+      costlist[i] = old_costlist[old_gid];
+    } else {
+      costlist[i] = 1.0;
+    }
+  }
+  
+  if (Globals::my_rank == 0) {
+    for (int i=0; i<nbtotal; ++i) {
+      std::cout << "new gid=" << i
+		<< " (" << loclist[i].lx1
+		<< "," << loclist[i].lx2
+		<< "," << loclist[i].lx3 << ")"
+		<< " -> old gid="
+		<< old_gid_for_new_gid[i]
+		<< std::endl;
+    }
+  }
+
 
   if (adaptive) { // allocate arrays for AMR
     nref = new int[Globals::nranks];
@@ -974,30 +1149,58 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   gide_ = gids_ + nblocal - 1;
   char *mbdata = new char[datasize];
   my_blocks.NewAthenaArray(nblocal);
+  // for (int i=gids_; i<=gide_; i++) {
+  //   if (i - gids_ < nbmin) {
+  //     // load MeshBlock (parallel)
+  //     if (resfile.Read_at_all(mbdata, datasize, 1, headeroffset+i*datasize) != 1) {
+  //       msg << "### FATAL ERROR in Mesh constructor" << std::endl
+  //           << "The restart file is broken or input parameters are inconsistent."
+  //           << std::endl;
+  //       ATHENA_ERROR(msg);
+  //     }
+  //   } else {
+  //     // load MeshBlock (serial)
+  //     if (resfile.Read_at(mbdata, datasize, 1, headeroffset+i*datasize) != 1) {
+  //       msg << "### FATAL ERROR in Mesh constructor" << std::endl
+  //           << "The restart file is broken or input parameters are inconsistent."
+  //           << std::endl;
+  //       ATHENA_ERROR(msg);
+  //     }
+  //   }
+  //   // Match fixed-width integer precision of IOWrapperSizeT datasize
+  //   SetBlockSizeAndBoundaries(loclist[i], block_size, block_bcs);
+  //   my_blocks(i-gids_) = new MeshBlock(i, i-gids_, this, pin, loclist[i], block_size,
+  //                                      block_bcs, costlist[i], mbdata);
+  //   my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
+  // }
+
   for (int i=gids_; i<=gide_; i++) {
-    if (i - gids_ < nbmin) {
-      // load MeshBlock (parallel)
-      if (resfile.Read_at_all(mbdata, datasize, 1, headeroffset+i*datasize) != 1) {
-        msg << "### FATAL ERROR in Mesh constructor" << std::endl
-            << "The restart file is broken or input parameters are inconsistent."
-            << std::endl;
-        ATHENA_ERROR(msg);
-      }
-    } else {
-      // load MeshBlock (serial)
-      if (resfile.Read_at(mbdata, datasize, 1, headeroffset+i*datasize) != 1) {
-        msg << "### FATAL ERROR in Mesh constructor" << std::endl
-            << "The restart file is broken or input parameters are inconsistent."
-            << std::endl;
-        ATHENA_ERROR(msg);
-      }
-    }
-    // Match fixed-width integer precision of IOWrapperSizeT datasize
+    const int old_gid = old_gid_for_new_gid[i];
+    
     SetBlockSizeAndBoundaries(loclist[i], block_size, block_bcs);
-    my_blocks(i-gids_) = new MeshBlock(i, i-gids_, this, pin, loclist[i], block_size,
-                                       block_bcs, costlist[i], mbdata);
+
+    if (old_gid >= 0) {
+      // existing block: read from restart file
+      if (resfile.Read_at(mbdata, datasize, 1, headeroffset + old_gid*datasize) != 1) {
+	msg << "### FATAL ERROR in Mesh constructor" << std::endl
+	    << "Failed to read old MeshBlock data." << std::endl;
+	ATHENA_ERROR(msg);
+      }
+
+      my_blocks(i-gids_) = new MeshBlock(i, i-gids_, this, pin, loclist[i], block_size,
+					 block_bcs, costlist[i], mbdata);
+
+    } else {
+      // newly added outer block
+      my_blocks(i-gids_) = new MeshBlock(i, i-gids_, loclist[i], block_size,
+					 block_bcs, this, pin);
+      // initialize with atmosphere
+      my_blocks(i-gids_)->InitializeAtmosphere(pin);
+    }
+
     my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
   }
+
   delete [] mbdata;
   // check consistency
   if ( (NR_RADIATION_ENABLED || IM_RADIATION_ENABLED) &&

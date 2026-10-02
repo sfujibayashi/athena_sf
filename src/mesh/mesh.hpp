@@ -198,6 +198,8 @@ class MeshBlock {
   void ProblemGenerator(ParameterInput *pin);
   void InitUserMeshBlockData(ParameterInput *pin);
 
+  void InitializeAtmosphere(ParameterInput *pin);
+
   // functions and variables for automatic load balancing based on timing
   double cost_, lb_time_;
   void ResetTimeMeasurement();

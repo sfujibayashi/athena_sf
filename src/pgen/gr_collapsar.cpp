@@ -1071,6 +1071,57 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 }
 
 
+void MeshBlock::InitializeAtmosphere(ParameterInput *pin) {
+  const Real rho = pin->GetReal("problem", "rho_atmos");
+  const Real press = pin->GetReal("problem", "press_atmos");
+
+  for (int k=ks; k<=ke; ++k) {
+    for (int j=js; j<=je; ++j) {
+      for (int i=is; i<=ie; ++i) {
+        phydro->w(IDN,k,j,i) = rho;
+        phydro->w(IPR,k,j,i) = press;
+        phydro->w(IVX,k,j,i) = 0.0;
+        phydro->w(IVY,k,j,i) = 0.0;
+        phydro->w(IVZ,k,j,i) = 0.0;
+
+        phydro->w1(IDN,k,j,i) = rho;
+        phydro->w1(IPR,k,j,i) = press;
+        phydro->w1(IVX,k,j,i) = 0.0;
+        phydro->w1(IVY,k,j,i) = 0.0;
+        phydro->w1(IVZ,k,j,i) = 0.0;
+
+#if NSCALARS > 0
+	pscalars->r(IYE,k,j,i)   = 0.5;
+	pscalars->r(IXINJ,k,j,i) = 0.0;
+	
+	for (int n=IXNEUT; n<NSCALAR_REQUIRED; ++n) {
+	  pscalars->r(n,k,j,i) = 0.0;
+	}
+	pscalars->r(IXHE4,k,j,i) = 1.0;
+#endif
+
+      }
+    }
+  }
+
+  AthenaArray<Real> bb;
+  bb.NewAthenaArray(3, ke+1, je+1, ie+1);
+  bb.ZeroClear();
+
+  peos->PrimitiveToConserved(
+      phydro->w, bb, phydro->u, pcoord,
+      is, ie, js, je, ks, ke);
+
+#if NSCALARS > 0
+  peos->PassiveScalarPrimitiveToConserved(
+    pscalars->r, phydro->u, pscalars->s, pcoord,
+    is, ie, js, je, ks, ke);
+#endif
+
+}
+
+
+
 // return eta that satisfies
 // t_collapse = t - t_m0 = sqrt(r0^3/8Gm)*(eta + sin(eta)).
 // r(t) = (1/2)*r0*(1+cos(eta))
