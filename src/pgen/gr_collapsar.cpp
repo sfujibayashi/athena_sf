@@ -3,13 +3,10 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file blast_helmholtz.cpp
-//! \brief Problem generator for spherical blast wave problem.  Works in Cartesian,
-//!        cylindrical, and spherical coordinates.  Contains post-processing code
-//!        to check whether blast is spherical for regression tests
-//!
-//! REFERENCE: P. Londrillo & L. Del Zanna, "High-order upwind schemes for
-//!   multidimensional MHD", ApJ, 530, 508 (2000), and references therein.
+//! \file gr_collapsar.cpp
+//! \brief Problem generator for long-term simulation of collapse and explosion of stars.
+
+// python3 configure.py --prob gr_collapsar --coord gr_dynamic --eos adiabatic --flux hllc --nghost 2 --nscalars 22 -g -t -mpi -hdf5 --hdf5_path /home/sfujibayashi/libs/hdf5/2.0.0 --cxx g++ 
 
 // C headers
 
