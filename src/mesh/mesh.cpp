@@ -755,6 +755,18 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 
   delete [] headerdata;
 
+  const int remove_inner_blocks =
+    pin->GetOrAddInteger("restart_mesh", "remove_inner_blocks", 0);
+  
+  const int add_outer_blocks =
+    pin->GetOrAddInteger("restart_mesh", "add_outer_blocks", 0);
+  if (Globals::my_rank == 0 and (remove_inner_blocks!=0 or add_outer_blocks!=0) ) {
+    std::cout << "restart mesh modification:"
+	      << " remove_inner_blocks=" << remove_inner_blocks
+	      << " add_outer_blocks=" << add_outer_blocks
+	      << std::endl;
+  }
+  
   // initialize
   loclist = new LogicalLocation[nbtotal];
   offset = new IOWrapperSizeT[nbtotal];
