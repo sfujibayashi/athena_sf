@@ -240,8 +240,7 @@ namespace {
     }
 
     AthenaArray<Real> vol;
-    vol.NewAthenaArray(pmb->ie-pmb->is+1);
-    
+    vol.NewAthenaArray(pmb->ncells1);
     Real mass = 0.0;
     
     for (int k=pmb->ks; k<=pmb->ke; ++k) {
@@ -264,8 +263,8 @@ namespace {
     }
 
     AthenaArray<Real> vol;
-    vol.NewAthenaArray(pmb->ie-pmb->is+1);
-    
+    vol.NewAthenaArray(pmb->ncells1);
+
     Real E = 0.0;
     
     for (int k=pmb->ks; k<=pmb->ke; ++k) {
@@ -289,7 +288,7 @@ namespace {
     }
 
     AthenaArray<Real> vol;
-    vol.NewAthenaArray(pmb->ie-pmb->is+1);
+    vol.NewAthenaArray(pmb->ncells1);
     
     Real J = 0.0;
     
