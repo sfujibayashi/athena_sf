@@ -742,8 +742,35 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   ruser_meshblock_data[2].ZeroClear();
   
   ruser_meshblock_data[2](HCYCLE) = -1.0;
-  
-}
+
+
+  // Name pscalars
+#if NSCALARS > 0
+  pscalars->SetScalarName(IYE,    "Ye");
+  pscalars->SetScalarName(IXINJ,  "Xinj");
+
+  pscalars->SetScalarName(IXNEUT, "Xn");
+  pscalars->SetScalarName(IXH1,   "XH1");
+  pscalars->SetScalarName(IXHE3,  "XHe3");
+  pscalars->SetScalarName(IXHE4,  "XHe4");
+  pscalars->SetScalarName(IXC12,  "XC12");
+  pscalars->SetScalarName(IXN14,  "XN14");
+  pscalars->SetScalarName(IXO16,  "XO16");
+  pscalars->SetScalarName(IXNE20, "XNe20");
+  pscalars->SetScalarName(IXMG24, "XMg24");
+  pscalars->SetScalarName(IXSI28, "XSi28");
+  pscalars->SetScalarName(IXS32,  "XS32");
+  pscalars->SetScalarName(IXAR36, "XAr36");
+  pscalars->SetScalarName(IXCA40, "XCa40");
+  pscalars->SetScalarName(IXTI44, "XTi44");
+  pscalars->SetScalarName(IXCR48, "XCr48");
+  pscalars->SetScalarName(IXCR56, "XCr56");
+  pscalars->SetScalarName(IXFE52, "XFe52");
+  pscalars->SetScalarName(IXFE54, "XFe54");
+  pscalars->SetScalarName(IXFE56, "XFe56");
+  pscalars->SetScalarName(IXNI56, "XNi56");
+#endif
+  }
 
 void MeshBlock::UserWorkInLoop(void) {
 }

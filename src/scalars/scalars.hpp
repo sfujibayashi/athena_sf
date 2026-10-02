@@ -11,6 +11,8 @@
 // C headers
 
 // C++ headers
+#include <array>
+#include <string>
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -93,6 +95,17 @@ class PassiveScalars {
   void DiffusiveFluxIso(const AthenaArray<Real> &prim_r, const AthenaArray<Real> &w,
                         AthenaArray<Real> *flx_out);
   Real NewDiffusionDt();
+
+  
+  std::array<std::string, NSCALARS> scalar_names;
+
+  void SetScalarName(int n, const std::string &name) {
+    scalar_names[n] = name;
+  }
+
+  const std::string& GetScalarName(int n) const {
+    return scalar_names[n];
+  }
 
  private:
   MeshBlock* pmy_block;

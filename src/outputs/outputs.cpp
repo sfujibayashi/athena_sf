@@ -722,9 +722,16 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   if (NSCALARS > 0) {
     std::string root_name_cons = "s";
     std::string root_name_prim = "r";
+
     for (int n=0; n<NSCALARS; n++) {
       std::string scalar_name_cons, scalar_name_prim;
-      if (CHEMISTRY_ENABLED) {
+
+      const std::string &user_name = psclr->GetScalarName(n);
+
+      if (!user_name.empty()) {
+        scalar_name_cons = "s_" + user_name;
+        scalar_name_prim = user_name;
+      } else if (CHEMISTRY_ENABLED) {
         if (n < NSPECIES) {
           scalar_name_cons = root_name_cons +
                              psclr->chemnet.species_names[n];
@@ -738,6 +745,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         scalar_name_cons = root_name_cons + std::to_string(n);
         scalar_name_prim = root_name_prim + std::to_string(n);
       }
+      
       if (ContainVariable(output_params.variable, scalar_name_cons) ||
           ContainVariable(output_params.variable, "cons")) {
         pod = new OutputData;
