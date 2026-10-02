@@ -465,7 +465,7 @@ def athdf(filename, raw=False, data=None, quantities=None, dtype=None, level=Non
                 else:
                     def vol_func(rm, rp, phim, phip, zm, zp):
                         return (rp**2-rm**2) * (phip-phim) * (zp-zm)
-            elif coord == 'spherical_polar' or coord == 'schwarzschild':
+            elif coord == 'spherical_polar' or coord == 'schwarzschild' or coord == 'gr_dynamic':
                 if nx1 == 1 and nx2 == 1 and (nx3 == 1 or x3_rat == 1.0):
                     fast_restrict = True
                 else:
@@ -498,7 +498,7 @@ def athdf(filename, raw=False, data=None, quantities=None, dtype=None, level=Non
             elif coord == 'spherical_polar':
                 def center_func_1(xm, xp):
                     return 3.0/4.0 * (xp**4-xm**4) / (xp**3-xm**3)
-            elif coord == 'schwarzschild':
+            elif coord == 'schwarzschild' or coord == 'gr_dynamic':
                 def center_func_1(xm, xp):
                     return (0.5*(xm**3+xp**3)) ** (1.0/3.0)
             else:
@@ -516,7 +516,7 @@ def athdf(filename, raw=False, data=None, quantities=None, dtype=None, level=Non
                     sp = np.sin(xp)
                     cp = np.cos(xp)
                     return (sp-xp*cp - sm+xm*cm) / (cm - cp)
-            elif coord == 'schwarzschild':
+            elif coord == 'schwarzschild' or coord == 'gr_dynamic':
                 def center_func_2(xm, xp):
                     return np.arccos(0.5 * (np.cos(xm) + np.cos(xp)))
             else:
@@ -525,7 +525,7 @@ def athdf(filename, raw=False, data=None, quantities=None, dtype=None, level=Non
             if (coord == 'cartesian' or coord == 'cylindrical' or coord == 'tilted'
                     or coord == 'spherical_polar' or coord == 'minkowski'
                     or coord == 'sinusoidal' or coord == 'schwarzschild'
-                    or coord == 'kerr-schild'):
+                    or coord == 'kerr-schild' or coord == 'gr_dynamic'):
 
                 def center_func_3(xm, xp):
                     return 0.5 * (xm+xp)

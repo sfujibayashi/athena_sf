@@ -65,21 +65,26 @@ def main(**kwargs):
         theta_vals = x2_vals + (1.0 - h) / 2.0 * np.sin(2.0 * x2_vals)
         return theta_vals
 
+    def x1_func(xmin, xmax, _, nf):
+        return np.geomspace(xmin, xmax, nf)
+
     # Read data
     if kwargs['theta_compression'] is not None:
         if quantities[0] == 'Levels':
             data = athena_read.athdf(kwargs['data_file'], quantities=quantities[1:],
-                                     level=level, return_levels=True,
+                                     level=level, return_levels=True,face_func_1=x1_func,
                                      face_func_2=theta_func)
         else:
             data = athena_read.athdf(kwargs['data_file'], quantities=quantities,
-                                     level=level, face_func_2=theta_func)
+                                     level=level, face_func_1=x1_func, face_func_2=theta_func)
     else:
         if quantities[0] == 'Levels':
             data = athena_read.athdf(kwargs['data_file'], quantities=quantities[1:],
+                                     face_func_1=x1_func,
                                      level=level, return_levels=True)
         else:
             data = athena_read.athdf(kwargs['data_file'], quantities=quantities,
+                                     face_func_1=x1_func,
                                      level=level)
 
     # Extract basic coordinate information
@@ -250,7 +255,7 @@ def main(**kwargs):
                 dy_dr = sin_phi
                 dx_dphi = -r_vals * sin_phi
                 dy_dphi = r_vals * cos_phi
-            if not (coordinates == 'schwarzschild' or coordinates == 'kerr-schild'):
+            if not (coordinates == 'schwarzschild' or coordinates == 'kerr-schild' or coordinates == 'gr_dynamic'):
                 dx_dphi /= r_vals
                 dy_dphi /= r_vals
             vals_x = dx_dr * vals_r + dx_dphi * vals_phi
@@ -268,7 +273,7 @@ def main(**kwargs):
                 dz_dr = cos_theta
                 dx_dtheta = r_vals * cos_theta
                 dz_dtheta = -r_vals * sin_theta
-            if not (coordinates == 'schwarzschild' or coordinates == 'kerr-schild'):
+            if not (coordinates == 'schwarzschild' or coordinates == 'kerr-schild' or coordinates == 'gr_dynamic'):
                 dx_dtheta /= r_vals
                 dz_dtheta /= r_vals
             vals_x = dx_dr * vals_r + dx_dtheta * vals_theta
