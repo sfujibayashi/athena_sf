@@ -393,7 +393,11 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
         std::fprintf(pfile,"[%d]=3-ME    ", iout++);
       }
       for (int n=0; n<NSCALARS; n++) {
-        if (CHEMISTRY_ENABLED) {
+	const std::string &user_name = psclr->GetScalarName(n);
+	
+        if (!user_name.empty()) {
+	  std::fprintf(pfile, "[%d]=%s    ", iout++, user_name.c_str());
+	} else if (CHEMISTRY_ENABLED) {
           if (n < NSPECIES) {
             std::fprintf(pfile,"[%d]=%s    ", iout++,
                          psclr->chemnet.species_names[n].c_str());
