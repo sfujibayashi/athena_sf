@@ -214,8 +214,7 @@ namespace {
 
   Real HistoryOuterMassFlux(MeshBlock *pmb, int iout) {
     // This block does not touch the physical outer-x1 boundary.
-    if (pmb->pbval->block_bcs[BoundaryFace::outer_x1]
-        == BoundaryFlag::block) {
+    if (pmb->pbval->block_bcs[BoundaryFace::outer_x1]== BoundaryFlag::block) {
       return 0.0;
     }
     
@@ -223,16 +222,90 @@ namespace {
     
     for (int k=pmb->ks; k<=pmb->ke; ++k) {
       for (int j=pmb->js; j<=pmb->je; ++j) {
-        const Real area =
-          pmb->pcoord->GetFace1Area(k, j, pmb->ie+1);
-        
-        mdot_out += area
-          * pmb->phydro->flux[X1DIR](IDN,k,j,pmb->ie+1);
+        const Real area = pmb->pcoord->GetFace1Area(k, j, pmb->ie+1);
+        mdot_out += area * pmb->phydro->flux[X1DIR](IDN,k,j,pmb->ie+1);
       }
     }
     
-    return mdot_out;
+    // make it units of Msun s^-1
+    return mdot_out/pmb->pmy_mesh->punit->solar_mass_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
   }
+
+
+  Real HistoryMInnerBlocks(MeshBlock *pmb, int iout) {
+    // This block does not touch the physical outer-x1 boundary.
+    if (pmb->pbval->block_bcs[BoundaryFace::inner_x1] == BoundaryFlag::block) {
+      return 0.0;
+    }
+
+    AthenaArray<Real> vol;
+    vol.NewAthenaArray(pmb->ie-pmb->is+1);
+    
+    Real mass = 0.0;
+    
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+        pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+	for (int i=pmb->is; i<=pmb->ie; ++i) {
+	  const Real rho_ut = pmb->phydro->u(IDN,k,j,i);
+	  mass += vol(i) * rho_ut;
+	}
+      }
+    }
+    
+    return mass / pmb->pmy_mesh->punit->solar_mass_code;
+  }
+
+  Real HistoryEInnerBlocks(MeshBlock *pmb, int iout) {
+    // This block does not touch the physical outer-x1 boundary.
+    if (pmb->pbval->block_bcs[BoundaryFace::inner_x1] == BoundaryFlag::block) {
+      return 0.0;
+    }
+
+    AthenaArray<Real> vol;
+    vol.NewAthenaArray(pmb->ie-pmb->is+1);
+    
+    Real E = 0.0;
+    
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+        pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+	for (int i=pmb->is; i<=pmb->ie; ++i) {
+	  const Real Tt_t = pmb->phydro->u(IEN,k,j,i);
+	  E += vol(i) * Tt_t;
+	}
+      }
+    }
+    
+    return E / pmb->pmy_mesh->punit->erg_code;
+  }
+
+
+  Real HistoryJInnerBlocks(MeshBlock *pmb, int iout) {
+    // This block does not touch the physical outer-x1 boundary.
+    if (pmb->pbval->block_bcs[BoundaryFace::inner_x1] == BoundaryFlag::block) {
+      return 0.0;
+    }
+
+    AthenaArray<Real> vol;
+    vol.NewAthenaArray(pmb->ie-pmb->is+1);
+    
+    Real J = 0.0;
+    
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+        pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+	for (int i=pmb->is; i<=pmb->ie; ++i) {
+	  const Real Tt_3 = pmb->phydro->u(IM3,k,j,i);
+	  J += vol(i) * Tt_3;
+	}
+      }
+    }
+    
+    return J * pmb->pmy_mesh->punit->code_velocity_cgs * pmb->pmy_mesh->punit->code_length_cgs;
+  }
+
 
   enum EjectaHistoryCache {
     HCYCLE = 0,
@@ -633,37 +706,48 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     }
   }
   // output
-  AllocateUserHistoryOutput(10);
-  
-  EnrollUserHistoryOutput(0, HistoryBlackHoleMass, "m_bh",
+  AllocateUserHistoryOutput(11);
+
+  int iout=0;
+  EnrollUserHistoryOutput(iout, HistoryBlackHoleMass, "m_bh",
                           UserHistoryOperation::max);
-  
-  EnrollUserHistoryOutput(1, HistoryBlackHoleMassAccretionRate, "mdot_bh",
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryBlackHoleMassAccretionRate, "mdot_bh",
                           UserHistoryOperation::max);
-
-  EnrollUserHistoryOutput(2, HistoryOuterMassFlux, "mdot_out",
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryOuterMassFlux, "mdot_out",
                           UserHistoryOperation::sum);
-
-  EnrollUserHistoryOutput(3, HistoryEjectaMassGeom, "ejecta_mass(geom)",
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaMassGeom, "ejecta_mass(geom)",
                           UserHistoryOperation::sum);
-
-  EnrollUserHistoryOutput(4, HistoryEjectaEnergyGeom, "ejecta_energy(geom)",
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaEnergyGeom, "ejecta_energy(geom)",
                           UserHistoryOperation::sum);
-
-  EnrollUserHistoryOutput(5, HistoryEjectaMassBern, "ejecta_mass(bern)",
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaMassBern, "ejecta_mass(bern)",
                           UserHistoryOperation::sum);
-
-  EnrollUserHistoryOutput(6, HistoryEjectaEnergyBern, "ejecta_energy(bern)",
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaEnergyBern, "ejecta_energy(bern)",
                           UserHistoryOperation::sum);
-
-  EnrollUserHistoryOutput(7, HistoryEjectaMassBind, "ejecta_mass(bind)",
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaMassBind, "ejecta_mass(bind)",
                           UserHistoryOperation::sum);
-
-  EnrollUserHistoryOutput(8, HistoryEjectaEnergyBind, "ejecta_energy(bind)",
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaEnergyBind, "ejecta_energy(bind)",
                           UserHistoryOperation::sum);
-
-  EnrollUserHistoryOutput(9, HistoryEjectaMaxRadius, "maximum radius",
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaMaxRadius, "maximum_radius",
                           UserHistoryOperation::max);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMInnerBlocks, "M_inner_block",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEInnerBlocks, "E_inner_block",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryJInnerBlocks, "J_inner_block",
+                          UserHistoryOperation::sum);
+
 
   //
   AllocateRealUserMeshDataField(2);
@@ -868,11 +952,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     for (int j=js; j<=je; j++) {
       pcoord->CellMetric(k, j, is, ie, g, gi);
       for (int i=is; i<=ie; i++) {
-        Real rad_cgs = pcoord->x1v(i)*pmy_mesh->punit->code_length_cgs;
+        Real r = pcoord->x1v(i);
+        Real rad_cgs = r * pmy_mesh->punit->code_length_cgs;
         
         int ind = collapsed.CellIndexFromRadius(rad_cgs);
         
-        Real rho_cgs, press_cgs, uu1, uu2, uu3;
+        Real rho_cgs, press_cgs, jrot_cgs, uu1, uu2, uu3;
 	Real ye, xinj, xprog[ProgenitorSpecies::NPROG_SPECIES];
         uu2 = 0.0;
         uu3 = 0.0;
@@ -882,6 +967,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           rho_cgs = rho_atmos;
           press_cgs = press_atmos;
           uu1 = 0.0;
+	  jrot_cgs = 0.0;
 	  ye = collapsed.ye[collapsed.ncell-1];
 	  for(int n=0; n<ProgenitorSpecies::NPROG_SPECIES; ++n){
 	    xprog[n] = collapsed.x[n][collapsed.ncell-1];
@@ -891,6 +977,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           rho_cgs   = collapsed.rho[ind];
           press_cgs = collapsed.press[ind];
           uu1 = collapsed.ur[ind] / Constants::speed_of_light_cgs;
+	  jrot_cgs = collapsed.jrot[ind];
 	  ye = collapsed.ye[ind];
 	  for(int n=0; n<ProgenitorSpecies::NPROG_SPECIES; ++n){
 	    xprog[n] = collapsed.x[n][ind];
@@ -900,6 +987,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           press_cgs= collapsed.press[ind_first];
           uu1 = collapsed.ur[ind_first]/Constants::speed_of_light_cgs;
           ye = collapsed.ye[ind_first];
+	  jrot_cgs = collapsed.jrot[ind_first];
 	  for(int n=0; n<ProgenitorSpecies::NPROG_SPECIES; ++n){
 	    xprog[n] = collapsed.x[n][ind_first];
 	  }
@@ -910,13 +998,19 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           press_cgs= xx0*collapsed.press[ind] + xx1*collapsed.press[ind+1];
           uu1 = (xx0*collapsed.ur[ind] + xx1*collapsed.ur[ind+1])/Constants::speed_of_light_cgs;
 	  ye = xx0*collapsed.ye[ind] + xx1*collapsed.ye[ind+1];
+	  jrot_cgs = xx0*collapsed.jrot[ind] + xx1*collapsed.jrot[ind+1];
 	  for(int n=0; n<ProgenitorSpecies::NPROG_SPECIES; ++n){
 	    xprog[n] = xx0*collapsed.x[n][ind] + xx1*collapsed.x[n][ind+1];
 	  }
         }
         Real rho_code = rho_cgs/pmy_mesh->punit->code_density_cgs;
         Real press_code = press_cgs/pmy_mesh->punit->code_pressure_cgs;
-        
+	Real jrot_code = jrot_cgs /(pmy_mesh->punit->code_velocity_cgs*pmy_mesh->punit->code_length_cgs);
+	// jrot is mass-shell-averaged value. jrot_local is (3/2)jrot*sin(theta)^2
+	// Therefore, u^3 = g^33 u_3 = (3/2)*jrot/(r^2 h).
+	Real h = 1.0+gamma_gas/(gamma_gas-1.0) * press_code/rho_code;
+	uu3 = 1.5*jrot_code/(r*r*h);
+
         phydro->w(IDN,k,j,i) = rho_code;
         phydro->w(IPR,k,j,i) = press_code;
         phydro->w(IVX,k,j,i) = uu1;
