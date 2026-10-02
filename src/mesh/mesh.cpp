@@ -136,7 +136,8 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     MGCRDiffusionCoeffMaskFunction_{},
     // new classes
     pmonograv(nullptr),
-    poutflow(nullptr)
+    poutflow(nullptr),
+    restart_(false)
 {
   std::stringstream msg;
   BoundaryFlag block_bcs[6];
@@ -694,7 +695,8 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     MGCRDiffusionCoeffMaskFunction_{},
     // new classes
     pmonograv(nullptr),
-    poutflow(nullptr)
+    poutflow(nullptr),
+    restart_(true)
 {
   std::stringstream msg;
   BoundaryFlag block_bcs[6];

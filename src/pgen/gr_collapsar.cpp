@@ -635,44 +635,51 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 	      << std::setprecision(17) << x1rat << std::endl;
   }
 
-  // Collapsed progenitor
-  std::string filename = pin->GetString("problem", "progenitor_file");
-
-  const bool initialize_with_mass =
-    pin->GetOrAddBoolean("coord", "initialize_with_mass", true);
-
-  ProgenitorProfile progenitor = ReadProgenitorProfile(filename);
-
-  Real t0=0.0;
-  if(initialize_with_mass){
-    Real bh_mass_init = pin->GetReal("problem", "initial_bh_mass");
-    t0 = GetTimeFromBlackHoleMass(progenitor, bh_mass_init);
-    if(Globals::my_rank==0) std::cout << "BH mass is specified to " << bh_mass_init << " Msun." << std::endl;
-  }else{
-    t0 = pin->GetReal("problem", "t0");
-    if(Globals::my_rank==0) std::cout << "Time is specified." << std::endl;
-  }
-  if(Globals::my_rank==0) std::cout << "t0 = " << t0 << " s." << std::endl;
-
   gamma_gas = pin->GetReal("hydro", "gamma");
-  collapsed = CollapseProgenitor(progenitor, t0);
-  
-  Real rin_code = mesh_size.x1min;
-  Real rin_cgs = rin_code*punit->code_length_cgs;
-  Real M_inner_cgs = collapsed.EnclosedMass(rin_cgs);
-  Real J_inner_cgs = 0.0;
 
-  Real m_bh_code = Constants::grav_const_cgs * M_inner_cgs
-    / SQR(Constants::speed_of_light_cgs)
-    / punit->code_length_cgs;
-
-  Real ang_bh_code = J_inner_cgs
-    * std::pow(Constants::grav_const_cgs / SQR(Constants::speed_of_light_cgs)
-    / punit->code_length_cgs, 2);
+  Real m_bh_code = 0.0;
+  Real ang_bh_code = 0.0;
   
-  if (Globals::my_rank == 0) {
-    printf("Black hole mass (cgs,code unit)=%15.7e, %15.7e\n",M_inner_cgs, m_bh_code);
+  if(!restart_){
+    // Collapsed progenitor
+    std::string filename = pin->GetString("problem", "progenitor_file");
+    
+    const bool initialize_with_mass =
+      pin->GetOrAddBoolean("coord", "initialize_with_mass", true);
+    
+    ProgenitorProfile progenitor = ReadProgenitorProfile(filename);
+
+    Real t0=0.0;
+    if(initialize_with_mass){
+      Real bh_mass_init = pin->GetReal("problem", "initial_bh_mass");
+      t0 = GetTimeFromBlackHoleMass(progenitor, bh_mass_init);
+      if(Globals::my_rank==0) std::cout << "BH mass is specified to " << bh_mass_init << " Msun." << std::endl;
+    }else{
+      t0 = pin->GetReal("problem", "t0");
+      if(Globals::my_rank==0) std::cout << "Time is specified." << std::endl;
+    }
+    if(Globals::my_rank==0) std::cout << "t0 = " << t0 << " s." << std::endl;
+
+    collapsed = CollapseProgenitor(progenitor, t0);
+    
+    Real rin_code = mesh_size.x1min;
+    Real rin_cgs = rin_code*punit->code_length_cgs;
+    Real M_inner_cgs = collapsed.EnclosedMass(rin_cgs);
+    Real J_inner_cgs = 0.0;
+    
+    m_bh_code = Constants::grav_const_cgs * M_inner_cgs
+      / SQR(Constants::speed_of_light_cgs)
+      / punit->code_length_cgs;
+    
+    ang_bh_code = J_inner_cgs
+      * std::pow(Constants::grav_const_cgs / SQR(Constants::speed_of_light_cgs)
+		 / punit->code_length_cgs, 2);
+    
+    if (Globals::my_rank == 0) {
+      printf("Black hole mass (cgs,code unit)=%15.7e, %15.7e\n",M_inner_cgs, m_bh_code);
+    }
   }
+  
   // pin->SetReal("coord", "m", m_bh_code);
   // pin->SetReal("coord", "j", ang_bh_code);
   // m_bh_code = pin->GetReal("coord", "m");
@@ -750,14 +757,13 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
   //
   AllocateRealUserMeshDataField(2);
+
   // BH mass
   ruser_mesh_data[0].NewAthenaArray(1);
   // BH spin
   ruser_mesh_data[1].NewAthenaArray(1);
 
-  // canonical BH mass
   ruser_mesh_data[0](0) = m_bh_code;
-  // canonical BH spin
   ruser_mesh_data[1](0) = ang_bh_code;
 }
 

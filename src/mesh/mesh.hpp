@@ -350,6 +350,9 @@ class Mesh {
   // global constants
   Real four_pi_G_;
 
+  // restart flag
+  bool restart_;
+
   // variables for load balancing control
   bool lb_flag_, lb_automatic_, lb_manual_;
   double lb_tolerance_;
