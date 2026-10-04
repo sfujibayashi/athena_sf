@@ -763,6 +763,12 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   
   const int add_outer_blocks =
     pin->GetOrAddInteger("restart_mesh", "add_outer_blocks", 0);
+  
+  if (remove_inner_blocks<0 or add_outer_blocks<0) {
+    msg << "### FATAL ERROR in Mesh constructor" << std::endl
+	<< "remove_inner_blocks and add_outer_blocks should be >=0." << std::endl;
+    ATHENA_ERROR(msg);
+  }
 
   bool modify_blocks = false;
   if (remove_inner_blocks!=0 or add_outer_blocks!=0) {
