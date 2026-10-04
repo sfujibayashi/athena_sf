@@ -230,24 +230,27 @@ void EquationOfState::ConservedToPrimitive(
           fixed = true;
         }
         if (!success) {
-          std::cout << "C2P failed:"
-                    << " i=" << i
-                    << " rho_old=" << prim_old(IDN,k,j,i)
-                    << " p_old=" << prim_old(IPR,k,j,i)
-                    << " D=" << normal_dd_(i)
-                    << " E=" << normal_ee_(i)
-                    << " M2=" << normal_mm_(0,i)
-                    << " pressure_floor_local=" << pressure_floor_local
-                    << " pgas_min_=" << pgas_min_
-                    << " p_est=" << (gamma_adi-1.0)*(normal_ee_(i)-normal_dd_(i))
-                    << std::endl;
-          
- 
+	  MeshBlock *pmb = pmy_block_;
+	  
+	  std::cout << "C2P failed:"
+		    << " gid=" << pmb->gid
+		    << " lx=("
+		    << pmb->loc.lx1 << ","
+		    << pmb->loc.lx2 << ","
+          << pmb->loc.lx3 << ")"
+		    << " i=" << i
+		    << " active=" << (i >= pmb->is && i <= pmb->ie)
+		    << " rho_old=" << prim_old(IDN,k,j,i)
+		    << " p_old=" << prim_old(IPR,k,j,i)
+		    << " D=" << normal_dd_(i)
+		    << " E=" << normal_ee_(i)
+		    << " M2=" << normal_mm_(0,i)
+		    << std::endl;
           rho = density_floor_local;
           pgas = pressure_floor_local;
           uu1 = uu2 = uu3 = 0.0;
         }
-
+	
         // Ensure conserved variables match primitives
         if (fixed) {
           PrimitiveToConservedSingle(prim, gamma_adi, g_, g_inv_, k, j, i, cons, pco);
