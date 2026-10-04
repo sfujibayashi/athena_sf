@@ -1078,12 +1078,22 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
 
 void MeshBlock::InitializeAtmosphere(ParameterInput *pin) {
-  const Real rho = pin->GetReal("problem", "rho_atmos");
-  const Real press = pin->GetReal("problem", "press_atmos");
+  const int il = is - NGHOST;
+  const int iu = ie + NGHOST;
+  const int jl = (block_size.nx2 > 1) ? js-NGHOST : js;
+  const int ju = (block_size.nx2 > 1) ? je+NGHOST : je;
+  const int kl = (block_size.nx3 > 1) ? ks-NGHOST : ks;
+  const int ku = (block_size.nx3 > 1) ? ke+NGHOST : ke;
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
+  const Real rho_cgs = pin->GetReal("problem", "rho_atmos");
+  const Real press_cgs = pin->GetReal("problem", "press_atmos");
+
+  const Real rho = rho_cgs / pmy_mesh->punit->code_density_cgs;
+  const Real press = press_cgs / pmy_mesh->punit->code_pressure_cgs;
+  
+  for (int k=kl; k<=ku; ++k) {
+    for (int j=jl; j<=ju; ++j) {
+      for (int i=il; i<=iu; ++i) {
         phydro->w(IDN,k,j,i) = rho;
         phydro->w(IPR,k,j,i) = press;
         phydro->w(IVX,k,j,i) = 0.0;
@@ -1123,7 +1133,6 @@ void MeshBlock::InitializeAtmosphere(ParameterInput *pin) {
     pscalars->r, phydro->u, pscalars->s, pcoord,
     is, ie, js, je, ks, ke);
 #endif
-
 }
 
 
