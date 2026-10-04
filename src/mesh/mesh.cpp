@@ -1203,6 +1203,12 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 
     my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
   }
+
+  if (Globals::my_rank == 0) {
+    std::cout << "old bh_mass = "
+	      << ruser_mesh_data[0](0)
+	      << std::endl;
+  }
   
   // reconstruct delta_m and Psi
   // MeshBlocks have already been reconstructed.
@@ -1225,9 +1231,17 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     
     if (Globals::my_rank == 0) {
       std::cout << "removed mass =" << removed_mass << std::endl;
+
+      const Real mass_to_length =
+	punit->grav_const_code
+	/ SQR(punit->speed_of_light_code);
+      const Real removed_mass_code =
+	removed_mass / mass_to_length;
+
+      std::cout << "removed mass (Msun) = "
+		<< removed_mass_code / punit->solar_mass_code
+		<< std::endl;
     }
-    
-    std::abort();
     
     ruser_mesh_data[0](0) += removed_mass;
   }
@@ -1235,12 +1249,66 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 #if DYNAMIC_METRIC_ENABLED
   pmonograv = new MonopoleGravity(this, pin);
   
-  if (remove_inner_blocks > 0 || add_outer_blocks > 0) {
+  if (modify_blocks) {
     pmonograv->Update();
+
+
+    for (int b=0; b<nblocal; ++b) {
+      MeshBlock *pmb = my_blocks(b);
+      
+      AthenaArray<Real> bb;
+      bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
+      bb.ZeroClear();
+      
+      pmb->peos->PrimitiveToConserved(
+				      pmb->phydro->w,
+				      bb,
+				      pmb->phydro->u,
+				      pmb->pcoord,
+				      pmb->is, pmb->ie,
+				      pmb->js, pmb->je,
+				      pmb->ks, pmb->ke);
+    }
   }
 #endif
   
-  
+  if (Globals::my_rank == 0) {
+    std::cout << "new bh_mass = "
+	      << ruser_mesh_data[0](0)
+	      << std::endl;
+  }
+
+  for (int b=0; b<nblocal; ++b) {
+    MeshBlock *pmb = my_blocks(b);
+
+    if (pmb->loc.lx1 == 0 &&
+	pmb->loc.lx2 == 0 &&
+	pmb->loc.lx3 == 0) {
+
+      std::cout << "new inner delta_m = "
+		<< pmb->pmetric->DeltaMFace1()(pmb->is)
+		<< std::endl;
+    }
+  }
+
+  for (int b=0; b<nblocal; ++b) {
+    MeshBlock *pmb = my_blocks(b);
+
+    if (pmb->loc.lx1 == nrbx1 - 1 &&
+	pmb->loc.lx2 == 0 &&
+	pmb->loc.lx3 == 0) {
+
+      std::cout << "new outermost Psi = "
+		<< pmb->pmetric->PsiFace1()(pmb->ie+1)
+		<< std::endl;
+    }
+  }
+
+  if (modify_blocks) {
+    pin->SetInteger("restart_mesh", "remove_inner_blocks", 0);
+    pin->SetInteger("restart_mesh", "add_outer_blocks", 0);
+  }
+
   delete [] mbdata;
   // check consistency
   if ( (NR_RADIATION_ENABLED || IM_RADIATION_ENABLED) &&
