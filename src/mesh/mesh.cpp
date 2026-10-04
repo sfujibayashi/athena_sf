@@ -63,6 +63,7 @@
 
 #include "../gravity/monopole_gravity.hpp"
 #include "../inputs/outflow_boundary_data.hpp"
+#include "../metric/metric.hpp"
 
 // MPI/OpenMP header
 #ifdef MPI_PARALLEL
@@ -1202,7 +1203,44 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 
     my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
   }
-
+  
+  // reconstruct delta_m and Psi
+  // MeshBlocks have already been reconstructed.
+  Real removed_mass = 0.0;
+  
+  if (remove_inner_blocks > 0) {
+    for (int b=0; b<nblocal; ++b) {
+      MeshBlock *pmb = my_blocks(b);
+      
+      // Pick exactly one angular block.
+      if (pmb->loc.lx1 == 0 && pmb->loc.lx2 == 0 && pmb->loc.lx3 == 0) {
+	removed_mass = pmb->pmetric->DeltaMFace1()(pmb->is);
+      }
+    }
+    
+#ifdef MPI_PARALLEL
+    MPI_Allreduce(MPI_IN_PLACE, &removed_mass, 1,
+		  MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+#endif
+    
+    if (Globals::my_rank == 0) {
+      std::cout << "removed mass =" << removed_mass << std::endl;
+    }
+    
+    std::abort();
+    
+    ruser_mesh_data[0](0) += removed_mass;
+  }
+  
+#if DYNAMIC_METRIC_ENABLED
+  pmonograv = new MonopoleGravity(this, pin);
+  
+  if (remove_inner_blocks > 0 || add_outer_blocks > 0) {
+    pmonograv->Update();
+  }
+#endif
+  
+  
   delete [] mbdata;
   // check consistency
   if ( (NR_RADIATION_ENABLED || IM_RADIATION_ENABLED) &&
