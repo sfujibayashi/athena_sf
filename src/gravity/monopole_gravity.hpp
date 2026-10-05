@@ -25,9 +25,9 @@ class ParameterInput;
 class MonopoleGravity : public DynamicMetricDriver {
 public:
   MonopoleGravity(Mesh *pm, ParameterInput *pin);
-  ~MonopoleGravity();
+  ~MonopoleGravity() override;
   
-  void Update();
+  void Update() override;
 
   Real bh_mass_prev_, bh_spin_prev_;
   Real bh_mass_pending_, bh_spin_pending_;
