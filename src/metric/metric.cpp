@@ -604,27 +604,6 @@ void Metric::CellMetricRadialDerivatives(const int k, const int j,
 					 const int il, const int iu,
 					 AthenaArray<Real> &d1_g00,
 					 AthenaArray<Real> &d1_g11) const {
-  // const auto &Psi_face1 = PsiFace1();
-  // const auto &delta_m_face1 = DeltaMFace1();
-  // const Real bh_mass = GetBlackHoleMass();
-  // const Real theta = pmy_block->pcoord->x2v(j);
-  // const Real phi = pmy_block->pcoord->x3v(k);
-
-  // for (int i = il; i <= iu; ++i) {
-
-  //   const Real r = pmy_block->pcoord->x1v(i);
-  //   const Real Psi = CellPsi(i);
-  //   const Real delta_m = CellDeltaM(i);
-  //   const Real dxf = pmy_block->pcoord->x1f(i+1)-pmy_block->pcoord->x1f(i);
-  //   const Real d1_Psi = (Psi_face1(i+1) - Psi_face1(i))/dxf;
-  //   const Real d1_delta_m = (delta_m_face1(i+1) - delta_m_face1(i))/dxf;
-    
-  //   gravity_model_.MetricRadialDerivatives(
-  //      r, theta, phi, Psi, delta_m, bh_mass,
-  //      d1_Psi, d1_delta_m,
-  //      d1_g00(i), d1_g11(i));
-
-  // }
   pmy_block->pmy_mesh->pmetric_driver->CellMetricRadialDerivatives(
         pmy_block,k,j,il,iu, d1_g00, d1_g11);
 }
