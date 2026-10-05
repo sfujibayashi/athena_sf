@@ -356,65 +356,17 @@ Real Metric::CellDensitizationFactor(int k, int j, int i) const {
 
 
 Real Metric::Face1DensitizationFactor(int k, int j, int i) const {
-  Coordinates *pcoord = pmy_block->pcoord;
-
-  auto &Psi_face1 = PsiFace1();
-  auto &delta_m_face1 = DeltaMFace1();
-  
-  const Real r = pcoord->x1f(i);
-  const Real theta = pcoord->x2v(j);
-  const Real phi = pcoord->x3v(k);
-  const Real Psi = Psi_face1(i);
-  const Real dm = delta_m_face1(i);
-
-  Real g00, g01, g02, g03;
-  Real g11, g12, g13, g22, g23, g33;
-  
-  ConstructCovariantMetric(r, theta, phi, Psi, dm,
-        g00, g01, g02, g03,
-        g11, g12, g13, g22, g23, g33);
-
-  return std::sqrt((-g00)*g11);
+  return pmy_block->pmy_mesh->pmetric_driver->Face1DensitizationFactor(pmy_block,k,j,i);
 }
 
 
 Real Metric::Face2DensitizationFactor(int k, int j, int i) const {
-  Coordinates *pcoord = pmy_block->pcoord;
-
-  const Real r = pcoord->x1v(i);
-  const Real theta = pcoord->x2f(j);
-  const Real phi = pcoord->x3v(k);
-  const Real Psi = CellPsi(i);
-  const Real dm = CellDeltaM(i);
-
-  Real g00, g01, g02, g03;
-  Real g11, g12, g13, g22, g23, g33;
-  
-  ConstructCovariantMetric(r, theta, phi, Psi, dm,
-        g00, g01, g02, g03,
-        g11, g12, g13, g22, g23, g33);
-
-  return std::sqrt((-g00)*g11);
+  return pmy_block->pmy_mesh->pmetric_driver->Face2DensitizationFactor(pmy_block,k,j,i);
 }
 
 
 Real Metric::Face3DensitizationFactor(int k, int j, int i) const {
-  Coordinates *pcoord = pmy_block->pcoord;
-
-  const Real r = pcoord->x1v(i);
-  const Real theta = pcoord->x2v(j);
-  const Real phi = pcoord->x3f(k);
-  const Real Psi = CellPsi(i);
-  const Real dm = CellDeltaM(i);
-
-  Real g00, g01, g02, g03;
-  Real g11, g12, g13, g22, g23, g33;
-  
-  ConstructCovariantMetric(r, theta, phi, Psi, dm,
-        g00, g01, g02, g03,
-        g11, g12, g13, g22, g23, g33);
-
-  return std::sqrt((-g00)*g11);
+  return pmy_block->pmy_mesh->pmetric_driver->Face3DensitizationFactor(pmy_block,k,j,i);
 }
 
 Real Metric::GetBlackHoleMass() const {
