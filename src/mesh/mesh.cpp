@@ -2676,19 +2676,6 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
     if (old_loclist[i].level > current_level) current_level = old_loclist[i].level;
   }
   delete [] idlist;
-
-  if (Globals::my_rank == 0) {
-    for (int i=0; i<old_nbtotal; ++i) {
-      std::cout
-	<< "old gid=" << i
-	<< " level=" << old_loclist[i].level
-	<< " lx1=" << old_loclist[i].lx1
-	<< " lx2=" << old_loclist[i].lx2
-	<< " lx3=" << old_loclist[i].lx3
-	<< std::endl;
-    }
-  }
-
   
   if (!adaptive) max_level = current_level;
 
@@ -2714,16 +2701,6 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   tree.GetMeshBlockList(loclist, nullptr, nbtotal);
   if (Globals::my_rank == 0) {
     std::cout << "new nbtotal=" << nbtotal << std::endl;
-    
-    for (int i=0; i<nbtotal; ++i) {
-      std::cout
-	<< "new gid=" << i
-	<< " level=" << loclist[i].level
-	<< " lx1=" << loclist[i].lx1
-	<< " lx2=" << loclist[i].lx2
-	<< " lx3=" << loclist[i].lx3
-	<< std::endl;
-    }
   }
 
 #ifdef MPI_PARALLEL
@@ -2772,19 +2749,6 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
       costlist[i] = 1.0;
     }
   }
-  
-  if (Globals::my_rank == 0) {
-    for (int i=0; i<nbtotal; ++i) {
-      std::cout << "new gid=" << i
-		<< " (" << loclist[i].lx1
-		<< "," << loclist[i].lx2
-		<< "," << loclist[i].lx3 << ")"
-		<< " -> old gid="
-		<< old_gid_for_new_gid[i]
-		<< std::endl;
-    }
-  }
-
 
   if (adaptive) { // allocate arrays for AMR
     nref = new int[Globals::nranks];
@@ -2911,7 +2875,6 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   
   pmonograv->Update();
     
-    
   for (int b=0; b<nblocal; ++b) {
     MeshBlock *pmb = my_blocks(b);
       
@@ -2919,8 +2882,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
     bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
     bb.ZeroClear();
       
-    pmb->peos->PrimitiveToConserved(
-				    pmb->phydro->w,
+    pmb->peos->PrimitiveToConserved(pmb->phydro->w,
 				    bb,
 				    pmb->phydro->u,
 				    pmb->pcoord,
@@ -2935,36 +2897,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
 	      << ruser_mesh_data[0](0)
 	      << std::endl;
   }
-
-  for (int b=0; b<nblocal; ++b) {
-    MeshBlock *pmb = my_blocks(b);
-
-    if (pmb->loc.lx1 == 0 &&
-	pmb->loc.lx2 == 0 &&
-	pmb->loc.lx3 == 0) {
-
-      std::cout << "new inner delta_m = "
-		<< pmb->pmetric->DeltaMFace1()(pmb->is)
-		<< std::endl;
-    }
-  }
-
-  for (int b=0; b<nblocal; ++b) {
-    MeshBlock *pmb = my_blocks(b);
-
-    if (pmb->loc.lx1 == nrbx1 - 1 &&
-	pmb->loc.lx2 == 0 &&
-	pmb->loc.lx3 == 0) {
-
-      std::cout << "new outermost Psi = "
-		<< pmb->pmetric->PsiFace1()(pmb->ie+1)
-		<< std::endl;
-    }
-  }
-
-  pin->SetInteger("restart_mesh", "remove_inner_blocks", 0);
-  pin->SetInteger("restart_mesh", "add_outer_blocks", 0);
-
+  
   delete [] mbdata;
   // check consistency
   if ( (NR_RADIATION_ENABLED || IM_RADIATION_ENABLED) &&
