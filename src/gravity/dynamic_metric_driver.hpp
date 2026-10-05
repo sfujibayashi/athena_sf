@@ -24,6 +24,13 @@ public:
 	 const int il, const int iu,
 	 AthenaArray<Real> &d1_g00,
 	 AthenaArray<Real> &d1_g11) const = 0;
+
+  virtual void ConstructCellCovariantMetric(
+         MeshBlock *pmb,
+	 int k, int j, int i,
+	 Real &g00, Real &g01, Real &g02, Real &g03,
+	 Real &g11, Real &g12, Real &g13,
+	 Real &g22, Real &g23, Real &g33) const = 0;
   
 };
 

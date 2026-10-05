@@ -574,15 +574,22 @@ void Metric::ConstructCellCovariantMetric(
     Real &g11, Real &g12, Real &g13,
     Real &g22, Real &g23, Real &g33) const {
 
-  Coordinates *pcoord = pmy_block->pcoord;
 
-  const Real r = pcoord->x1v(i);
-  const Real theta = pcoord->x2v(j);
-  const Real phi = pcoord->x3v(k);
+  pmy_block->pmy_mesh->pmetric_driver->ConstructCellCovariantMetric(
+        pmy_block,k,j,i,
+	g00, g01, g02, g03,
+	g11, g12, g13,
+	g22, g23, g33);
+
+  //Coordinates *pcoord = pmy_block->pcoord;
+
+  // const Real r = pcoord->x1v(i);
+  // const Real theta = pcoord->x2v(j);
+  // const Real phi = pcoord->x3v(k);
   
-  ConstructCovariantMetric(r, theta, phi, CellPsi(i), CellDeltaM(i),
-      g00, g01, g02, g03,
-      g11, g12, g13, g22, g23, g33);
+  // ConstructCovariantMetric(r, theta, phi, CellPsi(i), CellDeltaM(i),
+  //     g00, g01, g02, g03,
+  //     g11, g12, g13, g22, g23, g33);
   
 }
 

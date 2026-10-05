@@ -286,8 +286,30 @@ void MonopoleGravityDriver::CellMetricRadialDerivatives(
        d1_g00(i), d1_g11(i));
 
   }
-
 }  
+
+void MonopoleGravityDriver::ConstructCellCovariantMetric(
+         MeshBlock *pmb,
+	 int k, int j, int i,
+	 Real &g00, Real &g01, Real &g02, Real &g03,
+	 Real &g11, Real &g12, Real &g13,
+	 Real &g22, Real &g23, Real &g33) const {
+
+  const Real Psi = CellPsi(pmb, i);
+  const Real dm  = CellDeltaM(pmb, i);
+  const Real bh_mass = GetBlackHoleMass();
+
+  const Real r = pmb->pcoord->x1v(i);
+  const Real theta = pmb->pcoord->x2v(j);
+  const Real phi = pmb->pcoord->x3v(k);
+  
+  gravity_model_.ConstructCovariantMetric(
+      r, theta, phi, Psi, dm, bh_mass,
+      g00, g01, g02, g03,
+      g11, g12, g13,
+      g22, g23, g33);
+    
+}
 
 AthenaArray<Real>& MonopoleGravityDriver::PsiFace1(MeshBlock *pmb) {
   return pmb->ruser_meshblock_data[0];
