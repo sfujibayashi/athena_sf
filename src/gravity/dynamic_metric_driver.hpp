@@ -1,3 +1,8 @@
+#ifndef GRAVITY_DYNAMIC_METRIC_DRIVER_HPP_
+#define GRAVITY_DYNAMIC_METRIC_DRIVER_HPP_
+
+#include "../athena.hpp" // Real
+
 class DynamicMetricDriver {
  public:
   virtual ~DynamicMetricDriver() = default;
@@ -8,3 +13,6 @@ class DynamicMetricDriver {
   virtual Real GetBlackHoleMassAccretionRate() const = 0;
   
 };
+
+
+#endif // GRAVITY_DYNAMIC_METRIC_DRIVER_HPP_
