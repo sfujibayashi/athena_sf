@@ -456,16 +456,20 @@ void Coordinates::AddCoordTermsDivergence(
     const Real dt, const AthenaArray<Real> *flux,
     const AthenaArray<Real> &prim, const AthenaArray<Real> &bb_cc,
     AthenaArray<Real> &cons) {
+  
   class Metric *pmetric = pmy_block->pmetric;
   // Extract ratio of specific heats
   const Real gamma_adi = pmy_block->peos->GetGamma();
 
-  // Extract geometric quantities that do not depend on location
-  const Real m = pmetric->GetBlackHoleMass();
-
-  const auto &Psi_face1 = pmetric->PsiFace1();
-  const auto &delta_m_face1 = pmetric->DeltaMFace1();
-
+  // // Extract geometric quantities that do not depend on location
+  // const Real m = pmetric->GetBlackHoleMass();
+  // const auto &Psi_face1 = pmetric->PsiFace1();
+  // const auto &delta_m_face1 = pmetric->DeltaMFace1();
+  
+  AthenaArray<Real> d1_g00_, d1_g11_;
+  d1_g00_.NewAthenaArray(nc1+1);
+  d1_g11_.NewAthenaArray(nc1+1);
+  
   // Go through cells
   for (int k = pmy_block->ks; k <= pmy_block->ke; ++k) {
     for (int j = pmy_block->js; j <= pmy_block->je; ++j) {
@@ -477,6 +481,7 @@ void Coordinates::AddCoordTermsDivergence(
 
       // Calculate metric coefficients
       CellMetric(k, j, pmy_block->is, pmy_block->ie, g_, gi_);
+      CellMetricRadialDerivatives(k, j, pmy_block->is, pmy_block->ie, d1_g00_, d1_g11_);
 
       // Go through 1D slice
 #pragma omp simd
@@ -499,18 +504,8 @@ void Coordinates::AddCoordTermsDivergence(
         const Real &r = x1v(i);
         Real r2 = SQR(r);
 
-        const Real f = 1.0 - 2.0*m/r;
-        const Real Psi = pmetric->CellPsi(i);
-        const Real delta_m = pmetric->CellDeltaM(i);
-
-        const Real dxf = x1f(i+1)-x1f(i);
-        const Real d1_Psi = (Psi_face1(i+1) - Psi_face1(i))/dxf;
-        const Real d1_delta_m = (delta_m_face1(i+1) - delta_m_face1(i))/dxf;
-        Real d1_h_00 = -2.0*delta_m/r2 + 2.0/r*d1_delta_m + 4.0*m/r2*Psi + 2.0*f*d1_Psi;
-        Real d1_h_11 = 2.0/(r*f*f)*(d1_delta_m - (f+4.0*m/r)*delta_m/(r*f));
-
-        Real d1_g_00 = -2.0*m / r2 + d1_h_00;
-        Real d1_g_11 = -2.0*m / (r2*f*f) + d1_h_11;
+        Real d1_g_00 = d1_g00_(i);
+        Real d1_g_11 = d1_g11_(i);
         Real d1_g_22 = 2.0 * r;
         Real d1_g_33 = 2.0 * r * sin2;
         Real d2_g_33 = 2.0 * r2 * sincos;
@@ -554,6 +549,7 @@ void Coordinates::AddCoordTermsDivergence(
         // Calculate stress-energy tensor
         Real wtot = rho + gamma_adi/(gamma_adi-1.0) * pgas + b_sq;
         Real ptot = pgas + 0.5*b_sq;
+	// T^{ab}
         Real tt00 = wtot * u0 * u0 + ptot * g00 - b0 * b0;
         Real tt11 = wtot * u1 * u1 + ptot * g11 - b1 * b1;
         Real tt22 = wtot * u2 * u2 + ptot * g22 - b2 * b2;
@@ -590,6 +586,12 @@ void Coordinates::AddCoordTermsDivergence(
 void Coordinates::CellMetric(const int k, const int j, const int il, const int iu,
                                AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {
   pmy_block->pmetric->CellMetric(k, j, il, iu, g, g_inv);
+  return;
+}
+
+void Coordinates::CellMetricRadialDerivatives(const int k, const int j, const int il, const int iu,
+                               AthenaArray<Real> &d1_g00, AthenaArray<Real> &d1_g11) {
+  pmy_block->pmetric->CellMetricRadialDerivatives(k, j, il, iu, d1_g00, d1_g11);
   return;
 }
 

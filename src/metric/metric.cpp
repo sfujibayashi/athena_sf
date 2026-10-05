@@ -610,3 +610,35 @@ void Metric::ConstructCovariantMetric(
   g23 = 0.0;
   g33 = r*r*sintheta*sintheta;
 }
+
+void Metric::CellMetricRadialDerivatives(const int k, const int j,
+					 const int il, const int iu,
+					 AthenaArray<Real> &d1_g00,
+					 AthenaArray<Real> &d1_g11) const {
+  const auto &Psi_face1 = PsiFace1();
+  const auto &delta_m_face1 = DeltaMFace1();
+  const Real m = GetBlackHoleMass();
+
+  for (int i = il; i <= iu; ++i) {
+    
+    const Real &r = pmy_block->pcoord->x1v(i);
+    Real r2 = SQR(r);
+
+    const Real f = 1.0 - 2.0*m/r;
+    const Real Psi = CellPsi(i);
+    const Real delta_m = CellDeltaM(i);
+    
+    const Real dxf = pmy_block->pcoord->x1f(i+1)-pmy_block->pcoord->x1f(i);
+    const Real d1_Psi = (Psi_face1(i+1) - Psi_face1(i))/dxf;
+    const Real d1_delta_m = (delta_m_face1(i+1) - delta_m_face1(i))/dxf;
+    Real d1_h_00 = -2.0*delta_m/r2 + 2.0/r*d1_delta_m + 4.0*m/r2*Psi + 2.0*f*d1_Psi;
+    Real d1_h_11 = 2.0/(r*f*f)*(d1_delta_m - (f+4.0*m/r)*delta_m/(r*f));
+    
+    Real d1_g_00 = -2.0*m / r2 + d1_h_00;
+    Real d1_g_11 = -2.0*m / (r2*f*f) + d1_h_11;
+
+    d1_g00(i) = d1_g_00;
+    d1_g11(i) = d1_g_11;
+  }
+
+}

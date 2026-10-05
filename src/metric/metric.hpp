@@ -54,7 +54,6 @@ public:
                    AthenaArray<Real> &g, AthenaArray<Real> &g_inv);
   void Face3Metric(const int k, const int j, const int il, const int iu,
                    AthenaArray<Real> &g, AthenaArray<Real> &g_inv);
-
   
   Real SqrtMinusG(int k, int j, int i) const;
 
@@ -91,6 +90,13 @@ public:
     int i,
     const AthenaArray<Real> &g,
     AthenaArray<Real> &g_inv) const;
+
+
+  void CellMetricRadialDerivatives(const int k, const int j,
+				   const int il, const int iu,
+				   AthenaArray<Real> &d1_g00,
+				   AthenaArray<Real> &d1_g11) const;
+
 
 };
 

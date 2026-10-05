@@ -177,6 +177,11 @@ class Coordinates {
   void Face3Metric(const int k, const int j, const int il, const int iu,
                    AthenaArray<Real> &g, AthenaArray<Real> &g_inv);
 
+  // ... to compute radial derivatives of diagonal metric with areal radius
+  void CellMetricRadialDerivatives(const int k, const int j, const int il, const int iu,
+                  AthenaArray<Real> &d1_g00, AthenaArray<Real> &d1_g11);
+
+
   // ...to transform primitives to locally flat space
   void PrimToLocal1(const int k, const int j, const int il, const int iu,
                     const AthenaArray<Real> &b1_vals, AthenaArray<Real> &prim_left,
