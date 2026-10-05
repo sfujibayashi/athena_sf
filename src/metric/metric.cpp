@@ -236,34 +236,38 @@ void Metric::InvertSpatialMetric(Real g11, Real g12, Real g13,
     
   gi33 =  (g11*g22 - g12*g12) * inv_det;
 }
-  
+
 void Metric::CellMetric(const int k, const int j, const int il, const int iu,
                 AthenaArray<Real> &g, AthenaArray<Real> &g_inv){
+  // Coordinates *pcoord = pmy_block->pcoord;
   
-  Coordinates *pcoord = pmy_block->pcoord;
-  
-  for(int i=il; i<=iu; ++i){
-    const Real r = pcoord->x1v(i);
+  // for(int i=il; i<=iu; ++i){
+  //   const Real r = pcoord->x1v(i);
     
-    Real g00, g01, g02, g03;
-    Real g11, g12, g13, g22, g23, g33;
-    ConstructCellCovariantMetric(k,j,i,
-      g00, g01, g02, g03,
-      g11, g12, g13, g22, g23, g33);
+  //   Real g00, g01, g02, g03;
+  //   Real g11, g12, g13, g22, g23, g33;
+  //   ConstructCellCovariantMetric(k,j,i,
+  //     g00, g01, g02, g03,
+  //     g11, g12, g13, g22, g23, g33);
     
-    g(I00, i) = g00;
-    g(I01, i) = g01;
-    g(I02, i) = g02;
-    g(I03, i) = g03;
-    g(I11, i) = g11;
-    g(I12, i) = g12;
-    g(I13, i) = g13;
-    g(I22, i) = g22;
-    g(I23, i) = g23;
-    g(I33, i) = g33;
+  //   g(I00, i) = g00;
+  //   g(I01, i) = g01;
+  //   g(I02, i) = g02;
+  //   g(I03, i) = g03;
+  //   g(I11, i) = g11;
+  //   g(I12, i) = g12;
+  //   g(I13, i) = g13;
+  //   g(I22, i) = g22;
+  //   g(I23, i) = g23;
+  //   g(I33, i) = g33;
     
-    InvertMetric(i, g, g_inv);
-  }
+  //   InvertMetric(i, g, g_inv);
+  // }
+
+  pmy_block->pmy_mesh->pmetric_driver->CellMetric(
+        pmy_block,
+	k,j,il,iu,
+	g, g_inv);
 }
 
 void Metric::Face1Metric(const int k, const int j, const int il, const int iu,
@@ -296,6 +300,11 @@ void Metric::Face3Metric(const int k, const int j, const int il, const int iu,
 }
 
 Real Metric::SqrtMinusG(int k, int j, int i) const {
+
+  //Real sqrt_minus_g = pmy_block->pmy_mesh->pmetric_driver->SqrtMinusG(
+  //       pmy_block,k,j,i);
+
+
   Real g00, g01, g02, g03;
   Real g11, g12, g13, g22, g23, g33;
   
@@ -317,7 +326,10 @@ Real Metric::SqrtMinusG(int k, int j, int i) const {
 
   const Real alpha_sq = -g00 + g01*beta1 + g02*beta2 + g03*beta3;
 
+  //std::cout << sqrt_minus_g << " " << std::sqrt(alpha_sq*detgamma) << std::endl;
+  //std::abort();
   return std::sqrt(alpha_sq*detgamma);
+  //return sqrt_minus_g;
 }
 
 Real Metric::CellDensitizationFactor(int k, int j, int i) const {

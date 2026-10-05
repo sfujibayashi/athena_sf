@@ -46,6 +46,13 @@ public:
 	 AthenaArray<Real> &g, 
 	 AthenaArray<Real> &g_inv) const = 0;
 
+  virtual void CellMetric(
+         MeshBlock *pmb,
+	 const int k, const int j,
+	 const int il, const int iu,
+	 AthenaArray<Real> &g,
+	 AthenaArray<Real> &g_inv) const = 0;
+
   virtual void ConstructCellCovariantMetric(
          MeshBlock *pmb,
 	 int k, int j, int i,
@@ -53,6 +60,9 @@ public:
 	 Real &g11, Real &g12, Real &g13,
 	 Real &g22, Real &g23, Real &g33) const = 0;
 
+  virtual Real SqrtMinusG(
+         MeshBlock *pmb,
+	 const int k, const int j, const int i) const = 0;
   
   
 };
