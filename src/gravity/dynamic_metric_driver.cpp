@@ -5,7 +5,7 @@
 // Athena++ headers
 
 #include "dynamic_metric_driver.hpp"
-#include "monopole_gravity.hpp"
+#include "monopole_gravity_driver.hpp"
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
 

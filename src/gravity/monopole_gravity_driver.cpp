@@ -3,7 +3,7 @@
 #include <sstream>
 
 // Athena++ headers
-#include "monopole_gravity.hpp"
+#include "monopole_gravity_driver.hpp"
 #include "../mesh/mesh.hpp"
 #include "../hydro/hydro.hpp"
 #include "../metric/metric.hpp"

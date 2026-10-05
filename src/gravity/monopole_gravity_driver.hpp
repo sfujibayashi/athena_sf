@@ -1,5 +1,5 @@
-#ifndef GRAVITY_MONOPOLE_GRAVITY_HPP_
-#define GRAVITY_MONOPOLE_GRAVITY_HPP_
+#ifndef GRAVITY_MONOPOLE_GRAVITY_DRIVER_HPP_
+#define GRAVITY_MONOPOLE_GRAVITY_DRIVER_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
@@ -57,4 +57,4 @@ private:
 
 };
 
-#endif // GRAVITY_MONOPOLE_GRAVITY_HPP_
+#endif // GRAVITY_MONOPOLE_GRAVITY_DRIVER_HPP_
