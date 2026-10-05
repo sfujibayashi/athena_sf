@@ -562,6 +562,11 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     pimrad = new IMRadiation(this, pin);
   }
 
+  
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+#endif
+
   // create MeshBlock list for this process
   gids_ = nslist[Globals::my_rank];
   gide_ = gids_ + nblist[Globals::my_rank] - 1;
@@ -621,10 +626,6 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     // add one more element to buffer size for storing the derefinement counter
     bssame++;
   }
-#endif
-  
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = CreateDynamicMetricDriver(this, pin);
 #endif
 }
 
@@ -738,6 +739,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   }
 
   // Original path for mesh restart constructor
+
   BoundaryFlag block_bcs[6];
   IOWrapperSizeT *offset{};
   IOWrapperSizeT datasize, listsize, headeroffset;
@@ -982,6 +984,11 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     pimrad = new IMRadiation(this, pin);
   }
 
+  
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+#endif
+
 
   // allocate data buffer
   int nbmin = nblist[0];
@@ -1088,10 +1095,6 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   }
 #endif
 
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = CreateDynamicMetricDriver(this, pin);
-#endif
-  
 }
 
 //----------------------------------------------------------------------------------------
@@ -2787,6 +2790,9 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
     pimrad = new IMRadiation(this, pin);
   }
 
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+#endif
 
   // allocate data buffer
   int nbmin = nblist[0];
@@ -2871,9 +2877,8 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   }
   
 #if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = CreateDynamicMetricDriver(this, pin);  
   pmetric_driver->Update();
-    
+  
   for (int b=0; b<nblocal; ++b) {
     MeshBlock *pmb = my_blocks(b);
       
