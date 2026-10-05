@@ -49,7 +49,7 @@
 #include "task_list/chem_rad_task_list.hpp"
 #include "utils/utils.hpp"
 
-#include "gravity/monopole_gravity.hpp"
+#include "gravity/dynamic_metric_driver.hpp"
 
 // MPI/OpenMP headers
 #ifdef MPI_PARALLEL
@@ -517,8 +517,8 @@ int main(int argc, char *argv[]) {
         
 #if DYNAMIC_METRIC_ENABLED
         if (ptlist->TimeMetricUpdateEnabled()) {
-          pmesh->pmonograv->UpdateBlackHoleMass(stage);
-          pmesh->pmonograv->Update();
+          pmesh->pmetric_driver->UpdateBlackHoleMass(stage);
+          pmesh->pmetric_driver->Update();
         }
 #endif
         

@@ -15,13 +15,14 @@
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
+#include "dynamic_metric_driver.hpp"
 
 class Mesh;
 class ParameterInput;
 
 //! \class MonopoleGravity
 //! \brief Constructs global radial monopole gravity profiles
-class MonopoleGravity {
+class MonopoleGravity : public DynamicMetricDriver {
 public:
   MonopoleGravity(Mesh *pm, ParameterInput *pin);
   ~MonopoleGravity();
@@ -37,7 +38,8 @@ public:
 
   Real GetBlackHoleMass() const;
   Real GetBlackHoleSpin() const;
-  
+  Real GetBlackHoleMassAccretionRate() const override;
+
 private:
   Mesh *pmy_mesh_;
 

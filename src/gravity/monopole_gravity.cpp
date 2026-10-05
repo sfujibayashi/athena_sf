@@ -251,3 +251,7 @@ void MonopoleGravity::UpdateBlackHoleMass(int stage){
 
   BlackHoleMassStorage() = bh_mass_pending_;
 }
+
+Real MonopoleGravity::GetBlackHoleMassAccretionRate() const {
+  return mdot_bh_;
+}

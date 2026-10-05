@@ -136,7 +136,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     MGGravitySourceMaskFunction_{}, MGCRDiffusionSourceMaskFunction_{},
     MGCRDiffusionCoeffMaskFunction_{},
     // new classes
-    pmonograv(nullptr),
+    pmetric_driver(nullptr),
     poutflow(nullptr),
     restart_(false)
 {
@@ -624,7 +624,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
 #endif
   
 #if DYNAMIC_METRIC_ENABLED
-  pmonograv = new MonopoleGravity(this, pin);
+  pmetric_driver = new MonopoleGravity(this, pin);
 #endif
 }
 
@@ -695,7 +695,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     MGGravitySourceMaskFunction_{}, MGCRDiffusionSourceMaskFunction_{},
     MGCRDiffusionCoeffMaskFunction_{},
     // new classes
-    pmonograv(nullptr),
+    pmetric_driver(nullptr),
     poutflow(nullptr),
     restart_(true)
 {
@@ -1089,7 +1089,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 #endif
 
 #if DYNAMIC_METRIC_ENABLED
-  pmonograv = new MonopoleGravity(this, pin);
+  pmetric_driver = new MonopoleGravity(this, pin);
 #endif
   
 }
@@ -1099,7 +1099,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 
 Mesh::~Mesh() {
   delete poutflow;
-  delete pmonograv;
+  delete pmetric_driver;
   delete punit;
   for (int b=0; b<nblocal; ++b)
     delete my_blocks(b);
@@ -1694,7 +1694,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
   
 #if DYNAMIC_METRIC_ENABLED
     if (res_flag==0 and initial_metric_update) {
-      pmonograv->Update();
+      pmetric_driver->Update();
       
       // Convert primitive -> conserved after getting metric (it requires primitive rho)
       for (int i=0; i<nblocal; ++i) {
@@ -2871,9 +2871,9 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   }
   
 #if DYNAMIC_METRIC_ENABLED
-  pmonograv = new MonopoleGravity(this, pin);
+  pmetric_driver = new MonopoleGravity(this, pin);
   
-  pmonograv->Update();
+  pmetric_driver->Update();
     
   for (int b=0; b<nblocal; ++b) {
     MeshBlock *pmb = my_blocks(b);

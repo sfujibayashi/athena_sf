@@ -36,7 +36,7 @@
 // progenitor-reader
 #include "../inputs/progenitor_reader.hpp"
 #include "../metric/metric.hpp"
-#include "../gravity/monopole_gravity.hpp"
+#include "../gravity/dynamic_metric_driver.hpp"
 #include "../inputs/outflow_boundary_data.hpp"
 
 struct CollapsedProfile {
@@ -209,7 +209,7 @@ namespace {
   }
   
   Real HistoryBlackHoleMassAccretionRate(MeshBlock *pmb, int iout) {
-    return pmb->pmy_mesh->pmonograv->mdot_bh_;
+    return pmb->pmy_mesh->pmetric_driver->GetBlackHoleMassAccretionRate();
   }
 
   Real HistoryOuterMassFlux(MeshBlock *pmb, int iout) {
