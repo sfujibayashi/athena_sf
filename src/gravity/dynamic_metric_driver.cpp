@@ -10,5 +10,5 @@
 #include "../parameter_input.hpp"
 
 DynamicMetricDriver *CreateDynamicMetricDriver(Mesh *pm, ParameterInput *pin){
-  return new MonopoleGravity(pm, pin);
+  return new MonopoleGravityDriver(pm, pin);
 }

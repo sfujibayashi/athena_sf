@@ -6,7 +6,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file monopole_gravity.hpp
-//! \brief defines MonopoleGravity class
+//! \brief defines MonopoleGravityDriver class
 
 // C headers
 
@@ -20,12 +20,12 @@
 class Mesh;
 class ParameterInput;
 
-//! \class MonopoleGravity
+//! \class MonopoleGravityDriver
 //! \brief Constructs global radial monopole gravity profiles
-class MonopoleGravity : public DynamicMetricDriver {
+class MonopoleGravityDriver : public DynamicMetricDriver {
 public:
-  MonopoleGravity(Mesh *pm, ParameterInput *pin);
-  ~MonopoleGravity() override;
+  MonopoleGravityDriver(Mesh *pm, ParameterInput *pin);
+  ~MonopoleGravityDriver() override;
   
   void Update() override;
 

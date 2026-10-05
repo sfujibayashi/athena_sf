@@ -19,7 +19,7 @@ namespace{
   
 }
 
-MonopoleGravity::MonopoleGravity(Mesh *pm, ParameterInput *pin)
+MonopoleGravityDriver::MonopoleGravityDriver(Mesh *pm, ParameterInput *pin)
   : pmy_mesh_(pm) {
 
   if (pm->multilevel) {
@@ -54,14 +54,14 @@ MonopoleGravity::MonopoleGravity(Mesh *pm, ParameterInput *pin)
 
 }
 
-MonopoleGravity::~MonopoleGravity() {
+MonopoleGravityDriver::~MonopoleGravityDriver() {
   dm_shell_global_.DeleteAthenaArray();
   delta_m_face_global_.DeleteAthenaArray();
   Psi_face_global_.DeleteAthenaArray();
 }
 
 
-void MonopoleGravity::Update(){
+void MonopoleGravityDriver::Update(){
 
   const Real bh_mass = GetBlackHoleMass();
 
@@ -171,30 +171,30 @@ void MonopoleGravity::Update(){
 }
 
 
-Real& MonopoleGravity::BlackHoleMassStorage() {
+Real& MonopoleGravityDriver::BlackHoleMassStorage() {
   return pmy_mesh_->ruser_mesh_data[0](0);
 }
 
-const Real& MonopoleGravity::BlackHoleMassStorage() const {
+const Real& MonopoleGravityDriver::BlackHoleMassStorage() const {
   return pmy_mesh_->ruser_mesh_data[0](0);
 }
 
-Real& MonopoleGravity::BlackHoleSpinStorage() {
+Real& MonopoleGravityDriver::BlackHoleSpinStorage() {
   return pmy_mesh_->ruser_mesh_data[1](0);
 }
 
-const Real& MonopoleGravity::BlackHoleSpinStorage() const {
+const Real& MonopoleGravityDriver::BlackHoleSpinStorage() const {
   return pmy_mesh_->ruser_mesh_data[1](0);
 }
 
-Real MonopoleGravity::GetBlackHoleMass() const {
+Real MonopoleGravityDriver::GetBlackHoleMass() const {
   return BlackHoleMassStorage();
 }
-Real MonopoleGravity::GetBlackHoleSpin() const {
+Real MonopoleGravityDriver::GetBlackHoleSpin() const {
   return BlackHoleSpinStorage();
 }
 
-Real MonopoleGravity::BlackHoleMassAccretionRate() const {
+Real MonopoleGravityDriver::BlackHoleMassAccretionRate() const {
   
   Real mdot = 0.0;
   
@@ -236,7 +236,7 @@ Real MonopoleGravity::BlackHoleMassAccretionRate() const {
 }
 
 
-void MonopoleGravity::UpdateBlackHoleMass(int stage){
+void MonopoleGravityDriver::UpdateBlackHoleMass(int stage){
    
   mdot_bh_ = BlackHoleMassAccretionRate();
 
@@ -252,6 +252,6 @@ void MonopoleGravity::UpdateBlackHoleMass(int stage){
   BlackHoleMassStorage() = bh_mass_pending_;
 }
 
-Real MonopoleGravity::GetBlackHoleMassAccretionRate() const {
+Real MonopoleGravityDriver::GetBlackHoleMassAccretionRate() const {
   return mdot_bh_;
 }
