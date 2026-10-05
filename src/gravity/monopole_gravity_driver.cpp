@@ -551,8 +551,12 @@ Real MonopoleGravityDriver::SqrtMinusG(
        g11, g12, g13,
        g22, g23, g33);
   
-  return std::sqrt(-g00*g11*g22*g33);
-       
+  // Real detgamma = g11*(g22*g33);
+  // Real alpha_sq = -g00;
+  
+  
+  return std::sqrt(-g00*(g11*(g22*g33)));
+  //return std::sqrt(alpha_sq*detgamma);
 }
 
 AthenaArray<Real>& MonopoleGravityDriver::PsiFace1(MeshBlock *pmb) {
