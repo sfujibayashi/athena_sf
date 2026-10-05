@@ -208,7 +208,7 @@ namespace {
     // return pmb->pmetric->GetBlackHoleMass()/mass_to_length;
     // return pmb->pmy_mesh->pmetric_driver->GetBlackHoleMass()/mass_to_length;
     return pmb->pmy_mesh->pmetric_driver->GetBlackHoleMass()
-      / mass_to_length;;
+      / mass_to_length;
   }
   
   Real HistoryBlackHoleMassAccretionRate(MeshBlock *pmb, int iout) {
