@@ -31,7 +31,21 @@ public:
 	 const int il, const int iu,
 	 AthenaArray<Real> &g, 
 	 AthenaArray<Real> &g_inv) const = 0;
+
+  virtual void Face2Metric(
+         MeshBlock *pmb,
+	 const int k, const int j, 
+	 const int il, const int iu,
+	 AthenaArray<Real> &g, 
+	 AthenaArray<Real> &g_inv) const = 0;
   
+  virtual void Face3Metric(
+         MeshBlock *pmb,
+	 const int k, const int j, 
+	 const int il, const int iu,
+	 AthenaArray<Real> &g, 
+	 AthenaArray<Real> &g_inv) const = 0;
+
   virtual void ConstructCellCovariantMetric(
          MeshBlock *pmb,
 	 int k, int j, int i,

@@ -277,104 +277,22 @@ void Metric::Face1Metric(const int k, const int j, const int il, const int iu,
 
 void Metric::Face2Metric(const int k, const int j, const int il, const int iu,
                          AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {
-  // Extract geometric quantities that do not depend on r
-  Coordinates *pcoord = pmy_block->pcoord;
-  
+  pmy_block->pmy_mesh->pmetric_driver->Face2Metric(
+        pmy_block,
+	k,j,
+	il,iu,
+	g, g_inv);
 
-  const Real theta = pcoord->x2f(j);
-  const Real phi = pcoord->x3v(k);
-  const bool pole = pcoord->IsPole(j);
-  
-  // Go through 1D block of cells
-#pragma omp simd
-  for (int i=il; i<=iu; ++i) {
-
-    const Real r = pcoord->x1v(i);
-
-    Real g00, g01, g02, g03;
-    Real g11, g12, g13, g22, g23, g33;
-    
-    Real Psi = CellPsi(i);
-    Real dm = CellDeltaM(i);
-    
-    ConstructCovariantMetric(r, theta, phi, Psi, dm,
-        g00, g01, g02, g03,
-        g11, g12, g13, g22, g23, g33);
-
-    g(I00, i) = g00;
-    g(I01, i) = g01;
-    g(I02, i) = g02;
-    g(I03, i) = g03;
-    g(I11, i) = g11;
-    g(I12, i) = g12;
-    g(I13, i) = g13;
-    g(I22, i) = g22;
-    g(I23, i) = g23;
-    g(I33, i) = g33;
-  
-    if (!pole) {
-      InvertMetric(i, g, g_inv);
-    }else{
-      // Coordinate singularity at theta = 0 or pi.
-      // Current Schwarzschild + l=0 self-gravity metric is diagonal.
-      g_inv(I00,i) = 1.0/g00;
-      g_inv(I01,i) = 0.0;
-      g_inv(I02,i) = 0.0;
-      g_inv(I03,i) = 0.0;
-      
-      g_inv(I11,i) = 1.0/g11;
-      g_inv(I12,i) = 0.0;
-      g_inv(I13,i) = 0.0;
-      
-      g_inv(I22,i) = 1.0/g22;
-      g_inv(I23,i) = 0.0;
-      
-      // g^{phi phi} is singular in spherical coordinates at the pole.
-      g_inv(I33,i) = std::numeric_limits<Real>::infinity();
-    }
-  }
-  return;
 }
 
 void Metric::Face3Metric(const int k, const int j, const int il, const int iu,
                          AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {
-  // Extract geometric quantities that do not depend on r
-  Coordinates *pcoord = pmy_block->pcoord;
-  
-  const Real theta = pcoord->x2v(j);
-  const Real phi = pcoord->x3f(k);
-  
-  // Go through 1D block of cells
-#pragma omp simd
-  for (int i=il; i<=iu; ++i) {
+  pmy_block->pmy_mesh->pmetric_driver->Face3Metric(
+        pmy_block,
+	k,j,
+	il,iu,
+	g, g_inv);
 
-    const Real r = pcoord->x1v(i);
-
-    Real g00, g01, g02, g03;
-    Real g11, g12, g13, g22, g23, g33;
-    
-    Real Psi = CellPsi(i);
-    Real dm = CellDeltaM(i);
-    
-    ConstructCovariantMetric(r, theta, phi, Psi, dm, 
-        g00, g01, g02, g03,
-        g11, g12, g13, g22, g23, g33);
-
-    g(I00, i) = g00;
-    g(I01, i) = g01;
-    g(I02, i) = g02;
-    g(I03, i) = g03;
-    g(I11, i) = g11;
-    g(I12, i) = g12;
-    g(I13, i) = g13;
-    g(I22, i) = g22;
-    g(I23, i) = g23;
-    g(I33, i) = g33;
-    
-    InvertMetric(i, g, g_inv);
-
-  }
-  return;
 }
 
 Real Metric::SqrtMinusG(int k, int j, int i) const {

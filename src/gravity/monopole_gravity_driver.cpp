@@ -1,6 +1,7 @@
 
 // C++ headers
 #include <sstream>
+#include <limits>
 
 // Athena++ headers
 #include "../mesh/mesh.hpp"
@@ -332,13 +333,142 @@ void MonopoleGravityDriver::Face1Metric(
     g(I23, i) = g23;
     g(I33, i) = g33;
     
-    g_inv(I00, i) = 1.0/g00;
-    g_inv(I11, i) = 1.0/g11;
-    g_inv(I22, i) = 1.0/g22;
-    g_inv(I33, i) = 1.0/g33;
+    g_inv(I00,i) = 1.0/g00;
+    g_inv(I01,i) = 0.0;
+    g_inv(I02,i) = 0.0;
+    g_inv(I03,i) = 0.0;
+    g_inv(I11,i) = 1.0/g11;
+    g_inv(I12,i) = 0.0;
+    g_inv(I13,i) = 0.0;
+    g_inv(I22,i) = 1.0/g22;
+    g_inv(I23,i) = 0.0;
+    g_inv(I33,i) = 1.0/g33;
   }
   return;
 
+}
+
+void MonopoleGravityDriver::Face2Metric(
+         MeshBlock *pmb,
+	 const int k, const int j, 
+	 const int il, const int iu,
+	 AthenaArray<Real> &g, 
+	 AthenaArray<Real> &g_inv) const {
+
+  Coordinates *pcoord = pmb->pcoord;
+
+  const Real bh_mass = GetBlackHoleMass();
+  
+  const Real theta = pcoord->x2f(j);
+  const Real phi = pcoord->x3v(k);
+  const bool pole = pcoord->IsPole(j);
+  
+  // Go through 1D block of cells
+#pragma omp simd
+  for (int i=il; i<=iu; ++i) {
+
+    const Real r = pcoord->x1v(i);
+
+    Real g00, g01, g02, g03;
+    Real g11, g12, g13, g22, g23, g33;
+    
+    Real Psi = CellPsi(pmb, i);
+    Real dm = CellDeltaM(pmb, i);
+    
+    gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+    g(I00, i) = g00;
+    g(I01, i) = g01;
+    g(I02, i) = g02;
+    g(I03, i) = g03;
+    g(I11, i) = g11;
+    g(I12, i) = g12;
+    g(I13, i) = g13;
+    g(I22, i) = g22;
+    g(I23, i) = g23;
+    g(I33, i) = g33;
+
+    g_inv(I00,i) = 1.0/g00;
+    g_inv(I01,i) = 0.0;
+    g_inv(I02,i) = 0.0;
+    g_inv(I03,i) = 0.0;
+    
+    g_inv(I11,i) = 1.0/g11;
+    g_inv(I12,i) = 0.0;
+    g_inv(I13,i) = 0.0;
+    
+    g_inv(I22,i) = 1.0/g22;
+    g_inv(I23,i) = 0.0;
+
+    // Coordinate singularity at theta = 0 or pi.
+    // Current Schwarzschild + l=0 self-gravity metric is diagonal.
+    if (!pole) {
+      g_inv(I33,i) = 1.0/g33;
+    }else{
+      // g^{phi phi} is singular in spherical coordinates at the pole.
+      g_inv(I33,i) = std::numeric_limits<Real>::infinity();
+    }
+    
+  }
+}
+
+
+void MonopoleGravityDriver::Face3Metric(
+         MeshBlock *pmb,
+	 const int k, const int j, 
+	 const int il, const int iu,
+	 AthenaArray<Real> &g, 
+	 AthenaArray<Real> &g_inv) const {
+
+  // Extract geometric quantities that do not depend on r
+  Coordinates *pcoord = pmb->pcoord;
+  
+  const Real bh_mass = GetBlackHoleMass();
+
+  const Real theta = pcoord->x2v(j);
+  const Real phi = pcoord->x3f(k);
+  
+  // Go through 1D block of cells
+#pragma omp simd
+  for (int i=il; i<=iu; ++i) {
+
+    const Real r = pcoord->x1v(i);
+
+    Real g00, g01, g02, g03;
+    Real g11, g12, g13, g22, g23, g33;
+    
+    Real Psi = CellPsi(pmb, i);
+    Real dm = CellDeltaM(pmb, i);
+    
+    gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+    g(I00, i) = g00;
+    g(I01, i) = g01;
+    g(I02, i) = g02;
+    g(I03, i) = g03;
+    g(I11, i) = g11;
+    g(I12, i) = g12;
+    g(I13, i) = g13;
+    g(I22, i) = g22;
+    g(I23, i) = g23;
+    g(I33, i) = g33;
+
+    g_inv(I00,i) = 1.0/g00;
+    g_inv(I01,i) = 0.0;
+    g_inv(I02,i) = 0.0;
+    g_inv(I03,i) = 0.0;
+    g_inv(I11,i) = 1.0/g11;
+    g_inv(I12,i) = 0.0;
+    g_inv(I13,i) = 0.0;
+    g_inv(I22,i) = 1.0/g22;
+    g_inv(I23,i) = 0.0;
+    g_inv(I33,i) = 1.0/g33;
+
+  }
 }
 
 void MonopoleGravityDriver::ConstructCellCovariantMetric(
