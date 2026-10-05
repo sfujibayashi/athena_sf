@@ -460,6 +460,15 @@ class Mesh {
   void EnrollOrbitalVelocityDerivative(int i, OrbitalVelocityFunc my_func);
   void SetGravitationalConstant(Real g) { four_pi_G_=4.0*PI*g; }
   void SetFourPiG(Real fpg) { four_pi_G_=fpg; }
+
+
+  void LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test,
+				   IOWrapperSizeT *offset, 
+				   IOWrapperSizeT datasize, IOWrapperSizeT listsize, IOWrapperSizeT headeroffset, 
+				   IOWrapperSizeT headersize,
+				   int root_level,   RegionSize mesh_size,
+				   int remove_inner_blocks, int add_outer_blocks);
+
 };
 
 
