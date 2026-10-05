@@ -255,3 +255,61 @@ void MonopoleGravityDriver::UpdateBlackHoleMass(int stage){
 Real MonopoleGravityDriver::GetBlackHoleMassAccretionRate() const {
   return mdot_bh_;
 }
+
+void MonopoleGravityDriver::CellMetricRadialDerivatives(
+         MeshBlock *pmb,
+         const int k, const int j,
+	 const int il, const int iu,
+	 AthenaArray<Real> &d1_g00,
+	 AthenaArray<Real> &d1_g11) const{
+  
+  const auto &Psi_face1 = PsiFace1(pmb);
+  const auto &delta_m_face1 = DeltaMFace1(pmb);
+  const Real bh_mass = GetBlackHoleMass();
+  const Real theta = pmb->pcoord->x2v(j);
+  const Real phi = pmb->pcoord->x3v(k);
+
+  for (int i = il; i <= iu; ++i) {
+
+    const Real r = pmb->pcoord->x1v(i);
+    const Real Psi = CellPsi(pmb,i);
+    const Real delta_m = CellDeltaM(pmb,i);
+    const Real dxf = pmb->pcoord->x1f(i+1)-pmb->pcoord->x1f(i);
+    const Real d1_Psi = (Psi_face1(i+1) - Psi_face1(i))/dxf;
+    const Real d1_delta_m = (delta_m_face1(i+1) - delta_m_face1(i))/dxf;
+    
+    gravity_model_.MetricRadialDerivatives(
+       r, theta, phi, Psi, delta_m, bh_mass,
+       d1_Psi, d1_delta_m,
+       d1_g00(i), d1_g11(i));
+
+  }
+
+}  
+
+AthenaArray<Real>& MonopoleGravityDriver::PsiFace1(MeshBlock *pmb) {
+  return pmb->ruser_meshblock_data[0];
+}
+
+const AthenaArray<Real>& MonopoleGravityDriver::PsiFace1(MeshBlock *pmb) const {
+  return pmb->ruser_meshblock_data[0];
+}
+
+AthenaArray<Real>& MonopoleGravityDriver::DeltaMFace1(MeshBlock *pmb) {
+  return pmb->ruser_meshblock_data[1];
+}
+
+const AthenaArray<Real>& MonopoleGravityDriver::DeltaMFace1(MeshBlock *pmb) const {
+  return pmb->ruser_meshblock_data[1];
+}
+
+Real MonopoleGravityDriver::CellPsi(MeshBlock *pmb, int i) const {
+  const auto &psi = PsiFace1(pmb);
+  return 0.5*(psi(i) + psi(i+1));
+}
+
+Real MonopoleGravityDriver::CellDeltaM(MeshBlock *pmb, int i) const {
+  const auto &dm = DeltaMFace1(pmb);
+  return 0.5*(dm(i) + dm(i+1));
+}
+

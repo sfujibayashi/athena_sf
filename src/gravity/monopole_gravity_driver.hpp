@@ -40,6 +40,23 @@ public:
   Real GetBlackHoleSpin() const;
   Real GetBlackHoleMassAccretionRate() const override;
 
+  void CellMetricRadialDerivatives(
+         MeshBlock *pmb,
+         const int k, const int j,
+	 const int il, const int iu,
+	 AthenaArray<Real> &d1_g00,
+	 AthenaArray<Real> &d1_g11) const override;
+
+
+  AthenaArray<Real>& PsiFace1(MeshBlock *pmb);
+  const AthenaArray<Real>& PsiFace1(MeshBlock *pmb) const;
+  
+  AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb);
+  const AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb) const;
+
+  Real CellPsi(MeshBlock *pmb, int i) const;
+  Real CellDeltaM(MeshBlock *pmb, int i) const;
+
 private:
   Mesh *pmy_mesh_;
 
@@ -55,6 +72,7 @@ private:
   Real& BlackHoleSpinStorage();
   const Real& BlackHoleSpinStorage() const;
 
+  MonopoleGravity gravity_model_;
 };
 
 #endif // GRAVITY_MONOPOLE_GRAVITY_DRIVER_HPP_
