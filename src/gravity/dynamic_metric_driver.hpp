@@ -77,6 +77,8 @@ public:
   virtual Real GetEnclosedMassAtInnerBoundary(
         MeshBlock *pmb) const = 0;
 
+  virtual Real GetBlackHoleMass() const = 0;
+
   // virtual AthenaArray<Real>& PsiFace1(MeshBlock *pmb) = 0;
 
   // virtual const AthenaArray<Real>& PsiFace1(MeshBlock *pmb) const = 0;

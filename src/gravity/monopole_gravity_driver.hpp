@@ -38,7 +38,7 @@ public:
   Real BlackHoleMassAccretionRate() const;
   void UpdateBlackHoleMass(int stage);
 
-  Real GetBlackHoleMass() const;
+  Real GetBlackHoleMass() const override;
   Real GetBlackHoleSpin() const;
   Real GetBlackHoleMassAccretionRate() const override;
 
