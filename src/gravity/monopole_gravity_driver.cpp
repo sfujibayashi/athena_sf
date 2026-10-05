@@ -3,12 +3,14 @@
 #include <sstream>
 
 // Athena++ headers
-#include "monopole_gravity_driver.hpp"
 #include "../mesh/mesh.hpp"
 #include "../hydro/hydro.hpp"
 #include "../metric/metric.hpp"
 #include "../coordinates/coordinates.hpp"
 #include "../parameter_input.hpp"
+
+#include "monopole_gravity_driver.hpp"
+#include "dynamic_metric_driver.hpp"
 
 namespace{
 

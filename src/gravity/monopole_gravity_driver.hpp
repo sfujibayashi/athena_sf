@@ -15,7 +15,9 @@
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
+
 #include "dynamic_metric_driver.hpp"
+#include "monopole_gravity.hpp"
 
 class Mesh;
 class ParameterInput;

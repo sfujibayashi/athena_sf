@@ -5,7 +5,7 @@
 #include "../athena_arrays.hpp"
 #include "../coordinates/coordinates.hpp"
 #include "../gravity/monopole_gravity.hpp"
-#include "../gravity/dynamic_metric_driver.hpp"
+//#include "../gravity/dynamic_metric_driver.hpp"
 
 class MeshBlock;
 class ParameterInput;
@@ -14,7 +14,6 @@ class Metric {
 private:
   
   MonopoleGravity gravity_model_;
-  DynamicMetricDriver metric_driver_;
 
   void InvertSpatialMetric(Real g11, Real g12, Real g13,
                            Real g22, Real g23, Real g33,

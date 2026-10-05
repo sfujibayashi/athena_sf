@@ -2,7 +2,7 @@
 #define GRAVITY_DYNAMIC_METRIC_DRIVER_HPP_
 
 #include "../athena.hpp" // Real
-#include "monopole_gravity.hpp"
+#include "../athena_arrays.hpp"
 
 class Mesh;
 class ParameterInput;
@@ -22,7 +22,7 @@ public:
          const int k, const int j,
 	 const int il, const int iu,
 	 AthenaArray<Real> &d1_g00,
-	 AthenaArray<Real> &d1_g11) const;
+	 AthenaArray<Real> &d1_g11) const = 0;
   
 };
 

@@ -11,7 +11,7 @@
 
 #include "../hydro/hydro.hpp"
 
-//#include "../gravity/monopole_gravity.hpp"
+#include "../gravity/dynamic_metric_driver.hpp"
 
 Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
   : pmy_block(pmb) {
@@ -625,5 +625,6 @@ void Metric::CellMetricRadialDerivatives(const int k, const int j,
   //      d1_g00(i), d1_g11(i));
 
   // }
-  metric_driver_.CellMetricRadialDerivatives(pmy_block,k,j,il,iu, d1_g00, d1_g11);
+  pmy_block->pmy_mesh->pmetric_driver->CellMetricRadialDerivatives(
+        pmy_block,k,j,il,iu, d1_g00, d1_g11);
 }
