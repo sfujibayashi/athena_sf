@@ -65,17 +65,17 @@ public:
   Real Face2DensitizationFactor(int k, int j, int i) const;
   Real Face3DensitizationFactor(int k, int j, int i) const;
 
-  Real GetBlackHoleMass() const;
-  Real GetBlackHoleSpin() const;
+  // Real GetBlackHoleMass() const;
+  // Real GetBlackHoleSpin() const;
 
-  AthenaArray<Real>& PsiFace1();
-  const AthenaArray<Real>& PsiFace1() const;
+  // AthenaArray<Real>& PsiFace1();
+  // const AthenaArray<Real>& PsiFace1() const;
   
-  AthenaArray<Real>& DeltaMFace1();
-  const AthenaArray<Real>& DeltaMFace1() const;
+  // AthenaArray<Real>& DeltaMFace1();
+  // const AthenaArray<Real>& DeltaMFace1() const;
   
-  Real CellPsi(int i) const;
-  Real CellDeltaM(int i) const;
+  // Real CellPsi(int i) const;
+  // Real CellDeltaM(int i) const;
 
   void ConstructCovariantMetric(
     Real r, Real theta, Real phi, Real Psi, Real dm,

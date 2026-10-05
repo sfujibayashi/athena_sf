@@ -2850,7 +2850,8 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
       
       // Pick exactly one angular block.
       if (pmb->loc.lx1 == 0 && pmb->loc.lx2 == 0 && pmb->loc.lx3 == 0) {
-	removed_mass = pmb->pmetric->DeltaMFace1()(pmb->is);
+	// removed_mass = pmb->pmetric->DeltaMFace1()(pmb->is);
+	removed_mass = pmetric_driver->DeltaMFace1(pmb)(pmb->is);
       }
     }
     

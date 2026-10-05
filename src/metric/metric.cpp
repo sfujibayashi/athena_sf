@@ -68,31 +68,31 @@ Metric::~Metric() {
 // }
 
 
-AthenaArray<Real>& Metric::PsiFace1() {
-  return pmy_block->ruser_meshblock_data[0];
-}
+// AthenaArray<Real>& Metric::PsiFace1() {
+//   return pmy_block->ruser_meshblock_data[0];
+// }
 
-const AthenaArray<Real>& Metric::PsiFace1() const {
-  return pmy_block->ruser_meshblock_data[0];
-}
+// const AthenaArray<Real>& Metric::PsiFace1() const {
+//   return pmy_block->ruser_meshblock_data[0];
+// }
 
-AthenaArray<Real>& Metric::DeltaMFace1() {
-  return pmy_block->ruser_meshblock_data[1];
-}
+// AthenaArray<Real>& Metric::DeltaMFace1() {
+//   return pmy_block->ruser_meshblock_data[1];
+// }
 
-const AthenaArray<Real>& Metric::DeltaMFace1() const {
-  return pmy_block->ruser_meshblock_data[1];
-}
+// const AthenaArray<Real>& Metric::DeltaMFace1() const {
+//   return pmy_block->ruser_meshblock_data[1];
+// }
 
-Real Metric::CellPsi(int i) const {
-  const auto &psi = PsiFace1();
-  return 0.5*(psi(i) + psi(i+1));
-}
+// Real Metric::CellPsi(int i) const {
+//   const auto &psi = PsiFace1();
+//   return 0.5*(psi(i) + psi(i+1));
+// }
 
-Real Metric::CellDeltaM(int i) const {
-  const auto &dm = DeltaMFace1();
-  return 0.5*(dm(i) + dm(i+1));
-}
+// Real Metric::CellDeltaM(int i) const {
+//   const auto &dm = DeltaMFace1();
+//   return 0.5*(dm(i) + dm(i+1));
+// }
 
 
 // // delta_m_ and Psi_ are derived from fluid distribution.
@@ -369,12 +369,12 @@ Real Metric::Face3DensitizationFactor(int k, int j, int i) const {
   return pmy_block->pmy_mesh->pmetric_driver->Face3DensitizationFactor(pmy_block,k,j,i);
 }
 
-Real Metric::GetBlackHoleMass() const {
-  return pmy_block->pmy_mesh->ruser_mesh_data[0](0);
-}
-Real Metric::GetBlackHoleSpin() const {
-  return pmy_block->pmy_mesh->ruser_mesh_data[1](0);
-}
+// Real Metric::GetBlackHoleMass() const {
+//   return pmy_block->pmy_mesh->ruser_mesh_data[0](0);
+// }
+// Real Metric::GetBlackHoleSpin() const {
+//   return pmy_block->pmy_mesh->ruser_mesh_data[1](0);
+// }
 
 
 void Metric::InvertMetric(
@@ -455,19 +455,19 @@ void Metric::ConstructCellCovariantMetric(
   
 }
 
-void Metric::ConstructCovariantMetric(
-    Real r, Real theta, Real phi, Real Psi, Real dm,
-    Real &g00, Real &g01, Real &g02, Real &g03,
-    Real &g11, Real &g12, Real &g13,
-    Real &g22, Real &g23, Real &g33) const {
+// void Metric::ConstructCovariantMetric(
+//     Real r, Real theta, Real phi, Real Psi, Real dm,
+//     Real &g00, Real &g01, Real &g02, Real &g03,
+//     Real &g11, Real &g12, Real &g13,
+//     Real &g22, Real &g23, Real &g33) const {
 
-  const Real bh_mass = GetBlackHoleMass();
-  gravity_model_.ConstructCovariantMetric(
-	r, theta, phi, Psi, dm, bh_mass,
-	g00, g01, g02, g03,
-	g11, g12, g13,
-	g22, g23, g33);
-}
+//   const Real bh_mass = GetBlackHoleMass();
+//   gravity_model_.ConstructCovariantMetric(
+// 	r, theta, phi, Psi, dm, bh_mass,
+// 	g00, g01, g02, g03,
+// 	g11, g12, g13,
+// 	g22, g23, g33);
+// }
 
 void Metric::CellMetricRadialDerivatives(const int k, const int j,
 					 const int il, const int iu,

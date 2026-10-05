@@ -152,8 +152,8 @@ void MonopoleGravityDriver::Update(){
   for (int b=0; b<pmy_mesh_->nblocal; ++b) {
     MeshBlock *pmb = pmy_mesh_->my_blocks(b);
     
-    auto &dm  = pmb->pmetric->DeltaMFace1();
-    auto &Psi = pmb->pmetric->PsiFace1();
+    auto &dm  = DeltaMFace1(pmb);
+    auto &Psi = PsiFace1(pmb);
     
     for (int i=0; i<=pmb->ncells1; ++i) {
       int igf = pmb->loc.lx1 * pmb->block_size.nx1 + (i - pmb->is);
