@@ -49,6 +49,13 @@ public:
 	 AthenaArray<Real> &d1_g00,
 	 AthenaArray<Real> &d1_g11) const override;
 
+  void Face1Metric(
+         MeshBlock *pmb,
+	 const int k, const int j, 
+	 const int il, const int iu,
+	 AthenaArray<Real> &g, 
+	 AthenaArray<Real> &g_inv) const override;
+
   void ConstructCellCovariantMetric(
          MeshBlock *pmb,
 	 int k, int j, int i,

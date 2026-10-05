@@ -268,45 +268,11 @@ void Metric::CellMetric(const int k, const int j, const int il, const int iu,
 
 void Metric::Face1Metric(const int k, const int j, const int il, const int iu,
                                 AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {
-  // Extract geometric quantities that do not depend on r
-  Coordinates *pcoord = pmy_block->pcoord;
-
-  const auto &Psi_face1 = PsiFace1();
-  const auto &delta_m_face1 = DeltaMFace1();
-  
-  const Real theta = pcoord->x2v(j);
-  const Real phi = pcoord->x3v(k);
-  
-  // Go through 1D block of cells
-#pragma omp simd
-  for (int i=il; i<=iu; ++i) {
-
-    const Real r = pcoord->x1f(i);
-    
-    Real g00, g01, g02, g03;
-    Real g11, g12, g13, g22, g23, g33;
-
-    Real Psi = Psi_face1(i);
-    Real dm = delta_m_face1(i);
-
-    ConstructCovariantMetric(r, theta, phi, Psi, dm,
-        g00, g01, g02, g03,
-        g11, g12, g13, g22, g23, g33);
-
-    g(I00, i) = g00;
-    g(I01, i) = g01;
-    g(I02, i) = g02;
-    g(I03, i) = g03;
-    g(I11, i) = g11;
-    g(I12, i) = g12;
-    g(I13, i) = g13;
-    g(I22, i) = g22;
-    g(I23, i) = g23;
-    g(I33, i) = g33;
-    
-    InvertMetric(i, g, g_inv);
-  }
-  return;
+  pmy_block->pmy_mesh->pmetric_driver->Face1Metric(
+        pmy_block,
+	k,j,
+	il,iu,
+	g, g_inv);
 }
 
 void Metric::Face2Metric(const int k, const int j, const int il, const int iu,

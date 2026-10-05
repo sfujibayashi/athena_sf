@@ -288,6 +288,59 @@ void MonopoleGravityDriver::CellMetricRadialDerivatives(
   }
 }  
 
+void MonopoleGravityDriver::Face1Metric(
+         MeshBlock *pmb,
+	 const int k, const int j, 
+	 const int il, const int iu,
+	 AthenaArray<Real> &g, 
+	 AthenaArray<Real> &g_inv) const {
+    // Extract geometric quantities that do not depend on r
+  Coordinates *pcoord = pmb->pcoord;
+
+  const auto &Psi_face1 = PsiFace1(pmb);
+  const auto &delta_m_face1 = DeltaMFace1(pmb);
+  const Real bh_mass = GetBlackHoleMass();
+  
+  const Real theta = pcoord->x2v(j);
+  const Real phi = pcoord->x3v(k);
+  
+  g_inv.ZeroClear();
+  // Go through 1D block of cells
+#pragma omp simd
+  for (int i=il; i<=iu; ++i) {
+
+    const Real r = pcoord->x1f(i);
+    
+    Real g00, g01, g02, g03;
+    Real g11, g12, g13, g22, g23, g33;
+
+    Real Psi = Psi_face1(i);
+    Real dm = delta_m_face1(i);
+
+    gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+    g(I00, i) = g00;
+    g(I01, i) = g01;
+    g(I02, i) = g02;
+    g(I03, i) = g03;
+    g(I11, i) = g11;
+    g(I12, i) = g12;
+    g(I13, i) = g13;
+    g(I22, i) = g22;
+    g(I23, i) = g23;
+    g(I33, i) = g33;
+    
+    g_inv(I00, i) = 1.0/g00;
+    g_inv(I11, i) = 1.0/g11;
+    g_inv(I22, i) = 1.0/g22;
+    g_inv(I33, i) = 1.0/g33;
+  }
+  return;
+
+}
+
 void MonopoleGravityDriver::ConstructCellCovariantMetric(
          MeshBlock *pmb,
 	 int k, int j, int i,
