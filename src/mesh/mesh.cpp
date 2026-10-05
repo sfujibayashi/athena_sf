@@ -699,10 +699,9 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     poutflow(nullptr),
     restart_(true)
 {
+
+
   std::stringstream msg;
-  BoundaryFlag block_bcs[6];
-  IOWrapperSizeT *offset{};
-  IOWrapperSizeT datasize, listsize, headeroffset;
 
   // mesh test
   if (mesh_test > 0) Globals::nranks = mesh_test;
@@ -712,6 +711,36 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   next_phys_id_  = 1;
   ReserveMeshBlockPhysIDs();
 #endif
+
+  const int remove_inner_blocks =
+    pin->GetOrAddInteger("restart_mesh", "remove_inner_blocks", 0);
+  
+  const int add_outer_blocks =
+    pin->GetOrAddInteger("restart_mesh", "add_outer_blocks", 0);
+  
+  if (remove_inner_blocks<0 or add_outer_blocks<0) {
+    msg << "### FATAL ERROR in mesh.cpp Mesh restart constructor" << std::endl
+	<< "remove_inner_blocks and add_outer_blocks should be >=0." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  
+  bool modify_blocks = (remove_inner_blocks!=0 or add_outer_blocks!=0);
+  
+  // Modified path path to add/remove MeshBlocks
+  if(modify_blocks){
+    LoadRestartWithModifiedMesh(pin, resfile, mesh_test, 
+				remove_inner_blocks, add_outer_blocks);
+
+    pin->SetInteger("restart_mesh", "remove_inner_blocks", 0);
+    pin->SetInteger("restart_mesh", "add_outer_blocks", 0);
+
+    return;
+  }
+
+  // Original path for mesh restart constructor
+  BoundaryFlag block_bcs[6];
+  IOWrapperSizeT *offset{};
+  IOWrapperSizeT datasize, listsize, headeroffset;
 
   // check the number of OpenMP threads for mesh
   if (num_mesh_threads_ < 1) {
@@ -757,584 +786,6 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   hdos += sizeof(IOWrapperSizeT);   // (this updated value is never used)
 
   delete [] headerdata;
-  
-  const int remove_inner_blocks =
-    pin->GetOrAddInteger("restart_mesh", "remove_inner_blocks", 0);
-  
-  const int add_outer_blocks =
-    pin->GetOrAddInteger("restart_mesh", "add_outer_blocks", 0);
-  
-  if (remove_inner_blocks<0 or add_outer_blocks<0) {
-    msg << "### FATAL ERROR in mesh.cpp Mesh restart constructor" << std::endl
-	<< "remove_inner_blocks and add_outer_blocks should be >=0." << std::endl;
-    ATHENA_ERROR(msg);
-  }
-  
-  bool modify_blocks = (remove_inner_blocks!=0 or add_outer_blocks!=0);
-
-  // Modified path path to add/remove MeshBlocks
-  if(modify_blocks){
-    LoadRestartWithModifiedMesh(pin, resfile, mesh_test, 
-				offset,
-				datasize, listsize, headeroffset,
-				headersize,
-				root_level, mesh_size,
-				remove_inner_blocks, add_outer_blocks);
-//     const int old_nbtotal = nbtotal;
-//     const int old_root_level = root_level;
-//     const RegionSize old_mesh_size = mesh_size;
-  
-//     if (Globals::my_rank == 0) {
-//       std::cout << "restart mesh modification:"
-// 		<< " remove_inner_blocks=" << remove_inner_blocks
-// 		<< " add_outer_blocks=" << add_outer_blocks
-// 		<< std::endl;
-      
-//       std::cout << "old restart mesh:"
-// 		<< " nbtotal=" << old_nbtotal
-// 		<< " root_level=" << old_root_level
-// 		<< " nx1=" << old_mesh_size.nx1
-// 		<< " x1min=" << old_mesh_size.x1min
-// 		<< " x1max=" << old_mesh_size.x1max
-// 		<< std::endl;
-//     }
-
-//     LogicalLocation *old_loclist = new LogicalLocation[old_nbtotal];
-//     offset = new IOWrapperSizeT[old_nbtotal];
-//     double *old_costlist = new double[old_nbtotal];
-//     nslist = new int[Globals::nranks];
-//     nblist = new int[Globals::nranks];
-
-//     block_size.nx1 = pin->GetOrAddInteger("meshblock", "nx1", mesh_size.nx1);
-//     block_size.nx2 = pin->GetOrAddInteger("meshblock", "nx2", mesh_size.nx2);
-//     block_size.nx3 = pin->GetOrAddInteger("meshblock", "nx3", mesh_size.nx3);
-
-//     // calculate the number of the blocks
-//     nrbx1 = mesh_size.nx1/block_size.nx1;
-//     nrbx2 = mesh_size.nx2/block_size.nx2;
-//     nrbx3 = mesh_size.nx3/block_size.nx3;
-
-//     const int old_nrbx1 = old_mesh_size.nx1 / block_size.nx1;
-  
-//     if (Globals::my_rank == 0) {
-//       std::cout << "old_nrbx1=" << old_nrbx1
-// 		<< " block_nx1=" << block_size.nx1
-// 		<< std::endl;
-//     }
-  
-//     const Real q = std::pow(old_mesh_size.x1max/old_mesh_size.x1min,
-// 			    1.0/static_cast<Real>(old_mesh_size.nx1));
-
-//     const int nremove_cells = remove_inner_blocks * block_size.nx1;
-
-//     const int nadd_cells = add_outer_blocks * block_size.nx1;
-
-//     mesh_size = old_mesh_size;
-//     mesh_size.x1min = old_mesh_size.x1min * std::pow(q, nremove_cells);
-//     mesh_size.x1max = old_mesh_size.x1max * std::pow(q, nadd_cells);
-
-//     mesh_size.nx1 = old_mesh_size.nx1 - nremove_cells + nadd_cells;
-
-//     if (Globals::my_rank == 0) {
-//       std::cout << "new mesh:"
-// 		<< " nx1=" << mesh_size.nx1
-// 		<< " x1min=" << mesh_size.x1min
-// 		<< " x1max=" << mesh_size.x1max
-// 		<< " q=" << q
-// 		<< std::endl;
-//     }
-
-//     nrbx1 = mesh_size.nx1 / block_size.nx1;
-  
-//     std::int64_t nbmax = nrbx1;
-//     nbmax = std::max(nbmax, static_cast<std::int64_t>(nrbx2));
-//     nbmax = std::max(nbmax, static_cast<std::int64_t>(nrbx3));
-  
-//     root_level = 0;
-//     while ((1LL << root_level) < nbmax) {
-//       ++root_level;
-//     }
-  
-//     current_level = root_level;
-
-//     if (Globals::my_rank == 0) {
-//       std::cout << "new root grid:"
-// 		<< " nrbx1=" << nrbx1
-// 		<< " nrbx2=" << nrbx2
-// 		<< " nrbx3=" << nrbx3
-// 		<< " root_level=" << root_level
-// 		<< std::endl;
-//     }
-  
-//     // initialize user-enrollable functions
-//     if (mesh_size.x1rat != 1.0) {
-//       use_uniform_meshgen_fn_[X1DIR] = false;
-//       MeshGenerator_[X1DIR] = DefaultMeshGeneratorX1;
-//     }
-//     if (mesh_size.x2rat != 1.0) {
-//       use_uniform_meshgen_fn_[X2DIR] = false;
-//       MeshGenerator_[X2DIR] = DefaultMeshGeneratorX2;
-//     }
-//     if (mesh_size.x3rat != 1.0) {
-//       use_uniform_meshgen_fn_[X3DIR] = false;
-//       MeshGenerator_[X3DIR] = DefaultMeshGeneratorX3;
-//     }
-
-//     // Load balancing flag and parameters
-// #ifdef MPI_PARALLEL
-//     if (pin->GetOrAddString("loadbalancing", "balancer", "default") == "automatic")
-//       lb_automatic_ = true;
-//     else if (pin->GetOrAddString("loadbalancing", "balancer", "default") == "manual")
-//       lb_manual_ = true;
-//     lb_tolerance_ = pin->GetOrAddReal("loadbalancing", "tolerance", 0.5);
-//     lb_interval_ = pin->GetOrAddReal("loadbalancing", "interval", 10);
-// #endif
-
-//     // SMR / AMR
-//     if (adaptive) {
-//       max_level = pin->GetOrAddInteger("mesh", "numlevel", 1) + root_level - 1;
-//       if (max_level > 63) {
-// 	msg << "### FATAL ERROR in Mesh constructor" << std::endl
-// 	    << "The number of the refinement level must be smaller than "
-// 	    << 63 - root_level + 1 << "." << std::endl;
-// 	ATHENA_ERROR(msg);
-//       }
-//     } else {
-//       max_level = 63;
-//     }
-
-//     // initialize units
-//     punit = new Units(pin);
-
-//     if (EOS_TABLE_ENABLED) peos_table = new EosTable(pin);
-//     InitUserMeshData(pin);
-
-//     // read user Mesh data
-//     IOWrapperSizeT udsize = 0;
-//     for (int n=0; n<nint_user_mesh_data_; n++)
-//       udsize += iuser_mesh_data[n].GetSizeInBytes();
-//     for (int n=0; n<nreal_user_mesh_data_; n++)
-//       udsize += ruser_mesh_data[n].GetSizeInBytes();
-//     if (udsize != 0) {
-//       char *userdata = new char[udsize];
-//       if (Globals::my_rank == 0) { // only the master process reads the ID list
-// 	if (resfile.Read(userdata, 1, udsize) != udsize) {
-// 	  msg << "### FATAL ERROR in Mesh constructor" << std::endl
-// 	      << "The restart file is broken." << std::endl;
-// 	  ATHENA_ERROR(msg);
-// 	}
-//       }
-// #ifdef MPI_PARALLEL
-//       // then broadcast the ID list
-//       MPI_Bcast(userdata, udsize, MPI_BYTE, 0, MPI_COMM_WORLD);
-// #endif
-
-//       IOWrapperSizeT udoffset=0;
-//       for (int n=0; n<nint_user_mesh_data_; n++) {
-// 	std::memcpy(iuser_mesh_data[n].data(), &(userdata[udoffset]),
-// 		    iuser_mesh_data[n].GetSizeInBytes());
-// 	udoffset += iuser_mesh_data[n].GetSizeInBytes();
-//       }
-//       for (int n=0; n<nreal_user_mesh_data_; n++) {
-// 	std::memcpy(ruser_mesh_data[n].data(), &(userdata[udoffset]),
-// 		    ruser_mesh_data[n].GetSizeInBytes());
-// 	udoffset += ruser_mesh_data[n].GetSizeInBytes();
-//       }
-//       delete [] userdata;
-//     }
-
-//     // read the ID list
-//     listsize = sizeof(LogicalLocation)+sizeof(Real);
-
-//     char *idlist = new char[listsize*old_nbtotal];
-//     if (Globals::my_rank == 0) { // only the master process reads the ID list
-//       if (resfile.Read(idlist, listsize, old_nbtotal) != static_cast<unsigned int>(old_nbtotal)) {
-// 	msg << "### FATAL ERROR in Mesh constructor" << std::endl
-// 	    << "The restart file is broken." << std::endl;
-// 	ATHENA_ERROR(msg);
-//       }
-//     }
-
-
-// #ifdef MPI_PARALLEL
-//     // then broadcast the ID list
-//     // MPI_Bcast(idlist, listsize*nbtotal, MPI_BYTE, 0, MPI_COMM_WORLD);
-//     MPI_Bcast(idlist, listsize*old_nbtotal, MPI_BYTE, 0, MPI_COMM_WORLD);
-// #endif
-
-//     int os = 0;
-//     for (int i=0; i<old_nbtotal; i++) {
-//       std::memcpy(&(old_loclist[i]), &(idlist[os]), sizeof(LogicalLocation));
-//       os += sizeof(LogicalLocation);
-//       std::memcpy(&(old_costlist[i]), &(idlist[os]), sizeof(double));
-//       os += sizeof(double);
-//       if (old_loclist[i].level > current_level) current_level = old_loclist[i].level;
-//     }
-//     delete [] idlist;
-
-//     if (Globals::my_rank == 0) {
-//       for (int i=0; i<old_nbtotal; ++i) {
-// 	std::cout
-// 	  << "old gid=" << i
-// 	  << " level=" << old_loclist[i].level
-// 	  << " lx1=" << old_loclist[i].lx1
-// 	  << " lx2=" << old_loclist[i].lx2
-// 	  << " lx3=" << old_loclist[i].lx3
-// 	  << std::endl;
-//       }
-//     }
-
-  
-//     if (!adaptive) max_level = current_level;
-
-//     // calculate the header offset and seek
-//     headeroffset += headersize + udsize + listsize*old_nbtotal;
-//     if (Globals::my_rank != 0)
-//       resfile.Seek(headeroffset);
-
-//     // // rebuild the Block Tree
-//     // tree.CreateRootGrid();
-//     // for (int i=0; i<nbtotal; i++)
-//     //   tree.AddMeshBlockWithoutRefine(loclist[i]);
-//     int nnb;
-//     // // check the tree structure, and assign GID
-//     // tree.GetMeshBlockList(loclist, nullptr, nnb);
-
-//     // build the NEW root grid
-//     tree.CreateRootGrid();
-
-//     tree.CountMeshBlock(nbtotal);
-
-//     loclist = new LogicalLocation[nbtotal];
-//     tree.GetMeshBlockList(loclist, nullptr, nbtotal);
-//     if (Globals::my_rank == 0) {
-//       std::cout << "new nbtotal=" << nbtotal << std::endl;
-    
-//       for (int i=0; i<nbtotal; ++i) {
-// 	std::cout
-// 	  << "new gid=" << i
-// 	  << " level=" << loclist[i].level
-// 	  << " lx1=" << loclist[i].lx1
-// 	  << " lx2=" << loclist[i].lx2
-// 	  << " lx3=" << loclist[i].lx3
-// 	  << std::endl;
-//       }
-//     }
-
-// #ifdef MPI_PARALLEL
-//     if (nbtotal < Globals::nranks) {
-//       if (mesh_test == 0) {
-// 	msg << "### FATAL ERROR in Mesh constructor" << std::endl
-// 	    << "Too few mesh blocks: nbtotal ("<< nbtotal <<") < nranks ("
-// 	    << Globals::nranks << ")" << std::endl;
-// 	ATHENA_ERROR(msg);
-//       } else { // test
-// 	std::cout << "### Warning in Mesh constructor" << std::endl
-// 		  << "Too few mesh blocks: nbtotal ("<< nbtotal <<") < nranks ("
-// 		  << Globals::nranks << ")" << std::endl;
-// 	delete [] offset;
-// 	return;
-//       }
-//     }
-// #endif
-
-//     int *old_gid_for_new_gid = new int[nbtotal];
-
-//     costlist = new double[nbtotal];
-//     ranklist = new int[nbtotal];
-  
-//     for (int i=0; i<nbtotal; ++i) {
-//       old_gid_for_new_gid[i] = -1;
-
-//       const std::int64_t old_lx1 =
-// 	loclist[i].lx1 + remove_inner_blocks;
-
-//       for (int j=0; j<old_nbtotal; ++j) {
-// 	if (old_loclist[j].lx1 == old_lx1 &&
-// 	    old_loclist[j].lx2 == loclist[i].lx2 &&
-// 	    old_loclist[j].lx3 == loclist[i].lx3) {
-	
-// 	  old_gid_for_new_gid[i] = j;
-// 	  break;
-// 	}
-//       }
-    
-//       const int old_gid = old_gid_for_new_gid[i];
-    
-//       if (old_gid >= 0) {
-// 	costlist[i] = old_costlist[old_gid];
-//       } else {
-// 	costlist[i] = 1.0;
-//       }
-//     }
-  
-//     if (Globals::my_rank == 0) {
-//       for (int i=0; i<nbtotal; ++i) {
-// 	std::cout << "new gid=" << i
-// 		  << " (" << loclist[i].lx1
-// 		  << "," << loclist[i].lx2
-// 		  << "," << loclist[i].lx3 << ")"
-// 		  << " -> old gid="
-// 		  << old_gid_for_new_gid[i]
-// 		  << std::endl;
-//       }
-//     }
-
-
-//     if (adaptive) { // allocate arrays for AMR
-//       nref = new int[Globals::nranks];
-//       nderef = new int[Globals::nranks];
-//       rdisp = new int[Globals::nranks];
-//       ddisp = new int[Globals::nranks];
-//       bnref = new int[Globals::nranks];
-//       bnderef = new int[Globals::nranks];
-//       brdisp = new int[Globals::nranks];
-//       bddisp = new int[Globals::nranks];
-//       int nlevel = pin->GetOrAddInteger("mesh", "numlevel", 1);
-//       locmap_ = new std::unordered_map<LogicalLocation, int,
-// 				       LogicalLocationHash>[nlevel - 1];
-//     }
-
-//     CalculateLoadBalance(costlist, ranklist, nslist, nblist, nbtotal);
-
-//     // Output MeshBlock list and quit (mesh test only); do not create meshes
-//     if (mesh_test > 0) {
-//       if (Globals::my_rank == 0) OutputMeshStructure(ndim);
-//       delete [] offset;
-//       return;
-//     }
-
-//     if (SELF_GRAVITY_ENABLED == 1) {
-//       pfgrd = new FFTGravityDriver(this, pin);
-//     } else if (SELF_GRAVITY_ENABLED == 2) {
-//       // MGDriver must be initialzied before MeshBlocks
-//       pmgrd = new MGGravityDriver(this, pin);
-//     }
-
-//     if (CRDIFFUSION_ENABLED)
-//       pmcrd = new MGCRDiffusionDriver(this, pin);
-
-//     if (IM_RADIATION_ENABLED) {
-//       pimrad = new IMRadiation(this, pin);
-//     }
-
-
-//     // allocate data buffer
-//     int nbmin = nblist[0];
-//     for (int n = 1; n < Globals::nranks; ++n) {
-//       if (nbmin > nblist[n])
-// 	nbmin = nblist[n];
-//     }
-//     nblocal = nblist[Globals::my_rank];
-//     gids_ = nslist[Globals::my_rank];
-//     gide_ = gids_ + nblocal - 1;
-//     char *mbdata = new char[datasize];
-//     my_blocks.NewAthenaArray(nblocal);
-
-//     // read restart data for new block configuration
-//     for (int i=gids_; i<=gide_; i++) {
-//       const int old_gid = old_gid_for_new_gid[i];
-    
-//       SetBlockSizeAndBoundaries(loclist[i], block_size, block_bcs);
-
-//       if (old_gid >= 0) {
-// 	// existing block: read from restart file
-// 	if (resfile.Read_at(mbdata, datasize, 1, headeroffset + old_gid*datasize) != 1) {
-// 	  msg << "### FATAL ERROR in Mesh constructor" << std::endl
-// 	      << "Failed to read old MeshBlock data." << std::endl;
-// 	  ATHENA_ERROR(msg);
-// 	}
-
-// 	my_blocks(i-gids_) = new MeshBlock(i, i-gids_, this, pin, loclist[i], block_size,
-// 					   block_bcs, costlist[i], mbdata);
-
-//       } else {
-// 	// newly added outer block
-// 	my_blocks(i-gids_) = new MeshBlock(i, i-gids_, loclist[i], block_size,
-// 					   block_bcs, this, pin);
-// 	// initialize with atmosphere
-// 	my_blocks(i-gids_)->InitializeAtmosphere(pin);
-//       }
-
-//       my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
-//     }
-
-//     if (Globals::my_rank == 0) {
-//       std::cout << "old bh_mass = "
-// 		<< ruser_mesh_data[0](0)
-// 		<< std::endl;
-//     }
-  
-//     // reconstruct delta_m and Psi
-//     // MeshBlocks have already been reconstructed.
-//     Real removed_mass = 0.0;
-  
-//     if (remove_inner_blocks > 0) {
-//       for (int b=0; b<nblocal; ++b) {
-// 	MeshBlock *pmb = my_blocks(b);
-      
-// 	// Pick exactly one angular block.
-// 	if (pmb->loc.lx1 == 0 && pmb->loc.lx2 == 0 && pmb->loc.lx3 == 0) {
-// 	  removed_mass = pmb->pmetric->DeltaMFace1()(pmb->is);
-// 	}
-//       }
-    
-// #ifdef MPI_PARALLEL
-//       MPI_Allreduce(MPI_IN_PLACE, &removed_mass, 1,
-// 		    MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
-// #endif
-    
-//       if (Globals::my_rank == 0) {
-// 	std::cout << "removed mass =" << removed_mass << std::endl;
-
-// 	const Real mass_to_length =
-// 	  punit->grav_const_code
-// 	  / SQR(punit->speed_of_light_code);
-// 	const Real removed_mass_code =
-// 	  removed_mass / mass_to_length;
-
-// 	std::cout << "removed mass (Msun) = "
-// 		  << removed_mass_code / punit->solar_mass_code
-// 		  << std::endl;
-//       }
-    
-//       ruser_mesh_data[0](0) += removed_mass;
-//     }
-  
-// #if DYNAMIC_METRIC_ENABLED
-//     pmonograv = new MonopoleGravity(this, pin);
-  
-//     pmonograv->Update();
-    
-    
-//     for (int b=0; b<nblocal; ++b) {
-//       MeshBlock *pmb = my_blocks(b);
-      
-//       AthenaArray<Real> bb;
-//       bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
-//       bb.ZeroClear();
-      
-//       pmb->peos->PrimitiveToConserved(
-// 				      pmb->phydro->w,
-// 				      bb,
-// 				      pmb->phydro->u,
-// 				      pmb->pcoord,
-// 				      pmb->is, pmb->ie,
-// 				      pmb->js, pmb->je,
-// 				      pmb->ks, pmb->ke);
-//     }
-// #endif
-  
-//     if (Globals::my_rank == 0) {
-//       std::cout << "new bh_mass = "
-// 		<< ruser_mesh_data[0](0)
-// 		<< std::endl;
-//     }
-
-//     for (int b=0; b<nblocal; ++b) {
-//       MeshBlock *pmb = my_blocks(b);
-
-//       if (pmb->loc.lx1 == 0 &&
-// 	  pmb->loc.lx2 == 0 &&
-// 	  pmb->loc.lx3 == 0) {
-
-// 	std::cout << "new inner delta_m = "
-// 		  << pmb->pmetric->DeltaMFace1()(pmb->is)
-// 		  << std::endl;
-//       }
-//     }
-
-//     for (int b=0; b<nblocal; ++b) {
-//       MeshBlock *pmb = my_blocks(b);
-
-//       if (pmb->loc.lx1 == nrbx1 - 1 &&
-// 	  pmb->loc.lx2 == 0 &&
-// 	  pmb->loc.lx3 == 0) {
-
-// 	std::cout << "new outermost Psi = "
-// 		  << pmb->pmetric->PsiFace1()(pmb->ie+1)
-// 		  << std::endl;
-//       }
-//     }
-
-//     delete [] mbdata;
-//     // check consistency
-//     if ( (NR_RADIATION_ENABLED || IM_RADIATION_ENABLED) &&
-// 	 my_blocks(0)->pnrrad->restart_from_gray > 0) {
-//       if (datasize != my_blocks(0)->GetBlockSizeInBytesGray()) {
-//         msg << "### FATAL ERROR in Mesh constructor" << std::endl
-//             << "The restart file is broken or input parameters are inconsistent."
-//             << std::endl;
-//         ATHENA_ERROR(msg);
-//       }
-//     } else {
-//       if (datasize != my_blocks(0)->GetBlockSizeInBytes()) {
-//         msg << "### FATAL ERROR in Mesh constructor" << std::endl
-//             << "The restart file is broken or input parameters are inconsistent."
-//             << std::endl;
-//         ATHENA_ERROR(msg);
-//       }
-//     }
-
-//     ResetLoadBalanceVariables();
-
-//     // clean up
-//     delete [] offset;
-
-//     if (turb_flag > 0) // TurbulenceDriver depends on the MeshBlock ctor
-//       ptrbd = new TurbulenceDriver(this, pin);
-
-// #ifdef MPI_PARALLEL
-//     if (adaptive) {
-//       const int bnx1 = block_size.nx1;
-//       const int bnx2 = block_size.nx2;
-//       const int bnx3 = block_size.nx3;
-
-//       // use the first MeshBlock in the linked list of blocks belonging to this MPI rank as
-//       // a representative of all MeshBlocks for counting the "load-balancing registered" and
-//       // "SMR/AMR-enrolled" quantities (loop over MeshBlock::vars_cc_, not MeshRefinement)
-
-//       //! \todo (felker):
-//       //! * add explicit check to ensure that elements of pb->vars_cc/fc_ and
-//       //!   pb->pmr->pvars_cc/fc_ v point to the same objects, if adaptive
-
-//       // int num_cc = my_blocks(0)->pmr->pvars_cc_.size();
-//       int num_fc = my_blocks(0)->vars_fc_.size();
-//       int nx4_tot = 0;
-//       for (AthenaArray<Real> &var_cc : my_blocks(0)->vars_cc_) {
-// 	nx4_tot += var_cc.GetDim4();
-//       }
-//       // radiation variables are not included in vars_cc as they need different order
-//       if ((NR_RADIATION_ENABLED|| IM_RADIATION_ENABLED)) {
-// 	nx4_tot += my_blocks(0)->pnrrad->ir.GetDim1();
-//       }
-
-//       // cell-centered quantities enrolled in SMR/AMR
-//       bssame = bnx1*bnx2*bnx3*nx4_tot;
-//       bsf2c = (bnx1/2)*((bnx2 + 1)/2)*((bnx3 + 1)/2)*nx4_tot;
-//       bsc2f = (bnx1/2 + 2)*((bnx2 + 1)/2 + 2*f2)*((bnx3 + 1)/2 + 2*f3)*nx4_tot;
-//       // face-centered quantities enrolled in SMR/AMR
-//       bssame += num_fc*((bnx1 + 1)*bnx2*bnx3 + bnx1*(bnx2 + f2)*bnx3
-// 			+ bnx1*bnx2*(bnx3 + f3));
-//       bsf2c += num_fc*(((bnx1/2) + 1)*((bnx2 + 1)/2)*((bnx3 + 1)/2)
-// 		       + (bnx1/2)*(((bnx2 + 1)/2) + f2)*((bnx3 + 1)/2)
-// 		       + (bnx1/2)*((bnx2 + 1)/2)*(((bnx3 + 1)/2) + f3));
-//       bsc2f += num_fc*(((bnx1/2) + 1 + 2)*((bnx2 + 1)/2 + 2*f2)*((bnx3 + 1)/2 + 2*f3)
-// 		       + (bnx1/2 + 2)*(((bnx2 + 1)/2) + f2 + 2*f2)*((bnx3 + 1)/2 + 2*f3)
-// 		       + (bnx1/2 + 2)*((bnx2 + 1)/2 + 2*f2)*(((bnx3 + 1)/2) + f3 + 2*f3));
-//       // add one more element to buffer size for storing the derefinement counter
-//       bssame++;
-//     }
-// #endif
-
-    pin->SetInteger("restart_mesh", "remove_inner_blocks", 0);
-    pin->SetInteger("restart_mesh", "add_outer_blocks", 0);
-
-
-    return;
-  }
-
-  // Original path for mesh restart constructor
 
   // initialize
   loclist = new LogicalLocation[nbtotal];
@@ -2982,14 +2433,58 @@ void Mesh::OutputCycleDiagnostics() {
 
 
 void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test,
-				       IOWrapperSizeT *offset, 
-				       IOWrapperSizeT datasize, IOWrapperSizeT listsize, IOWrapperSizeT headeroffset, 
-				       IOWrapperSizeT headersize,
-				       int root_level,   RegionSize mesh_size,
 				       int remove_inner_blocks, int add_outer_blocks){
   std::stringstream msg;
   BoundaryFlag block_bcs[6];
+  IOWrapperSizeT *offset{};
+  IOWrapperSizeT datasize, listsize, headeroffset;
   
+
+  // check the number of OpenMP threads for mesh
+  if (num_mesh_threads_ < 1) {
+    msg << "### FATAL ERROR in Mesh constructor" << std::endl
+        << "Number of OpenMP threads must be >= 1, but num_threads="
+        << num_mesh_threads_ << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  // get the end of the header
+  headeroffset = resfile.GetPosition();
+  // read the restart file
+  // the file is already open and the pointer is set to after <par_end>
+  IOWrapperSizeT headersize = sizeof(int)*3+sizeof(Real)*2
+                              + sizeof(RegionSize)+sizeof(IOWrapperSizeT);
+  char *headerdata = new char[headersize];
+  if (Globals::my_rank == 0) { // the master process reads the header data
+    if (resfile.Read(headerdata, 1, headersize) != headersize) {
+      msg << "### FATAL ERROR in Mesh constructor" << std::endl
+          << "The restart file is broken." << std::endl;
+      ATHENA_ERROR(msg);
+    }
+  }
+#ifdef MPI_PARALLEL
+  // then broadcast the header data
+  MPI_Bcast(headerdata, headersize, MPI_BYTE, 0, MPI_COMM_WORLD);
+#endif
+  IOWrapperSizeT hdos = 0;
+  std::memcpy(&nbtotal, &(headerdata[hdos]), sizeof(int));
+  hdos += sizeof(int);
+  std::memcpy(&root_level, &(headerdata[hdos]), sizeof(int));
+  hdos += sizeof(int);
+  current_level = root_level;
+  std::memcpy(&mesh_size, &(headerdata[hdos]), sizeof(RegionSize));
+  hdos += sizeof(RegionSize);
+  std::memcpy(&time, &(headerdata[hdos]), sizeof(Real));
+  hdos += sizeof(Real);
+  std::memcpy(&dt, &(headerdata[hdos]), sizeof(Real));
+  hdos += sizeof(Real);
+  std::memcpy(&ncycle, &(headerdata[hdos]), sizeof(int));
+  hdos += sizeof(int);
+  std::memcpy(&datasize, &(headerdata[hdos]), sizeof(IOWrapperSizeT));
+  hdos += sizeof(IOWrapperSizeT);   // (this updated value is never used)
+
+  delete [] headerdata;
+
   const int old_nbtotal = nbtotal;
   const int old_root_level = root_level;
   const RegionSize old_mesh_size = mesh_size;

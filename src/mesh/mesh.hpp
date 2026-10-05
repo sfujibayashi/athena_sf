@@ -463,10 +463,6 @@ class Mesh {
 
 
   void LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test,
-				   IOWrapperSizeT *offset, 
-				   IOWrapperSizeT datasize, IOWrapperSizeT listsize, IOWrapperSizeT headeroffset, 
-				   IOWrapperSizeT headersize,
-				   int root_level,   RegionSize mesh_size,
 				   int remove_inner_blocks, int add_outer_blocks);
 
 };
