@@ -305,7 +305,6 @@ void MonopoleGravityDriver::Face1Metric(
   const Real theta = pcoord->x2v(j);
   const Real phi = pcoord->x3v(k);
   
-  g_inv.ZeroClear();
   // Go through 1D block of cells
 #pragma omp simd
   for (int i=il; i<=iu; ++i) {
