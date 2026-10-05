@@ -61,8 +61,8 @@
 #include "mesh_refinement.hpp"
 #include "meshblock_tree.hpp"
 
-#include "../gravity/monopole_gravity.hpp"
 #include "../inputs/outflow_boundary_data.hpp"
+#include "../gravity/dynamic_metric_driver.hpp"
 #include "../metric/metric.hpp"
 
 // MPI/OpenMP header
@@ -624,7 +624,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
 #endif
   
 #if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = new MonopoleGravity(this, pin);
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
 #endif
 }
 
@@ -1089,7 +1089,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 #endif
 
 #if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = new MonopoleGravity(this, pin);
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
 #endif
   
 }
@@ -2871,8 +2871,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   }
   
 #if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = new MonopoleGravity(this, pin);
-  
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);  
   pmetric_driver->Update();
     
   for (int b=0; b<nblocal; ++b) {
