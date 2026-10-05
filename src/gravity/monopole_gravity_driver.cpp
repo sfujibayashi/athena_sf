@@ -651,6 +651,12 @@ Real MonopoleGravityDriver::Face3DensitizationFactor(
 
 }
 
+Real MonopoleGravityDriver::GetEnclosedMassAtInnerBoundary(
+    MeshBlock *pmb) const {
+  return DeltaMFace1(pmb)(pmb->is);
+}
+
+
 
 AthenaArray<Real>& MonopoleGravityDriver::PsiFace1(MeshBlock *pmb) {
   return pmb->ruser_meshblock_data[0];

@@ -98,14 +98,19 @@ public:
   Real Face3DensitizationFactor(
 	MeshBlock *pmb, int k, int j, int i) const override;
   
-  AthenaArray<Real>& PsiFace1(MeshBlock *pmb) override;
-  const AthenaArray<Real>& PsiFace1(MeshBlock *pmb) const override;
-  
-  AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb) override;
-  const AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb) const override;
 
-  Real CellPsi(MeshBlock *pmb, int i) const override;
-  Real CellDeltaM(MeshBlock *pmb, int i) const override;
+  Real GetEnclosedMassAtInnerBoundary(
+        MeshBlock *pmb) const override;
+
+
+  AthenaArray<Real>& PsiFace1(MeshBlock *pmb);
+  const AthenaArray<Real>& PsiFace1(MeshBlock *pmb) const;
+  
+  AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb);
+  const AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb) const ;
+
+  Real CellPsi(MeshBlock *pmb, int i) const;
+  Real CellDeltaM(MeshBlock *pmb, int i) const;
 
 private:
   Mesh *pmy_mesh_;

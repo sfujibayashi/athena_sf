@@ -205,7 +205,9 @@ namespace {
       pmb->pmy_mesh->punit->grav_const_code
       / SQR(pmb->pmy_mesh->punit->speed_of_light_code);
     
-    return pmb->pmetric->GetBlackHoleMass()/mass_to_length;
+    // return pmb->pmetric->GetBlackHoleMass()/mass_to_length;
+    // return pmb->pmy_mesh->pmetric_driver->GetBlackHoleMass()/mass_to_length;
+    return 0.0;
   }
   
   Real HistoryBlackHoleMassAccretionRate(MeshBlock *pmb, int iout) {
@@ -914,16 +916,16 @@ void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
   }
 
 
-  for (int k = ks; k <= ke; ++k) {
-    for (int j = js; j <= je; ++j) {
-      for (int i = is; i <= ie; ++i) {
-        user_out_var(6,k,j,i) = pmetric->CellDeltaM(i);
-        user_out_var(7,k,j,i) = pmetric->CellPsi(i);
-        user_out_var(8,k,j,i) = pmetric->CellDensitizationFactor(k,j,i);
+  // for (int k = ks; k <= ke; ++k) {
+  //   for (int j = js; j <= je; ++j) {
+  //     for (int i = is; i <= ie; ++i) {
+  //       user_out_var(6,k,j,i) = pmy_mesh->pmetric_driver->CellDeltaM(this, i);
+  //       user_out_var(7,k,j,i) = pmy_mesh->pmetric_driver->CellPsi(this, i);
+  //       user_out_var(8,k,j,i) = pmy_mesh->pmetric_driver->CellDensitizationFactor(this, k,j,i);
         
-      }
-    }
-  }
+  //     }
+  //   }
+  // }
 }
 
 

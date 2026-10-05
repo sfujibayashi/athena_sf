@@ -74,18 +74,21 @@ public:
   virtual Real Face3DensitizationFactor(
 	MeshBlock *pmb, int k, int j, int i) const = 0;
 
-  virtual AthenaArray<Real>& PsiFace1(MeshBlock *pmb) const = 0;
+  virtual Real GetEnclosedMassAtInnerBoundary(
+        MeshBlock *pmb) const = 0;
 
-  virtual const AthenaArray<Real>& PsiFace1(MeshBlock *pmb) const = 0;
+  // virtual AthenaArray<Real>& PsiFace1(MeshBlock *pmb) = 0;
 
-  virtual AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb) const = 0;
+  // virtual const AthenaArray<Real>& PsiFace1(MeshBlock *pmb) const = 0;
 
-  virtual const AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb) const = 0;
+  // virtual AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb) = 0;
+
+  // virtual const AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb) const = 0;
 
 
-  virtual Real CellPsi(MeshBlock *pmb, int i) const = 0;
+  // virtual Real CellPsi(MeshBlock *pmb, int i) const = 0;
 
-  virtual Real CellDeltaM(MeshBlock *pmb, int i) const = 0;
+  // virtual Real CellDeltaM(MeshBlock *pmb, int i) const = 0;
 
 };
 
