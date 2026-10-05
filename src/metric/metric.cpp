@@ -11,6 +11,8 @@
 
 #include "../hydro/hydro.hpp"
 
+#include "../gravity/monopole_gravity.hpp"
+
 Metric::Metric(MeshBlock *pmb, ParameterInput *pin)
   : pmy_block(pmb) {
 
@@ -590,25 +592,12 @@ void Metric::ConstructCovariantMetric(
     Real &g11, Real &g12, Real &g13,
     Real &g22, Real &g23, Real &g33) const {
 
-  const Real sintheta = std::sin(theta);
-
   const Real bh_mass = GetBlackHoleMass();
-  // const Real alpha = std::sqrt(1.0 - 2.0*bh_mass_/r);
-  // const Real f = alpha*alpha;
-  const Real f = 1.0 - 2.0*bh_mass/r;
-
-  g00 = -f + 2.0*dm/r + 2.0*f*Psi;
-  g01 = 0.0;
-  g02 = 0.0;
-  g03 = 0.0;
-  
-  g11 = 1.0/f + 2.0*dm/(r*f*f);
-  g12 = 0.0;
-  g13 = 0.0;
-  
-  g22 = r*r;
-  g23 = 0.0;
-  g33 = r*r*sintheta*sintheta;
+  gravity_model_.ConstructCovariantMetric(
+	r, theta, phi, Psi, dm, bh_mass,
+	g00, g01, g02, g03,
+	g11, g12, g13,
+	g22, g23, g33);
 }
 
 void Metric::CellMetricRadialDerivatives(const int k, const int j,
@@ -617,28 +606,23 @@ void Metric::CellMetricRadialDerivatives(const int k, const int j,
 					 AthenaArray<Real> &d1_g11) const {
   const auto &Psi_face1 = PsiFace1();
   const auto &delta_m_face1 = DeltaMFace1();
-  const Real m = GetBlackHoleMass();
+  const Real bh_mass = GetBlackHoleMass();
+  const Real theta = pmy_block->pcoord->x2v(j);
+  const Real phi = pmy_block->pcoord->x2v(k);
 
   for (int i = il; i <= iu; ++i) {
-    
-    const Real &r = pmy_block->pcoord->x1v(i);
-    Real r2 = SQR(r);
 
-    const Real f = 1.0 - 2.0*m/r;
+    const Real r = pmy_block->pcoord->x1v(i);
     const Real Psi = CellPsi(i);
     const Real delta_m = CellDeltaM(i);
-    
     const Real dxf = pmy_block->pcoord->x1f(i+1)-pmy_block->pcoord->x1f(i);
     const Real d1_Psi = (Psi_face1(i+1) - Psi_face1(i))/dxf;
     const Real d1_delta_m = (delta_m_face1(i+1) - delta_m_face1(i))/dxf;
-    Real d1_h_00 = -2.0*delta_m/r2 + 2.0/r*d1_delta_m + 4.0*m/r2*Psi + 2.0*f*d1_Psi;
-    Real d1_h_11 = 2.0/(r*f*f)*(d1_delta_m - (f+4.0*m/r)*delta_m/(r*f));
     
-    Real d1_g_00 = -2.0*m / r2 + d1_h_00;
-    Real d1_g_11 = -2.0*m / (r2*f*f) + d1_h_11;
+    gravity_model_.MetricRadialDerivatives(
+       r, theta, phi, Psi, delta_m, bh_mass,
+       d1_Psi, d1_delta_m,
+       d1_g00(i), d1_g11(i));
 
-    d1_g00(i) = d1_g_00;
-    d1_g11(i) = d1_g_11;
   }
-
 }

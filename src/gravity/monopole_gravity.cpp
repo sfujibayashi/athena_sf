@@ -1,6 +1,7 @@
 
 // C++ headers
 #include <cmath>
+#include <iostream>
 
 //
 #include "monopole_gravity.hpp"
@@ -27,4 +28,21 @@ void MonopoleGravity::ConstructCovariantMetric(
   g22 = r*r;
   g23 = 0.0;
   g33 = r*r*sintheta*sintheta;
+}
+
+void MonopoleGravity::MetricRadialDerivatives(
+     Real r, Real theta, Real phi, Real Psi, Real dm, Real bh_mass,
+     Real dPsi_dr, Real ddm_dr,
+     Real &d1_g00, Real &d1_g11) const {
+  
+  const Real f = 1.0 - 2.0*bh_mass/r;
+  Real r2 = SQR(r);
+  Real d1_h_00 = -2.0*dm/r2 + 2.0/r*ddm_dr + 4.0*bh_mass/r2*Psi + 2.0*f*dPsi_dr;
+  Real d1_h_11 = 2.0/(r*f*f)*(ddm_dr - (f+4.0*bh_mass/r)*dm/(r*f));
+  
+  Real d1_g_00 = -2.0*bh_mass / r2 + d1_h_00;
+  Real d1_g_11 = -2.0*bh_mass / (r2*f*f) + d1_h_11;
+  
+  d1_g00 = d1_g_00;
+  d1_g11 = d1_g_11;
 }

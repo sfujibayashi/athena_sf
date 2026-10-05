@@ -19,13 +19,17 @@
 //! \brief Constructs global radial monopole gravity profiles
 class MonopoleGravity {
 public:
-  MonopoleGravity();
-  ~MonopoleGravity();
+  MonopoleGravity() = default;
+  ~MonopoleGravity() = default;
   
   void ConstructCovariantMetric(Real r, Real theta, Real phi, Real Psi, Real dm, Real bh_mass,
 				Real &g00, Real &g01, Real &g02, Real &g03,
 				Real &g11, Real &g12, Real &g13,
 				Real &g22, Real &g23, Real &g33) const;
-};
 
+  void MetricRadialDerivatives(Real r, Real theta, Real phi, Real Psi, Real dm, Real bh_mass,
+			       Real dPsi_dr, Real ddm_dr,
+			       Real &d1_g00, Real &d1_g11) const;
+
+};
 #endif // GRAVITY_MONOPOLE_GRAVITY_HPP_
