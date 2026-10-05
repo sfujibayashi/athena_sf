@@ -5,6 +5,7 @@
 #include "../athena_arrays.hpp"
 
 class Mesh;
+class MeshBlock;
 class ParameterInput;
 
 
