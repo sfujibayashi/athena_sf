@@ -64,7 +64,8 @@ public:
          MeshBlock *pmb,
 	 const int k, const int j, const int i) const = 0;
   
-  
+  virtual Real CellDensitizationFactor(
+        MeshBlock *pmb, int k, int j, int i) const = 0;
 };
 
 DynamicMetricDriver *CreateDynamicMetricDriver(Mesh *pm, ParameterInput *pin);

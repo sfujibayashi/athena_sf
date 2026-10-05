@@ -88,6 +88,9 @@ public:
          MeshBlock *pmb,
 	 const int k, const int j, const int i) const override;
 
+  Real CellDensitizationFactor(
+        MeshBlock *pmb, int k, int j, int i) const override;
+  
   AthenaArray<Real>& PsiFace1(MeshBlock *pmb);
   const AthenaArray<Real>& PsiFace1(MeshBlock *pmb) const;
   

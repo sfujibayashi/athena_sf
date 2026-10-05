@@ -559,6 +559,27 @@ Real MonopoleGravityDriver::SqrtMinusG(
   //return std::sqrt(alpha_sq*detgamma);
 }
 
+
+
+Real MonopoleGravityDriver::CellDensitizationFactor(
+        MeshBlock *pmb, int k, int j, int i) const {
+  const Real sqrt_minus_g = SqrtMinusG(pmb,k,j,i);
+  const Real r = pmb->pcoord->x1v(i);
+  const Real theta = pmb->pcoord->x2v(j);
+  return sqrt_minus_g/(r*r*std::sin(theta));
+
+  // Real g00, g01, g02, g03;
+  // Real g11, g12, g13, g22, g23, g33;
+
+  // ConstructCellCovariantMetric(
+  //      pmb, k,j,i,
+  //      g00, g01, g02, g03,
+  //      g11, g12, g13,
+  //      g22, g23, g33);
+
+  //return g11;
+}
+
 AthenaArray<Real>& MonopoleGravityDriver::PsiFace1(MeshBlock *pmb) {
   return pmb->ruser_meshblock_data[0];
 }

@@ -346,10 +346,12 @@ Real Metric::SqrtMinusG(int k, int j, int i) const {
 
 Real Metric::CellDensitizationFactor(int k, int j, int i) const {
   // return 1.0;
-  const Real sqrt_minus_g = SqrtMinusG(k,j,i);
-  const Real r = pmy_block->pcoord->x1v(i);
-  const Real theta = pmy_block->pcoord->x2v(j);
-  return sqrt_minus_g/(r*r*std::sin(theta));
+  // const Real sqrt_minus_g = SqrtMinusG(k,j,i);
+  // const Real r = pmy_block->pcoord->x1v(i);
+  // const Real theta = pmy_block->pcoord->x2v(j);
+  // return sqrt_minus_g/(r*r*std::sin(theta));
+  return pmy_block->pmy_mesh->pmetric_driver->CellDensitizationFactor(
+         pmy_block,k,j,i);
 }
 
 
