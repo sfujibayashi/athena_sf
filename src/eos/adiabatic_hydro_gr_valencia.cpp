@@ -398,6 +398,20 @@ void CalculateNormalConserved(
 
   // Go through row
   for (int i=il; i<=iu; ++i) {
+
+    const Real q =
+      pmetric->CellSpatialDensitizationFactor(k,j,i);
+    const Real qi= q.0/q;
+
+    const Real D  = cons(IDN,k,j,i)*qi;
+    const Real tau= cons(IEN,k,j,i)*qi;
+    const Real S_1= cons(IM1,k,j,i)*qi;
+    const Real S_2= cons(IM2,k,j,i)*qi;
+    const Real S_3= cons(IM3,k,j,i)*qi;
+
+    dd(i) = D;
+    ee(i) = D+tau;
+
     // Extract metric
     const Real &g_11 = g(I11,i), &g_12 = g(I12,i), &g_13 = g(I13,i),
                &g_21 = g(I12,i), &g_22 = g(I22,i), &g_23 = g(I23,i),
@@ -406,7 +420,7 @@ void CalculateNormalConserved(
                &g10 = gi(I01,i), &g11 = gi(I11,i), &g12 = gi(I12,i), &g13 = gi(I13,i),
                &g20 = gi(I02,i), &g21 = gi(I12,i), &g22 = gi(I22,i), &g23 = gi(I23,i),
                &g30 = gi(I03,i), &g31 = gi(I13,i), &g32 = gi(I23,i), &g33 = gi(I33,i);
-
+    
     // Calculate unit timelike normal
     const Real alpha = std::sqrt(-1.0/g00);
     const Real n0 = -alpha * g00;
@@ -414,44 +428,21 @@ void CalculateNormalConserved(
     const Real n2 = -alpha * g02;
     const Real n3 = -alpha * g03;
 
-    // Calculate projection operator
+    // Calculate projection operator j^(ab) = g^(ab) + n^a n^b (=gamma^ab)
     const Real j10 = g10 + n1*n0, j20 = g20 + n2*n0, j30 = g30 + n3*n0;
     const Real j11 = g11 + n1*n1, j21 = g21 + n2*n1, j31 = g31 + n3*n1;
     const Real j12 = g12 + n1*n2, j22 = g22 + n2*n2, j32 = g32 + n3*n2;
     const Real j13 = g13 + n1*n3, j23 = g23 + n2*n3, j33 = g33 + n3*n3;
 
-    // Extract conserved quantities
-    // un-densitize with q := sqrt(-g)/(r^2 sin(theta));
-    const Real q = pmetric->CellDensitizationFactor(k, j, i);
-    const Real qi= 1.0/q;
-
-    const Real rho_u0 = cons(IDN,k,j,i) * qi;
-    const Real t0_0 = cons(IEN,k,j,i) * qi;
-    const Real t0_1 = cons(IVX,k,j,i) * qi;
-    const Real t0_2 = cons(IVY,k,j,i) * qi;
-    const Real t0_3 = cons(IVZ,k,j,i) * qi;
-
-    // Calculate projected momentum densities Q_\mu = -n_\nu T^\nu_\mu (N 17)
-    const Real qq_0 = alpha * t0_0;
-    const Real qq_1 = alpha * t0_1;
-    const Real qq_2 = alpha * t0_2;
-    const Real qq_3 = alpha * t0_3;
-    const Real qq_n = qq_0*n0 + qq_1*n1 + qq_2*n2 + qq_3*n3;
-
-    // Calculate projected momentum M^i = j^{i\mu} Q_\mu
-    const Real mm1 = j10*qq_0 + j11*qq_1 + j12*qq_2 + j13*qq_3;
-    const Real mm2 = j20*qq_0 + j21*qq_1 + j22*qq_2 + j23*qq_3;
-    const Real mm3 = j30*qq_0 + j31*qq_1 + j32*qq_2 + j33*qq_3;
-
-    // Set normal conserved quantities
-    dd(i) = alpha * rho_u0;  // (N 21)
-    ee(i) = -qq_n;
-    mm(0,i) = g_11*SQR(mm1) + 2.0*g_12*mm1*mm2 + 2.0*g_13*mm1*mm3
-              + g_22*SQR(mm2) + 2.0*g_23*mm2*mm3
-              + g_33*SQR(mm3);
-    mm(1,i) = mm1;
-    mm(2,i) = mm2;
-    mm(3,i) = mm3;
+    // Calculate projected momentum S^i = gamma^ij S_j
+    const Real Su1 = j11*S_1 + j12*S_2 + j13*S_3;
+    const Real Su2 = j21*S_1 + j22*S_2 + j23*S_3;
+    const Real Su3 = j31*S_1 + j32*S_2 + j33*S_3;
+    
+    mm(0,i) = Su1*S_1 + Su2*S_2 + Su3*S_3;
+    mm(1,i) = Su1;
+    mm(2,i) = Su2;
+    mm(3,i) = Su3;
   }
   return;
 }
