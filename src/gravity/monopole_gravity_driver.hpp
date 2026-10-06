@@ -112,6 +112,17 @@ public:
   Real CellPsi(MeshBlock *pmb, int i) const;
   Real CellDeltaM(MeshBlock *pmb, int i) const;
 
+  // output
+  int NumModelOutputVariables() const override;
+
+  const char *ModelOutputVariableName(int n) const override;
+
+  Real ModelOutputVariable(
+    MeshBlock *pmb,
+    int n,
+    int k, int j, int i) const override;
+
+
 private:
   Mesh *pmy_mesh_;
 

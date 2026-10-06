@@ -806,7 +806,11 @@ void Mesh::UserWorkInLoop(void) {
 
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
-  AllocateUserOutputVariables(9);
+  // model-specific output fields
+  auto *pdrv = pmy_mesh->pmetric_driver;
+  const int n_output = pdrv->NumModelOutputVariables();
+  
+  AllocateUserOutputVariables(6+n_output);
   
   SetUserOutputVariableName(0, "gtt");
   SetUserOutputVariableName(1, "grr");
@@ -814,9 +818,10 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   SetUserOutputVariableName(3, "Lorentz-1");
   SetUserOutputVariableName(4, "u_t+1");
   SetUserOutputVariableName(5, "enthalpy-1");
-  SetUserOutputVariableName(6, "delta_m");
-  SetUserOutputVariableName(7, "Phi");
-  SetUserOutputVariableName(8, "q");
+
+  for(int n=0; n<n_output; ++n){
+    SetUserOutputVariableName(6+n, pdrv->ModelOutputVariableName(n));
+  }
 
   //
   AllocateRealUserMeshBlockDataField(3);

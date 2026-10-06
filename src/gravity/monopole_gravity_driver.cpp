@@ -684,3 +684,26 @@ Real MonopoleGravityDriver::CellDeltaM(MeshBlock *pmb, int i) const {
   return 0.5*(dm(i) + dm(i+1));
 }
 
+
+
+
+int MonopoleGravityDriver::NumModelOutputVariables() const {
+  return 3;
+}
+
+const char *MonopoleGravityDriver::ModelOutputVariableName(int n) const {
+  if(n==0)return "delta_m";
+  if(n==1)return "Psi";
+  if(n==2)return "q";
+  return "";
+}
+
+Real MonopoleGravityDriver::ModelOutputVariable(
+    MeshBlock *pmb,
+    int n,
+    int k, int j, int i) const{
+    if (n == 0) return CellDeltaM(pmb, i);
+    if (n == 1) return CellPsi(pmb, i);
+    if (n == 2) return CellDensitizationFactor(pmb, k,j,i);
+    return 0.0;
+}

@@ -79,18 +79,16 @@ public:
 
   virtual Real GetBlackHoleMass() const = 0;
 
-  // virtual AthenaArray<Real>& PsiFace1(MeshBlock *pmb) = 0;
 
-  // virtual const AthenaArray<Real>& PsiFace1(MeshBlock *pmb) const = 0;
-
-  // virtual AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb) = 0;
-
-  // virtual const AthenaArray<Real>& DeltaMFace1(MeshBlock *pmb) const = 0;
-
-
-  // virtual Real CellPsi(MeshBlock *pmb, int i) const = 0;
-
-  // virtual Real CellDeltaM(MeshBlock *pmb, int i) const = 0;
+  // output
+  virtual int NumModelOutputVariables() const = 0;
+  
+  virtual const char *ModelOutputVariableName(int n) const = 0;
+  
+  virtual Real ModelOutputVariable(
+    MeshBlock *pmb,
+    int n,
+    int k, int j, int i) const = 0;
 
 };
 
