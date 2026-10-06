@@ -2926,7 +2926,10 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
 
   // clean up
   delete [] offset;
-
+  delete [] old_loclist;
+  delete [] old_costlist;
+  delete [] old_gid_for_new_gid;
+  
   if (turb_flag > 0) // TurbulenceDriver depends on the MeshBlock ctor
     ptrbd = new TurbulenceDriver(this, pin);
 
