@@ -401,7 +401,7 @@ void CalculateNormalConserved(
 
     const Real q =
       pmetric->CellSpatialDensitizationFactor(k,j,i);
-    const Real qi= q.0/q;
+    const Real qi= 1.0/q;
 
     const Real D  = cons(IDN,k,j,i)*qi;
     const Real tau= cons(IEN,k,j,i)*qi;
@@ -413,9 +413,6 @@ void CalculateNormalConserved(
     ee(i) = D+tau;
 
     // Extract metric
-    const Real &g_11 = g(I11,i), &g_12 = g(I12,i), &g_13 = g(I13,i),
-               &g_21 = g(I12,i), &g_22 = g(I22,i), &g_23 = g(I23,i),
-               &g_31 = g(I13,i), &g_32 = g(I23,i), &g_33 = g(I33,i);
     const Real &g00 = gi(I00,i), &g01 = gi(I01,i), &g02 = gi(I02,i), &g03 = gi(I03,i),
                &g10 = gi(I01,i), &g11 = gi(I11,i), &g12 = gi(I12,i), &g13 = gi(I13,i),
                &g20 = gi(I02,i), &g21 = gi(I12,i), &g22 = gi(I22,i), &g23 = gi(I23,i),
