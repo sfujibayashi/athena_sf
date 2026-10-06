@@ -75,6 +75,12 @@ public:
 
   virtual Real CellSpatialDensitizationFactor(
         MeshBlock *pmb, int k, int j, int i) const = 0;
+  virtual Real Face1SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const = 0;
+  virtual Real Face2SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const = 0;
+  virtual Real Face3SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const = 0;
 
 
   virtual Real GetEnclosedMassAtInnerBoundary(

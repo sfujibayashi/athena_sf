@@ -665,6 +665,76 @@ Real MonopoleGravityDriver::CellSpatialDensitizationFactor(
   return std::sqrt(g11);
 }
 
+Real MonopoleGravityDriver::Face1SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const {
+  Coordinates *pcoord = pmb->pcoord;
+
+  auto &Psi_face1 = PsiFace1(pmb);
+  auto &delta_m_face1 = DeltaMFace1(pmb);
+  const Real bh_mass = GetBlackHoleMass();
+  
+  const Real r = pcoord->x1f(i);
+  const Real theta = pcoord->x2v(j);
+  const Real phi = pcoord->x3v(k);
+  const Real Psi = Psi_face1(i);
+  const Real dm = delta_m_face1(i);
+  
+  Real g00, g01, g02, g03;
+  Real g11, g12, g13, g22, g23, g33;
+  
+  gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+  
+  return std::sqrt(g11);
+}
+
+Real MonopoleGravityDriver::Face2SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const {
+  Coordinates *pcoord = pmb->pcoord;
+
+  const Real bh_mass = GetBlackHoleMass();
+  
+  const Real r = pcoord->x1v(i);
+  const Real theta = pcoord->x2f(j);
+  const Real phi = pcoord->x3v(k);
+  const Real Psi = CellPsi(pmb,i);
+  const Real dm = CellDeltaM(pmb,i);
+  
+  Real g00, g01, g02, g03;
+  Real g11, g12, g13, g22, g23, g33;
+  
+  gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+  return std::sqrt(g11);
+
+}
+
+Real MonopoleGravityDriver::Face3SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const {
+  Coordinates *pcoord = pmb->pcoord;
+
+  const Real bh_mass = GetBlackHoleMass();
+  
+  const Real r = pcoord->x1v(i);
+  const Real theta = pcoord->x2v(j);
+  const Real phi = pcoord->x3f(k);
+  const Real Psi = CellPsi(pmb,i);
+  const Real dm = CellDeltaM(pmb,i);
+  
+  Real g00, g01, g02, g03;
+  Real g11, g12, g13, g22, g23, g33;
+  
+  gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+        g00, g01, g02, g03,
+        g11, g12, g13, g22, g23, g33);
+
+  return std::sqrt(g11);
+}
+
+
 
 Real MonopoleGravityDriver::GetEnclosedMassAtInnerBoundary(
     MeshBlock *pmb) const {

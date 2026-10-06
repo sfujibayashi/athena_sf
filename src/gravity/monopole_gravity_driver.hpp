@@ -99,6 +99,13 @@ public:
   
   Real CellSpatialDensitizationFactor(
         MeshBlock *pmb, int k, int j, int i) const override;
+  Real Face1SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const override;
+  Real Face2SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const override;
+  Real Face3SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const override;
+
 
   Real GetEnclosedMassAtInnerBoundary(
         MeshBlock *pmb) const override;
