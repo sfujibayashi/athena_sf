@@ -129,6 +129,20 @@ Real Metric::CellSpatialDensitizationFactor(int k, int j, int i) const {
   return pmy_block->pmy_mesh->pmetric_driver->CellSpatialDensitizationFactor(pmy_block,k,j,i);
 }
 
+Real Metric::Face1SpatialDensitizationFactor(int k, int j, int i) const {
+  return pmy_block->pmy_mesh->pmetric_driver->Face1SpatialDensitizationFactor(pmy_block,k,j,i);
+}
+
+
+Real Metric::Face2SpatialDensitizationFactor(int k, int j, int i) const {
+  return pmy_block->pmy_mesh->pmetric_driver->Face2SpatialDensitizationFactor(pmy_block,k,j,i);
+}
+
+
+Real Metric::Face3SpatialDensitizationFactor(int k, int j, int i) const {
+  return pmy_block->pmy_mesh->pmetric_driver->Face3SpatialDensitizationFactor(pmy_block,k,j,i);
+}
+
 void Metric::InvertMetric(
     int i,
     const AthenaArray<Real> &g,
