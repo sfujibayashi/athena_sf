@@ -4,7 +4,6 @@
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../coordinates/coordinates.hpp"
-#include "../gravity/monopole_gravity.hpp"
 
 class MeshBlock;
 class ParameterInput;
