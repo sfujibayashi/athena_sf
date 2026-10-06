@@ -11,8 +11,6 @@ class ParameterInput;
 class Metric {
 private:
   
-  MonopoleGravity gravity_model_;
-
   void InvertSpatialMetric(Real g11, Real g12, Real g13,
                            Real g22, Real g23, Real g33,
                            Real &gi11, Real &gi12, Real &gi13,
@@ -27,23 +25,6 @@ public:
   ~Metric();
 
   MeshBlock *pmy_block;  // ptr to MeshBlock containing this Field
-
-  // // Quantities needed to construct perturbed field (Only monopole l=0 mode)
-  // AthenaArray<Real> Psi_;
-  // AthenaArray<Real> delta_m_;
-
-  // AthenaArray<Real> Psi_face1_;
-  // AthenaArray<Real> delta_m_face1_;
-
-  // void Update();
-
-  // Real bh_mass_prev_, bh_spin_prev_;
-  // Real bh_mass_pending_, bh_spin_pending_;
-  // Real mdot_bh_, angdot_bh_;
-
-  // Real BlackHoleMassAccretionRate(const AthenaArray<Real> &x1flux) const;
-  // void SetPendingBlackHoleMass(Real mass);
-  // void CommitBlackHoleMass();
 
   void CellMetric(const int k, const int j,
                   const int il, const int iu,
@@ -63,18 +44,6 @@ public:
   Real Face1DensitizationFactor(int k, int j, int i) const;
   Real Face2DensitizationFactor(int k, int j, int i) const;
   Real Face3DensitizationFactor(int k, int j, int i) const;
-
-  // Real GetBlackHoleMass() const;
-  // Real GetBlackHoleSpin() const;
-
-  // AthenaArray<Real>& PsiFace1();
-  // const AthenaArray<Real>& PsiFace1() const;
-  
-  // AthenaArray<Real>& DeltaMFace1();
-  // const AthenaArray<Real>& DeltaMFace1() const;
-  
-  // Real CellPsi(int i) const;
-  // Real CellDeltaM(int i) const;
 
   void ConstructCovariantMetric(
     Real r, Real theta, Real phi, Real Psi, Real dm,
