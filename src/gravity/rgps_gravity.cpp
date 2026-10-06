@@ -39,7 +39,7 @@ void RGPSGravity::MetricRadialDerivatives(
   const Real f = 1.0 - 2.0*mgrav/r;
   const Real r2= r*r;
 
-  d1_g00 = std::exp(2.0*Phi) * 2.0*dPhi_dr;
+  d1_g00 = -std::exp(2.0*Phi) * 2.0*dPhi_dr;
   d1_g11 = -1.0/(f*f) * (2.0*mgrav/r2 - 2.0/r * dmgrav_dr);
 
 }
