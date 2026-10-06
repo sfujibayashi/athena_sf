@@ -126,7 +126,7 @@ Real Metric::Face3DensitizationFactor(int k, int j, int i) const {
 }
 
 Real Metric::CellSpatialDensitizationFactor(int k, int j, int i) const {
-  return pmy_block->pmy_mesh->pmetric_driver->CellDensitizationFactor(pmy_block,k,j,i);
+  return pmy_block->pmy_mesh->pmetric_driver->CellSpatialDensitizationFactor(pmy_block,k,j,i);
 }
 
 void Metric::InvertMetric(
