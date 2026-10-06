@@ -922,16 +922,19 @@ void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
   }
 
 
-  // for (int k = ks; k <= ke; ++k) {
-  //   for (int j = js; j <= je; ++j) {
-  //     for (int i = is; i <= ie; ++i) {
-  //       user_out_var(6,k,j,i) = pmy_mesh->pmetric_driver->CellDeltaM(this, i);
-  //       user_out_var(7,k,j,i) = pmy_mesh->pmetric_driver->CellPsi(this, i);
-  //       user_out_var(8,k,j,i) = pmy_mesh->pmetric_driver->CellDensitizationFactor(this, k,j,i);
-        
-  //     }
-  //   }
-  // }
+  // model-specific output
+  auto *pdrv = pmy_mesh->pmetric_driver;
+  const int n_output = pdrv->NumModelOutputVariables();
+
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      for (int i = is; i <= ie; ++i) {
+	for (int n=0; n<n_output; ++n) {
+	  user_out_var(6+n,k,j,i) = pdrv->ModelOutputVariable(this,n,k,j,i);
+	}
+      }
+    }
+  }
 }
 
 
