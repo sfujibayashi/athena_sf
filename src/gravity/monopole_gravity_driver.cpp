@@ -651,6 +651,21 @@ Real MonopoleGravityDriver::Face3DensitizationFactor(
 
 }
 
+Real MonopoleGravityDriver::CellSpatialDensitizationFactor(
+        MeshBlock *pmb, int k, int j, int i) const {
+  Real g00, g01, g02, g03;
+  Real g11, g12, g13, g22, g23, g33;
+
+  ConstructCellCovariantMetric(
+       pmb, k,j,i,
+       g00, g01, g02, g03,
+       g11, g12, g13,
+       g22, g23, g33);
+  
+  return std::sqrt(g11);
+}
+
+
 Real MonopoleGravityDriver::GetEnclosedMassAtInnerBoundary(
     MeshBlock *pmb) const {
   return DeltaMFace1(pmb)(pmb->is);

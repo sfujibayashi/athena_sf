@@ -45,6 +45,8 @@ public:
   Real Face2DensitizationFactor(int k, int j, int i) const;
   Real Face3DensitizationFactor(int k, int j, int i) const;
 
+  Real CellSpatialDensitizationFactor(int k, int j, int i) const;
+  
   void ConstructCovariantMetric(
     Real r, Real theta, Real phi, Real Psi, Real dm,
     Real &g00, Real &g01, Real &g02, Real &g03,
