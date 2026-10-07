@@ -3,7 +3,7 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file gr_rgps.cpp
+//! \file gr_dynamic_valencia.cpp
 //! \brief implements functions for Radial Gauge Polar Slicing spacetime and spherical (t,r,theta,phi)
 //!        Valencia formulation of hydrodynamics is assumed.
 //!
@@ -1060,8 +1060,6 @@ void Coordinates::FluxToGlobal1(const int k, const int j, const int il, const in
     const Real Txx = flux(IM1,k,j,i);
     const Real Txy = flux(IM2,k,j,i);
     const Real Txz = flux(IM3,k,j,i);
-    // Valencia 
-    const Real ftaux = Txt-Jx;
 
     // Transform stress-energy tensor to global coordinate frame. T^{mu 1}
     Real J1  = m1_x*Jx;
@@ -1069,16 +1067,16 @@ void Coordinates::FluxToGlobal1(const int k, const int j, const int il, const in
     Real T11 = m1_x*m1_x *Txx;
     Real T12 = m1_x*m2_y *Txy;
     Real T13 = m1_x*m3_z *Txz;
-
+    
     // lower indices T^1_i
     Real T1_1 = g11*T11;
     Real T1_2 = g22*T12;
     Real T1_3 = g33*T13;
 
     // Extract global fluxes
-    // 
-    flux(IDN,k,j,i) = J1;
-    flux(IEN,k,j,i) = alpha_sq*T10;
+    // IEN = tau = E-D, so subtracted by flx(IDN).
+    flux(IDN,k,j,i) = alpha*J1;
+    flux(IEN,k,j,i) = alpha_sq*T10 - alpha*J1;
     flux(IM1,k,j,i) = alpha*T1_1;
     flux(IM2,k,j,i) = alpha*T1_2;
     flux(IM3,k,j,i) = alpha*T1_3;
