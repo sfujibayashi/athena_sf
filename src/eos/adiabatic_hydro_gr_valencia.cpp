@@ -172,7 +172,7 @@ void EquationOfState::ConservedToPrimitive(
           // Adjust conserved density and energy
           Real wgas_add = rho_add + gamma_adi/(gamma_adi-1.0) * pgas_add;
           normal_dd_(i) += rho_add * gamma;
-          normal_ee_(i) += wgas_add * SQR(gamma) + pgas_add;
+          normal_ee_(i) += wgas_add * SQR(gamma) - pgas_add;
 
           // Recalculate primitives
           success = ConservedToPrimitiveNormal(normal_dd_, normal_ee_, normal_mm_,
