@@ -1073,7 +1073,6 @@ void Coordinates::FluxToGlobal1(const int k, const int j, const int il, const in
     Real T1_2 = g22*T12;
     Real T1_3 = g33*T13;
 
-    // Extract global fluxes
     // IEN = tau = E-D, so subtracted by flx(IDN).
     flux(IDN,k,j,i) = alpha*J1;
     flux(IEN,k,j,i) = alpha_sq*T10 - alpha*J1;
@@ -1138,31 +1137,30 @@ void Coordinates::FluxToGlobal2(const int k, const int j, const int il, const in
     const Real m3_y = 1.0 / std::sqrt(g33);
 
     // Extract local conserved quantities and fluxes
-    const Real dx = flux(IDN,k,j,i);
-    const Real txt = flux(IEN,k,j,i);
-    const Real txx = flux(IM2,k,j,i);
-    const Real txy = flux(IM3,k,j,i);
-    const Real txz = flux(IM1,k,j,i);
+    const Real Jx = flux(IDN,k,j,i);
+    const Real Txt = flux(IEN,k,j,i);
+    const Real Txx = flux(IM2,k,j,i);
+    const Real Txy = flux(IM3,k,j,i);
+    const Real Txz = flux(IM1,k,j,i);
 
     // Transform stress-energy tensor
-    Real t20 = m2_x*m0_tm*txt;
-    Real t21 = m2_x*m1_z*txz;
-    Real t22 = m2_x*m2_x*txx;
-    Real t23 = m2_x*m3_y*txy;
-
+    Real J2  = m2_x*Jx;
+    Real T20 = m2_x*m0_tm*Txt;
+    Real T21 = m2_x*m1_z*Txz;
+    Real T22 = m2_x*m2_x*Txx;
+    Real T23 = m2_x*m3_y*Txy;
+    
     // Extract global fluxes
-    Real &d2 = flux(IDN,k,j,i);
-    Real &t2_0 = flux(IEN,k,j,i);
-    Real &t2_1 = flux(IM1,k,j,i);
-    Real &t2_2 = flux(IM2,k,j,i);
-    Real &t2_3 = flux(IM3,k,j,i);
+    Real T2_1 = g11*T21;
+    Real T2_2 = g22*T22;
+    Real T2_3 = g33*T23;
 
-    // Set fluxes
-    d2 = m2_x*dx;
-    t2_0 = g00*t20;
-    t2_1 = g11*t21;
-    t2_2 = g22*t22;
-    t2_3 = g33*t23;
+    // IEN = tau = E-D, so subtracted by flx(IDN).
+    flux(IDN,k,j,i) = alpha*J2;
+    flux(IEN,k,j,i) = alpha_sq*T20 - alpha*J2;
+    flux(IM1,k,j,i) = alpha*T2_1;
+    flux(IM2,k,j,i) = alpha*T2_2;
+    flux(IM3,k,j,i) = alpha*T2_3;
 
     // Transform magnetic fluxes if necessary
     if (MAGNETIC_FIELDS_ENABLED) {
@@ -1221,31 +1219,30 @@ void Coordinates::FluxToGlobal3(const int k, const int j, const int il, const in
     const Real m3_x = 1.0 / std::sqrt(g33);
 
     // Extract local conserved quantities and fluxes
-    const Real dx = flux(IDN,k,j,i);
-    const Real txt = flux(IEN,k,j,i);
-    const Real txx = flux(IM3,k,j,i);
-    const Real txy = flux(IM1,k,j,i);
-    const Real txz = flux(IM2,k,j,i);
+    const Real Jx = flux(IDN,k,j,i);
+    const Real Txt = flux(IEN,k,j,i);
+    const Real Txx = flux(IM3,k,j,i);
+    const Real Txy = flux(IM1,k,j,i);
+    const Real Txz = flux(IM2,k,j,i);
 
     // Transform stress-energy tensor
-    Real t30 = m3_x*m0_tm*txt;
-    Real t31 = m3_x*m1_y*txy;
-    Real t32 = m3_x*m2_z*txz;
-    Real t33 = m3_x*m3_x*txx;
+    Real J3  = m3_x*Jx;
+    Real T30 = m3_x*m0_tm*Txt;
+    Real T31 = m3_x*m1_y*Txy;
+    Real T32 = m3_x*m2_z*Txz;
+    Real T33 = m3_x*m3_x*Txx;
 
-    // Extract global fluxes
-    Real &d3 = flux(IDN,k,j,i);
-    Real &t3_0 = flux(IEN,k,j,i);
-    Real &t3_1 = flux(IM1,k,j,i);
-    Real &t3_2 = flux(IM2,k,j,i);
-    Real &t3_3 = flux(IM3,k,j,i);
+    // lower indices T^1_i
+    Real T3_1 = g11*T31;
+    Real T3_2 = g22*T32;
+    Real T3_3 = g33*T33;
 
-    // Set fluxes
-    d3 = m3_x*dx;
-    t3_0 = g00*t30;
-    t3_1 = g11*t31;
-    t3_2 = g22*t32;
-    t3_3 = g33*t33;
+    // IEN = tau = E-D, so subtracted by flx(IDN).
+    flux(IDN,k,j,i) = alpha*J3;
+    flux(IEN,k,j,i) = alpha_sq*T30 - alpha*J3;
+    flux(IM1,k,j,i) = alpha*T3_1;
+    flux(IM2,k,j,i) = alpha*T3_2;
+    flux(IM3,k,j,i) = alpha*T3_3;
 
     // Transform magnetic fluxes if necessary
     if (MAGNETIC_FIELDS_ENABLED) {
