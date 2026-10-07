@@ -106,6 +106,11 @@ public:
   Real Face3SpatialDensitizationFactor(
 	MeshBlock *pmb, int k, int j, int i) const override;
 
+  void CellExtrinsicCurvature(
+         MeshBlock *pmb,
+	 const int k, const int j,
+	 const int il, const int iu,
+	 AthenaArray<Real> &k11, AthenaArray<Real> &k22, AthenaArray<Real> &k33) const override;
 
   Real GetEnclosedMassAtInnerBoundary(
         MeshBlock *pmb) const override;

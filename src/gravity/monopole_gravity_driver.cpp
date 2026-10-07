@@ -735,6 +735,24 @@ Real MonopoleGravityDriver::Face3SpatialDensitizationFactor(
 }
 
 
+void MonopoleGravityDriver::CellExtrinsicCurvature(
+         MeshBlock *pmb,
+	 const int k, const int j,
+	 const int il, const int iu,
+	 AthenaArray<Real> &k11, AthenaArray<Real> &k22, AthenaArray<Real> &k33) const {
+  
+  for (int i = il; i <= iu; ++i) {
+
+    const Real r = pmb->pcoord->x1v(i);
+    
+    k11(i) = 0.0;
+    k22(i) = 0.0;
+    k33(i) = 0.0;
+
+  }
+
+}
+
 
 Real MonopoleGravityDriver::GetEnclosedMassAtInnerBoundary(
     MeshBlock *pmb) const {

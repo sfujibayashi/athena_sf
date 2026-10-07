@@ -440,6 +440,11 @@ void Coordinates::AddCoordTermsDivergence(
   AthenaArray<Real> d1_g00_, d1_g11_;
   d1_g00_.NewAthenaArray(nc1+1);
   d1_g11_.NewAthenaArray(nc1+1);
+
+  AthenaArray<Real> k11,k22,k33;
+  k11.NewAthenaArray(nc1+1);
+  k22.NewAthenaArray(nc1+1);
+  k33.NewAthenaArray(nc1+1);
   
   // Go through cells
   for (int k = pmy_block->ks; k <= pmy_block->ke; ++k) {
@@ -453,6 +458,7 @@ void Coordinates::AddCoordTermsDivergence(
       // Calculate metric coefficients
       CellMetric(k, j, pmy_block->is, pmy_block->ie, g_, gi_);
       CellMetricRadialDerivatives(k, j, pmy_block->is, pmy_block->ie, d1_g00_, d1_g11_);
+      pmy_block->pmetric->CellExtrinsicCurvature(k, j, pmy_block->is, pmy_block->ie, k11, k22, k33);
 
       // Go through 1D slice
 #pragma omp simd
@@ -526,19 +532,30 @@ void Coordinates::AddCoordTermsDivergence(
         Real tt22 = wtot * u2 * u2 + ptot * g22 - b2 * b2;
         Real tt33 = wtot * u3 * u3 + ptot * g33 - b3 * b3;
 
+	// S^i
+	Real S1 = rho*wtot*u0 * u1;
+	// S^ij
+	Real S11 = tt11;
+
+	// del_i alpha
+	Real d1_alpha = -1.0/(2.0*alpha) * d1_g_00;
+
+        const Real q = pmetric->CellDensitizationFactor(k,j,i);
+	
         // Calculate source terms
-        Real s_1 = 0.5 * (d1_g_00*tt00 + d1_g_11*tt11 + d1_g_22*tt22 + d1_g_33*tt33);
-        Real s_2 = 0.5 * d2_g_33*tt33;
+        Real s_1 = q * 0.5 * (d1_g_00*tt00 + d1_g_11*tt11 + d1_g_22*tt22 + d1_g_33*tt33);
+        Real s_2 = q * 0.5 * d2_g_33*tt33;
+	Real s_e = S11*k11(i) - q*S1*d1_alpha;
 
         // Extract conserved quantities
+	Real &e_0 = cons(IEN,k,j,i);
         Real &m_1 = cons(IM1,k,j,i);
         Real &m_2 = cons(IM2,k,j,i);
 
-        const Real q = pmetric->CellDensitizationFactor(k,j,i);
-
         // Add source terms to conserved quantities        
-        m_1 += dt * q * s_1;
-        m_2 += dt * q * s_2;
+        m_1 += dt * s_1;
+        m_2 += dt * s_2;
+	e_0 += dt * s_e;
       }
     }
   }

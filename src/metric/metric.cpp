@@ -143,6 +143,15 @@ Real Metric::Face3SpatialDensitizationFactor(int k, int j, int i) const {
   return pmy_block->pmy_mesh->pmetric_driver->Face3SpatialDensitizationFactor(pmy_block,k,j,i);
 }
 
+void Metric::CellExtrinsicCurvature(const int k, const int j, const int il, const int iu,
+			AthenaArray<Real> &k11, AthenaArray<Real> &k22, AthenaArray<Real> &k33) const{
+  pmy_block->pmy_mesh->pmetric_driver->CellExtrinsicCurvature(
+        pmy_block,
+	k,j,il,iu,
+	k11,k22,k33);
+}
+
+
 void Metric::InvertMetric(
     int i,
     const AthenaArray<Real> &g,

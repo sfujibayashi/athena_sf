@@ -49,6 +49,10 @@ public:
   Real Face1SpatialDensitizationFactor(int k, int j, int i) const;
   Real Face2SpatialDensitizationFactor(int k, int j, int i) const;
   Real Face3SpatialDensitizationFactor(int k, int j, int i) const;
+
+  void CellExtrinsicCurvature(const int k, const int j,
+                  const int il, const int iu,
+                  AthenaArray<Real> &k11, AthenaArray<Real> &k22, AthenaArray<Real> &k33) const;
   
   void ConstructCovariantMetric(
     Real r, Real theta, Real phi, Real Psi, Real dm,
