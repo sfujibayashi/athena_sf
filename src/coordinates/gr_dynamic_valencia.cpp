@@ -483,7 +483,7 @@ void Coordinates::AddCoordTermsDivergence(
 
         // Extract primitives
         const Real &rho = prim(IDN,k,j,i);
-        const Real &pgas = prim(IEN,k,j,i);
+        const Real &pgas= prim(IEN,k,j,i);
         const Real &uu1 = prim(IVX,k,j,i);
         const Real &uu2 = prim(IVY,k,j,i);
         const Real &uu3 = prim(IVZ,k,j,i);
@@ -1232,7 +1232,7 @@ void Coordinates::FluxToGlobal3(const int k, const int j, const int il, const in
     Real T32 = m3_x*m2_z*Txz;
     Real T33 = m3_x*m3_x*Txx;
 
-    // lower indices T^1_i
+    // lower indices T^3_i
     Real T3_1 = g11*T31;
     Real T3_2 = g22*T32;
     Real T3_3 = g33*T33;
