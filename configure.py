@@ -93,6 +93,7 @@ parser.add_argument(
         'minkowski',
         'schwarzschild',
         'gr_dynamic',
+        'gr_dynamic_valencia',
         'kerr-schild',
         'gr_user'],
     help='select coordinate system')
@@ -457,7 +458,7 @@ definitions['PROBLEM'] = makefile_options['PROBLEM_FILE'] = args['prob']
 definitions['COORDINATE_SYSTEM'] = makefile_options['COORDINATES_FILE'] = args['coord']
 
 definitions['DYNAMIC_METRIC_ENABLED'] = \
-    '1' if args['coord'] == 'gr_dynamic' else '0'
+    '1' if args['coord'] in ('gr_dynamic','gr_dynamic_valencia') else '0'
 
 # --eos=[name] argument
 definitions['NON_BAROTROPIC_EOS'] = '0' if args['eos'] == 'isothermal' else '1'
@@ -545,9 +546,8 @@ if args['s']:
         makefile_options['GENERAL_EOS_FILE'] += '_sr'
     makefile_options['RSOLVER_FILE'] += '_rel'
 if args['g']:
-    if args['coord'] == 'gr_dynamic':
-        # makefile_options['EOS_FILE'] += '_gr_dynamic'
-        makefile_options['EOS_FILE'] += '_gr_valencia'
+    if args['coord'] in ('gr_dynamic' or 'gr_dynamic_valencia'):
+        makefile_options['EOS_FILE'] += '_gr_dynamic'
     else:
         makefile_options['EOS_FILE'] += '_gr'
     
