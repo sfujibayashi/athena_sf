@@ -533,19 +533,21 @@ void Coordinates::AddCoordTermsDivergence(
         Real tt33 = wtot * u3 * u3 + ptot * g33 - b3 * b3;
 
 	// S^i
-	Real S1 = rho*wtot*u0 * u1;
-	// S^ij
+	Real S1 = alpha*(wtot*u0*u1-b0*b1);
+	// S^ij Without shift, S^ij = T^ij
 	Real S11 = tt11;
+	Real S22 = tt22;
+	Real S33 = tt33;
 
 	// del_i alpha
 	Real d1_alpha = -1.0/(2.0*alpha) * d1_g_00;
-
-        const Real q = pmetric->CellDensitizationFactor(k,j,i);
+	
+        const Real qs = pmetric->CellSpatialDensitizationFactor(k,j,i);
 	
         // Calculate source terms
-        Real s_1 = q * 0.5 * (d1_g_00*tt00 + d1_g_11*tt11 + d1_g_22*tt22 + d1_g_33*tt33);
-        Real s_2 = q * 0.5 * d2_g_33*tt33;
-	Real s_e = S11*k11(i) - q*S1*d1_alpha;
+        Real s_1 = alpha*qs * 0.5 * (d1_g_00*tt00 + d1_g_11*tt11 + d1_g_22*tt22 + d1_g_33*tt33);
+        Real s_2 = alpha*qs * 0.5 * (d2_g_33*tt33);
+	Real s_e = qs * (alpha*(S11*k11(i) + S22*k22(i) + S33*k33(i)) - S1*d1_alpha);
 
         // Extract conserved quantities
 	Real &e_0 = cons(IEN,k,j,i);
