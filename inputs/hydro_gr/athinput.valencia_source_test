@@ -1,0 +1,47 @@
+<comment>
+problem = Valencia geometric source unit test
+
+<job>
+problem_id = valencia_source_test
+
+<time>
+cfl_number = 0.3
+nlim = 0
+tlim = 0.0
+integrator = vl2
+xorder = 2
+
+<mesh>
+nx1 = 4
+x1min = 2.0
+x1max = 4.0
+x1rat = 1.0
+
+nx2 = 4
+x2min = 0.5
+x2max = 1.2
+x2rat = 1.0
+
+nx3 = 2
+x3min = 0.2
+x3max = 1.0
+x3rat = 1.0
+
+ix1_bc = outflow
+ox1_bc = outflow
+ix2_bc = outflow
+ox2_bc = outflow
+ix3_bc = outflow
+ox3_bc = outflow
+
+<meshblock>
+nx1 = 4
+nx2 = 4
+nx3 = 2
+
+<hydro>
+gamma = 1.4
+
+<problem>
+tol = 2.0e-12
+dt_test = 0.37
