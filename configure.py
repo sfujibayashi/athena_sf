@@ -546,8 +546,10 @@ if args['s']:
         makefile_options['GENERAL_EOS_FILE'] += '_sr'
     makefile_options['RSOLVER_FILE'] += '_rel'
 if args['g']:
-    if args['coord'] in ('gr_dynamic' or 'gr_dynamic_valencia'):
+    if args['coord'] == 'gr_dynamic':
         makefile_options['EOS_FILE'] += '_gr_dynamic'
+    elif args['coord'] == 'gr_dynamic_valencia':
+        makefile_options['EOS_FILE'] += '_gr_valencia'
     else:
         makefile_options['EOS_FILE'] += '_gr'
     
