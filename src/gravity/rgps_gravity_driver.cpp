@@ -994,7 +994,7 @@ Real RGPSGravityDriver::CellMgrav(MeshBlock *pmb, int i) const {
   const int ig = GlobalRadialIndex(pmb, i);
   if (ig < 0) return GetBlackHoleMass();
   if ( ig >= nr_ ){
-    return mgrav_face_global_(ig+1);
+    return mgrav_face_global_(nr_);
   }
   const Real X_sq  = X_sq_cell_global_(ig);
   const Real r = r_cell_global_(ig);
