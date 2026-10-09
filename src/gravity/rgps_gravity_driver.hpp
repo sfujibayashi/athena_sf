@@ -138,6 +138,7 @@ private:
   AthenaArray<Real> calE_shell_global_;
   AthenaArray<Real> Srr_shell_global_;
   AthenaArray<Real> mgrav_face_global_;
+  AthenaArray<Real> X_sq_cell_global_;
   AthenaArray<Real> Phi_face_global_;
 
   AthenaArray<Real> r_cell_global_;

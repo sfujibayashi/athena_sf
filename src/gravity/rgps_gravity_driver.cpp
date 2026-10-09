@@ -59,6 +59,7 @@ RGPSGravityDriver::RGPSGravityDriver(Mesh *pm, ParameterInput *pin)
   // dmgrav_dr_global_.NewAthenaArray(nr_);
   // dmgrav_dt_global_.NewAthenaArray(nr_);
   // dphi_dr_global_.NewAthenaArray(nr_);
+  X_sq_cell_global_.NewAthenaArray(nr_);
   mgrav_face_global_.NewAthenaArray(nr_ + 1);
   Phi_face_global_.NewAthenaArray(nr_ + 1);
 
@@ -68,6 +69,7 @@ RGPSGravityDriver::RGPSGravityDriver(Mesh *pm, ParameterInput *pin)
   // dmgrav_dr_global_.ZeroClear();
   // dmgrav_dt_global_.ZeroClear();
   // dphi_dr_global_.ZeroClear();
+  X_sq_cell_global_.ZeroClear();
   mgrav_face_global_.ZeroClear();
   Phi_face_global_.ZeroClear();
   
@@ -250,6 +252,7 @@ void RGPSGravityDriver::ConstructMgravFromPrimitive(){
     }
 
     const Real X_sq = 1.0/Xinv_sq;
+    X_sq_cell_global_(i) = X_sq;
 
     const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
     const Real dm_full = dV*(Em_shell_global(i) + Er_shell_global(i)*X_sq + Ea_shell_global(i) - Eatmos)*mass_to_length;
@@ -304,14 +307,13 @@ void RGPSGravityDriver::ConstructPhiFromPrimitive(){
 	  const Real uu2  = pmb->phydro->w(IVY,k,j,i);
 	  const Real uu3  = pmb->phydro->w(IVZ,k,j,i);
 
-	  const Real mgrav = CellMgrav(pmb, i);
-	  const Real X_sq  = 1.0/(1.0 - 2.0*mgrav/r);
+	  const int ig = GlobalRadialIndex(pmb, i);
+	  const Real X_sq  = X_sq_cell_global_(ig);
 
 	  const Real egas = pmb->peos->EgasFromRhoP(rho, pgas);
 	  const Real wtot = rho + egas + pgas; // rho*h
 	  const Real Sr_r = wtot*X_sq*uu1*uu1 + pgas;
 
-          int ig = GlobalRadialIndex(pmb, i);
           Sr_r_shell_global(ig) += Sr_r*vol_(i);
         }
       }
