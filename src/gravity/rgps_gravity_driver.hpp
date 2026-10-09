@@ -30,6 +30,11 @@ public:
   ~RGPSGravityDriver() override;
   
   void InitializeRadialGrid();
+
+  void ConstructMgravFromPrimitive();
+  void ConstructMgravFromConserved();
+  void ConstructPhiFromPrimitive();
+
   void UpdateBeforeCons2Prim() override;
   void UpdateAfterCons2Prim() override;
 

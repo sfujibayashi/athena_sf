@@ -141,7 +141,111 @@ void RGPSGravityDriver::InitializeRadialGrid(){
   }
 }
 
-void RGPSGravityDriver::UpdateBeforeCons2Prim(){
+void RGPSGravityDriver::ConstructMgravFromPrimitive(){
+
+  const Real bh_mass = GetBlackHoleMass();
+  
+  AthenaArray<Real> E_shell_global;
+
+
+  AthenaArray<Real> Em_shell_global;
+  AthenaArray<Real> Er_shell_global;
+  AthenaArray<Real> Ea_shell_global;
+
+  Em_shell_global.NewAthenaArray(nr_);
+  Er_shell_global.NewAthenaArray(nr_);
+  Ea_shell_global.NewAthenaArray(nr_);
+
+  Em_shell_global.ZeroClear();
+  Er_shell_global.ZeroClear();
+  Ea_shell_global.ZeroClear();
+
+  // run over MeshBlocks
+  for (int b=0; b<pmy_mesh_->nblocal; ++b) {
+    MeshBlock *pmb = pmy_mesh_->my_blocks(b);
+    
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+        pmy_mesh_->my_blocks(b)->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol_);
+	const Real theta = pmy_mesh_->my_blocks(b)->pcoord->x2v(j);
+	const Real sintheta = std::sin(theta);
+        for (int i=pmb->is; i<=pmb->ie; ++i) {
+	  const Real r = pmy_mesh_->my_blocks(b)->pcoord->x1v(i);
+
+	  const Real rho  = pmb->phydro->w(IDN,k,j,i);
+	  const Real pgas = pmb->phydro->w(IPR,k,j,i);
+	  const Real uu1  = pmb->phydro->w(IVX,k,j,i);
+	  const Real uu2  = pmb->phydro->w(IVY,k,j,i);
+	  const Real uu3  = pmb->phydro->w(IVZ,k,j,i);
+
+	  const Real egas = pmb->peos->EgasFromRhoP(rho, pgas);
+	  const Real rhoh = rho + egas + pgas;
+	  
+	  const Real kr = rhoh*uu1*uu1;
+	  const Real ka = rhoh*r*r*(uu2*uu2 + uu2*uu2*sintheta*sintheta);
+	  
+          int ig = GlobalRadialIndex(pmb, i);
+          Em_shell_global(ig) += (rhoh-pgas) * vol_(i);
+          Er_shell_global(ig) += kr * vol_(i);
+          Ea_shell_global(ig) += ka * vol_(i);
+        }
+      }
+    }
+  }
+
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, Em_shell_global.data(), nr_, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, Er_shell_global.data(), nr_, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, Ea_shell_global.data(), nr_, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+#endif
+
+  // Get angular average value by dividing with the shell volume.
+  for(int i=0; i<nr_; ++i){
+    const Real rm = r_face_global_(i);
+    const Real rp = r_face_global_(i+1);
+
+    const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
+    Em_shell_global(i) /= dV;
+    Er_shell_global(i) /= dV;
+    Ea_shell_global(i) /= dV;
+  }
+  
+  
+  
+}
+
+// void RGPSGravityDriver::ConstructPhiFromPrimitive(){
+
+//   const Real bh_mass = GetBlackHoleMass();
+  
+//   AthenaArray<Real> E_shell_global;
+//   E_shell_global.NewAthenaArray(nr_);
+//   E_shell_global.ZeroClear();
+  
+//   // run over MeshBlocks
+//   for (int b=0; b<pmy_mesh_->nblocal; ++b) {
+//     MeshBlock *pmb = pmy_mesh_->my_blocks(b);
+    
+//     for (int k=pmb->ks; k<=pmb->ke; ++k) {
+//       for (int j=pmb->js; j<=pmb->je; ++j) {
+//         pmy_mesh_->my_blocks(b)->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol_);
+//         for (int i=pmb->is; i<=pmb->ie; ++i) {
+
+// 	  const Real rho  = pmb->phydro->w(IDN,k,j,i);
+// 	  const Real press= pmb->phydro->w(IPN,k,j,i);
+// 	  const Real uu1  = pmb->phydro->w(IVX,k,j,i);
+// 	  const Real uu2  = pmb->phydro->w(IVY,k,j,i);
+// 	  const Real uu3  = pmb->phydro->w(IVZ,k,j,i);
+	  
+//           int ig = GlobalRadialIndex(pmb, i);
+//           E_shell_global_(ig) += (pmb->phydro->u(IEN,k,j,i)+pmb->phydro->u(IDN,k,j,i)) * vol_(i);
+//         }
+//       }
+//     }
+//   }
+// }
+
+void RGPSGravityDriver::ConstructMgravFromConserved(){
   
   const Real bh_mass = GetBlackHoleMass();
 
@@ -237,6 +341,9 @@ void RGPSGravityDriver::UpdateBeforeCons2Prim(){
   } 
 }
 
+
+void RGPSGravityDriver::UpdateBeforeCons2Prim(){
+}
 
 void RGPSGravityDriver::UpdateAfterCons2Prim(){
   
