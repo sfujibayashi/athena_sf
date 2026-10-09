@@ -184,6 +184,9 @@ class EquationOfState {
   Real GetGamma() const {return gamma_;}
 #endif
 
+  Real GetDensityFloor(Real r) const;
+  Real GetPressureFloor(Real r) const;
+
  private:
   // (C++11) in-class Default Member Initializer (fallback option):
   const Real float_min{std::numeric_limits<float>::min()};

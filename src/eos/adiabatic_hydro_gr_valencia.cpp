@@ -113,17 +113,9 @@ void EquationOfState::ConservedToPrimitive(
         bool fixed = false;
 
         // Calculate floors for density and pressure
-        Real density_floor_local = density_floor_;
-        if (rho_pow_ != 0.0) {
-          density_floor_local =
-              std::max(density_floor_local, rho_min_ * std::pow(pco->x1v(i), rho_pow_));
-        }
-        Real pressure_floor_local = pressure_floor_;
-        if (pgas_pow_ != 0.0) {
-          pressure_floor_local = std::max(pressure_floor_local,
-                                          pgas_min_ * std::pow(pco->x1v(i), pgas_pow_));
-        }
-
+        const Real density_floor_local = GetDensityFloor(pco->x1v(i));                    
+        const Real pressure_floor_local = GetPressureFloor(pco->x1v(i));
+	
         // Ensure conserved density is large enough
         Real dd_min = density_floor_local;
         if (normal_dd_(i) < dd_min) {
@@ -204,18 +196,6 @@ void EquationOfState::ConservedToPrimitive(
           uu2 *= factor;
           uu3 *= factor;
           fixed = true;
-        }
-
-        // Recalculate density and pressure floors given new velocity
-        density_floor_local = density_floor_;
-        if (rho_pow_ != 0.0) {
-          density_floor_local =
-              std::max(density_floor_local, rho_min_ * std::pow(pco->x1v(i), rho_pow_));
-        }
-        pressure_floor_local = pressure_floor_;
-        if (pgas_pow_ != 0.0) {
-          pressure_floor_local = std::max(pressure_floor_local,
-                                          pgas_min_ * std::pow(pco->x1v(i), pgas_pow_));
         }
 
         // Apply density and gas pressure floors in fluid frame
@@ -672,4 +652,21 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
   w_p = (w_p > pressure_floor_) ?  w_p : pressure_floor_;
 
   return;
+}
+
+
+Real EquationOfState::GetDensityFloor(Real r) const {
+  if (rho_pow_ != 0.0) {
+    return std::max(density_floor_, rho_min_ * std::pow(r, rho_pow_));
+  }else{
+    return density_floor_;
+  }
+}
+
+Real EquationOfState::GetPressureFloor(Real r) const {
+  if (pgas_pow_ != 0.0) {
+    return std::max(pressure_floor_, pgas_min_ * std::pow(r, pgas_pow_));
+  }else{
+    return pressure_floor_;
+  }
 }
