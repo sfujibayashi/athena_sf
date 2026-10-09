@@ -230,10 +230,10 @@ void RGPSGravityDriver::ConstructMgravFromPrimitive(){
     const Real dEr_len    = Er_shell_global(i)*dVm * mass_to_length;
     const Real dErest_len = (Em_shell_global(i) + Ea_shell_global(i) - Eatmos)*dVm * mass_to_length;
     
-    const Real b = 0.5*(1.0 - 2.0/rc*(mL + dEr_len + dErest_len));
+    const Real b = 0.5*(1.0 - 2.0/rc*(mL + dErest_len));
     const Real c = 2.0*dEr_len/rc;
     
-    const Real Xinv_sq = -c/(b + std::sqrt(b*b - c));
+    const Real Xinv_sq = 0.5*(b + std::sqrt(b*b - 4.0*c));
     const Real X_sq = 1.0/Xinv_sq;
 
     const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
