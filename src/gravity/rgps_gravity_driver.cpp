@@ -145,9 +145,6 @@ void RGPSGravityDriver::ConstructMgravFromPrimitive(){
 
   const Real bh_mass = GetBlackHoleMass();
   
-  AthenaArray<Real> E_shell_global;
-
-
   AthenaArray<Real> Em_shell_global;
   AthenaArray<Real> Er_shell_global;
   AthenaArray<Real> Ea_shell_global;
@@ -247,7 +244,7 @@ void RGPSGravityDriver::ConstructMgravFromPrimitive(){
     if (Xinv_sq <= 0.0) {
       std::stringstream msg;
       msg << "### FATAL ERROR in RGPSGravityDriver::ConstructMgravFromPrimitive" << std::endl
-	  << "Xinv_sq < 0."
+	  << "Xinv_sq <= 0."
 	  << std::endl;
       ATHENA_ERROR(msg);
     }
@@ -280,36 +277,67 @@ void RGPSGravityDriver::ConstructMgravFromPrimitive(){
   } 
 }
 
-// void RGPSGravityDriver::ConstructPhiFromPrimitive(){
+void RGPSGravityDriver::ConstructPhiFromPrimitive(){
 
-//   const Real bh_mass = GetBlackHoleMass();
+  const Real bh_mass = GetBlackHoleMass();
   
-//   AthenaArray<Real> E_shell_global;
-//   E_shell_global.NewAthenaArray(nr_);
-//   E_shell_global.ZeroClear();
+  AthenaArray<Real> Sr_r_shell_global;
+  Sr_r_shell_global.NewAthenaArray(nr_);
+  Sr_r_shell_global.ZeroClear();
   
-//   // run over MeshBlocks
-//   for (int b=0; b<pmy_mesh_->nblocal; ++b) {
-//     MeshBlock *pmb = pmy_mesh_->my_blocks(b);
+  // run over MeshBlocks
+  for (int b=0; b<pmy_mesh_->nblocal; ++b) {
+    MeshBlock *pmb = pmy_mesh_->my_blocks(b);
     
-//     for (int k=pmb->ks; k<=pmb->ke; ++k) {
-//       for (int j=pmb->js; j<=pmb->je; ++j) {
-//         pmy_mesh_->my_blocks(b)->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol_);
-//         for (int i=pmb->is; i<=pmb->ie; ++i) {
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+        pmy_mesh_->my_blocks(b)->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol_);
+        for (int i=pmb->is; i<=pmb->ie; ++i) {
 
-// 	  const Real rho  = pmb->phydro->w(IDN,k,j,i);
-// 	  const Real press= pmb->phydro->w(IPN,k,j,i);
-// 	  const Real uu1  = pmb->phydro->w(IVX,k,j,i);
-// 	  const Real uu2  = pmb->phydro->w(IVY,k,j,i);
-// 	  const Real uu3  = pmb->phydro->w(IVZ,k,j,i);
-	  
-//           int ig = GlobalRadialIndex(pmb, i);
-//           E_shell_global_(ig) += (pmb->phydro->u(IEN,k,j,i)+pmb->phydro->u(IDN,k,j,i)) * vol_(i);
-//         }
-//       }
-//     }
-//   }
-// }
+	  const Real r = pmb->pcoord->x1v(i);
+
+	  const Real rho  = pmb->phydro->w(IDN,k,j,i);
+	  const Real pgas = pmb->phydro->w(IPR,k,j,i);
+	  const Real uu1  = pmb->phydro->w(IVX,k,j,i);
+	  const Real uu2  = pmb->phydro->w(IVY,k,j,i);
+	  const Real uu3  = pmb->phydro->w(IVZ,k,j,i);
+
+	  const Real mgrav = CellMgrav(pmb, i);
+	  const Real X_sq  = 1.0/(1.0 - 2.0*mgrav/r);
+
+	  const Real egas = pmb->peos->EgasFromRhoP(rho, pgas);
+	  const Real wtot = rho + egas + pgas; // rho*h
+	  const Real Sr_r = wtot*X_sq*uu1*uu1 + pgas;
+
+          int ig = GlobalRadialIndex(pmb, i);
+          Sr_r_shell_global(ig) += Sr_r*vol_(i);
+        }
+      }
+    }
+  }
+  
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, Sr_r_shell_global.data(), nr_, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+#endif
+  
+  const Real mout = mgrav_face_global_(nr_);
+  const Real rout = r_face_global_(nr_);
+  Phi_face_global_(nr_) = 0.5*std::log(1.0 - 2.0*mout/rout);
+  for (int i=nr_; i>0; --i) {
+    const Real rm = r_face_global_(i);
+    const Real rp = r_face_global_(i+1);
+    const Real dr = rp-rm;
+
+    // cell-centered values
+    const Real mgrav = 0.5*(mgrav_face_global_(i) + mgrav_face_global_(i-1));
+    const Real r = r_cell_global_(i-1);
+    const Real Sr_r = Sr_r_shell_global(i-1);
+    const Real X_sq = 1.0/(1.0-2.0*mgrav/r);
+    
+    Phi_face_global_(i-1) = Phi_face_global_(i) 
+      + dr*X_sq*(mgrav/(r*r) + 4.0*M_PI*Sr_r);
+  }
+}
 
 void RGPSGravityDriver::ConstructMgravFromConserved(){
   
