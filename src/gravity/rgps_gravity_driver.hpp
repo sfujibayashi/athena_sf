@@ -35,7 +35,8 @@ public:
   void ConstructMgravFromConserved();
   void ConstructPhiFromPrimitive();
 
-  void UpdateBeforeCons2Prim() override;
+  void InitializeFromPrimitive() override;
+  void UpdateBeforeCons2Prim(int stage) override;
   void UpdateAfterCons2Prim() override;
 
   Real bh_mass_prev_, bh_spin_prev_;
@@ -97,7 +98,6 @@ public:
 
   Real CellDensitizationFactor(
         MeshBlock *pmb, int k, int j, int i) const override;
-
   Real Face1DensitizationFactor(
 	MeshBlock *pmb, int k, int j, int i) const override;
   Real Face2DensitizationFactor(
@@ -105,6 +105,20 @@ public:
   Real Face3DensitizationFactor(
 	MeshBlock *pmb, int k, int j, int i) const override;
   
+  Real CellSpatialDensitizationFactor(
+        MeshBlock *pmb, int k, int j, int i) const override;
+  Real Face1SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const override;
+  Real Face2SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const override;
+  Real Face3SpatialDensitizationFactor(
+	MeshBlock *pmb, int k, int j, int i) const override;
+
+  void CellExtrinsicCurvature(
+         MeshBlock *pmb,
+	 const int k, const int j,
+	 const int il, const int iu,
+	 AthenaArray<Real> &k11, AthenaArray<Real> &k22, AthenaArray<Real> &k33) const override;
 
   Real GetEnclosedMassAtInnerBoundary(
         MeshBlock *pmb) const override;

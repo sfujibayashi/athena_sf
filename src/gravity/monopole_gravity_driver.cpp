@@ -63,7 +63,10 @@ MonopoleGravityDriver::~MonopoleGravityDriver() {
   Psi_face_global_.DeleteAthenaArray();
 }
 
-void MonopoleGravityDriver::UpdateBeforeCons2Prim(){
+void MonopoleGravityDriver::InitializeFromPrimitive() {
+}
+
+void MonopoleGravityDriver::UpdateBeforeCons2Prim(int stage){
 }
 
 void MonopoleGravityDriver::UpdateAfterCons2Prim(){

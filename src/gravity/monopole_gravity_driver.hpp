@@ -29,7 +29,8 @@ public:
   MonopoleGravityDriver(Mesh *pm, ParameterInput *pin);
   ~MonopoleGravityDriver() override;
   
-  void UpdateBeforeCons2Prim() override;
+  void InitializeFromPrimitive() override;
+  void UpdateBeforeCons2Prim(int stage) override;
   void UpdateAfterCons2Prim() override;
 
   Real bh_mass_prev_, bh_spin_prev_;
