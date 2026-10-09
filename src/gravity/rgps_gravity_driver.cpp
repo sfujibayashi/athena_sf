@@ -378,8 +378,11 @@ void RGPSGravityDriver::ConstructPhiFromPrimitive(){
 
   for (int i=0; i<nr_; ++i) {
     const Real r = r_cell_global_(i);
+    const Real rm = r_face_global_(i);
     const Real r2 = SQR(r);
-    const Real alpha = std::exp(Phi_face_global_(i));
+    const Real Phi = Phi_face_global_(i)
+      + (r-rm)*dPhi_dr_cell_global_(i);
+    const Real alpha = std::exp(Phi);
     
     dmgrav_dt_cell_global_(i) = -4.0*M_PI*r2 * alpha * Sr_shell_global(i)*mass_to_length;
   }
@@ -559,9 +562,13 @@ Real RGPSGravityDriver::BlackHoleMassAccretionRate() const {
     for (int k=pmb->ks; k<=pmb->ke; ++k) {
       for (int j=pmb->js; j<=pmb->je; ++j) {
         const Real area = pcoord->GetFace1Area(k, j, pmb->is);
-        
+	const Real X =
+	  pmb->pmetric->Face1SpatialDensitizationFactor(k,j,pmb->is);
+        const Real fE = 
+	  pmb->phydro->flux[X1DIR](IEN, k, j, pmb->is)
+	  + pmb->phydro->flux[X1DIR](IDN, k, j, pmb->is);
         // inward flux is negative
-        mdot -= area * pmb->phydro->flux[X1DIR](IDN, k, j, pmb->is);
+        mdot -= (area/X) * fE;
       }
     }
   }
