@@ -896,8 +896,8 @@ Real RGPSGravityDriver::Face1DensitizationFactor(
 	MeshBlock *pmb, int k, int j, int i) const {
   Coordinates *pcoord = pmb->pcoord;
 
-  auto &Phi_face1 = PhiFace1(pmb);
-  auto &mgrav_face1 = MgravFace1(pmb);
+  const auto &Phi_face1 = PhiFace1(pmb);
+  const auto &mgrav_face1 = MgravFace1(pmb);
   
   const Real r = pcoord->x1f(i);
   const Real theta = pcoord->x2v(j);
@@ -982,8 +982,12 @@ const AthenaArray<Real>& RGPSGravityDriver::MgravFace1(MeshBlock *pmb) const {
 }
 
 Real RGPSGravityDriver::CellPhi(MeshBlock *pmb, int i) const {
-  const auto &phi = PhiFace1(pmb);
-  return 0.5*(phi(i) + phi(i+1));
+  const auto &Phi = PhiFace1(pmb);
+  const Real rc = pmb->pcoord->x1v(i);
+  const Real rm = pmb->pcoord->x1f(i);
+  const int ig = GlobalRadialIndex(pmb, i);
+  const Real dPhi_dr = dPhi_dr_cell_global_(ig);
+  return Phi(i) + (rc-rm)*dPhi_dr;
 }
 
 Real RGPSGravityDriver::CellMgrav(MeshBlock *pmb, int i) const {
