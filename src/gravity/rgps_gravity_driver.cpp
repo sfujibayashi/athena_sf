@@ -57,7 +57,7 @@ RGPSGravityDriver::RGPSGravityDriver(Mesh *pm, ParameterInput *pin)
   Srr_shell_global_.NewAthenaArray(nr_);
   // Sr_shell_global_.NewAthenaArray(nr_);
   dmgrav_dr_cell_global_.NewAthenaArray(nr_);
-  // dmgrav_dt_global_.NewAthenaArray(nr_);
+  dmgrav_dt_cell_global_.NewAthenaArray(nr_);
   dPhi_dr_cell_global_.NewAthenaArray(nr_);
   X_sq_cell_global_.NewAthenaArray(nr_);
   mgrav_face_global_.NewAthenaArray(nr_ + 1);
@@ -67,7 +67,7 @@ RGPSGravityDriver::RGPSGravityDriver(Mesh *pm, ParameterInput *pin)
   Srr_shell_global_.ZeroClear();
   // Sr_shell_global_.ZeroClear();
   dmgrav_dr_cell_global_.ZeroClear();
-  // dmgrav_dt_global_.ZeroClear();
+  dmgrav_dt_cell_global_.ZeroClear();
   dPhi_dr_cell_global_.ZeroClear();
   X_sq_cell_global_.ZeroClear();
   mgrav_face_global_.ZeroClear();
@@ -91,7 +91,7 @@ RGPSGravityDriver::~RGPSGravityDriver() {
   Srr_shell_global_.DeleteAthenaArray();
   // Sr_shell_global_.DeleteAthenaArray();
   dmgrav_dr_cell_global_.DeleteAthenaArray();
-  // dmgrav_dt_global_.DeleteAthenaArray();
+  dmgrav_dt_cell_global_.DeleteAthenaArray();
   dPhi_dr_cell_global_.DeleteAthenaArray();
   mgrav_face_global_.DeleteAthenaArray();
   Phi_face_global_.DeleteAthenaArray();
@@ -305,6 +305,8 @@ void RGPSGravityDriver::ConstructPhiFromPrimitive(){
     for (int k=pmb->ks; k<=pmb->ke; ++k) {
       for (int j=pmb->js; j<=pmb->je; ++j) {
         pmy_mesh_->my_blocks(b)->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol_);
+	const Real theta = pmb->pcoord->x2v(j);
+	const Real sintheta = std::sin(theta);
         for (int i=pmb->is; i<=pmb->ie; ++i) {
 
 	  const Real r = pmb->pcoord->x1v(i);
@@ -322,6 +324,15 @@ void RGPSGravityDriver::ConstructPhiFromPrimitive(){
 	  const Real wtot = rho + egas + pgas; // rho*h
 	  const Real Sr_r = wtot*X_sq*uu1*uu1 + pgas;
           Sr_r_shell_global(ig) += Sr_r*vol_(i);
+	  
+	  const Real g11 = X_sq;
+	  const Real g22 = r*r;
+	  const Real g33 = r*r*sintheta*sintheta;
+	  
+	  const Real W = std::sqrt(1.0 + g11*uu1*uu1 + g22*uu2*uu2 + g33*uu3*uu3);
+	  const Real Sr = wtot*W*uu1; // S^r
+	  
+	  Sr_shell_global(ig) += Sr*vol_(i);
         }
       }
     }
@@ -329,15 +340,17 @@ void RGPSGravityDriver::ConstructPhiFromPrimitive(){
   
 #ifdef MPI_PARALLEL
   MPI_Allreduce(MPI_IN_PLACE, Sr_r_shell_global.data(), nr_, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, Sr_shell_global.data(), nr_, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
 #endif
   
   // Get angular average value by dividing with the shell volume.
   for(int i=0; i<nr_; ++i){
     const Real rm = r_face_global_(i);
     const Real rp = r_face_global_(i+1);
-
+    
     const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
     Sr_r_shell_global(i) /= dV;
+    Sr_shell_global(i) /= dV;
   }
   
 
@@ -363,6 +376,13 @@ void RGPSGravityDriver::ConstructPhiFromPrimitive(){
     dPhi_dr_cell_global_(i) = dPhi_dr;
   }
 
+  for (int i=0; i<nr_; ++i) {
+    const Real r = r_cell_global_(i);
+    const Real r2 = SQR(r);
+    const Real alpha = std::exp(Phi_face_global_(i));
+    
+    dmgrav_dt_cell_global_(i) = -4.0*M_PI*r2 * alpha * Sr_shell_global(i)*mass_to_length;
+  }
   
   for (int b=0; b<pmy_mesh_->nblocal; ++b) {
     MeshBlock *pmb = pmy_mesh_->my_blocks(b);
@@ -1052,10 +1072,17 @@ void RGPSGravityDriver::CellExtrinsicCurvature(
 	 AthenaArray<Real> &k11, AthenaArray<Real> &k22, AthenaArray<Real> &k33) const {
   
   for (int i = il; i <= iu; ++i) {
-
     const Real r = pmb->pcoord->x1v(i);
+    const Real Phi = CellPhi(pmb, i);
+    const Real alpha = std::exp(Phi);
+    const Real X_sq = CellXsq(pmb, i);
+    const int ig = GlobalRadialIndex(pmb, i);
+    Real dmgrav_dt = 0.0;
+    if(0<=ig and ig<nr_){
+      dmgrav_dt = dmgrav_dt_cell_global_(ig);
+    }
     
-    k11(i) = 0.0;
+    k11(i) = -X_sq*X_sq*dmgrav_dt / (alpha*r);
     k22(i) = 0.0;
     k33(i) = 0.0;
 

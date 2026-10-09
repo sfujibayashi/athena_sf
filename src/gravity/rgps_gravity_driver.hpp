@@ -44,7 +44,7 @@ public:
   Real mdot_bh_, angdot_bh_;
 
   Real BlackHoleMassAccretionRate() const;
-  void UpdateBlackHoleMass(int stage);
+  void UpdateBlackHoleMass(int stage) override;
 
   Real GetBlackHoleMass() const override;
   Real GetBlackHoleSpin() const;
@@ -157,6 +157,7 @@ private:
   AthenaArray<Real> Phi_face_global_;
 
   AthenaArray<Real> dmgrav_dr_cell_global_;
+  AthenaArray<Real> dmgrav_dt_cell_global_;
   AthenaArray<Real> dPhi_dr_cell_global_;
 
   AthenaArray<Real> r_cell_global_;
