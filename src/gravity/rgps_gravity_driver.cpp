@@ -17,8 +17,6 @@
 
 namespace{
 
-  bool radial_grid_initialized_;
-
   int GlobalRadialIndex(const MeshBlock *pmb, int i){
     int ig = pmb->loc.lx1 * pmb->block_size.nx1 + (i - pmb->is);
     return ig;
@@ -49,10 +47,11 @@ RGPSGravityDriver::RGPSGravityDriver(Mesh *pm, ParameterInput *pin)
   
   nr_ = pm->mesh_size.nx1;
 
-  radial_grid_initialized_ = false;
   r_cell_global_.NewAthenaArray(nr_);
   r_face_global_.NewAthenaArray(nr_+1);
   vol_.NewAthenaArray(pmy_mesh_->block_size.nx1+2*NGHOST);
+
+  InitializeRadialGrid()
 
   calE_shell_global_.NewAthenaArray(nr_);
   Srr_shell_global_.NewAthenaArray(nr_);
@@ -98,10 +97,6 @@ RGPSGravityDriver::~RGPSGravityDriver() {
 
 void RGPSGravityDriver::InitializeRadialGrid(){
 
-  if(radial_grid_initialized_){
-    return;
-  }
-
   AthenaArray<Real> r_sum, rf_sum;
   AthenaArray<int> count, countf;
 
@@ -144,14 +139,10 @@ void RGPSGravityDriver::InitializeRadialGrid(){
   for(int i=0; i<nr_+1;++i){
     r_face_global_(i) = rf_sum(i)/countf(i);
   }
-
-  radial_grid_initialized_ = true;
 }
 
 void RGPSGravityDriver::Update(){
   
-  InitializeRadialGrid();
-
   const Real bh_mass = GetBlackHoleMass();
 
   // AthenaArray<Real> vol;
