@@ -128,11 +128,15 @@ private:
 
   int nr_;
 
-  AthenaArray<Real> dm_dt_global_;
-  AthenaArray<Real> dm_dr_global_;
-  AthenaArray<Real> dphi_dr_global_;
+  AthenaArray<Real> calE_shell_global_;
   AthenaArray<Real> mgrav_face_global_;
   AthenaArray<Real> Phi_face_global_;
+
+  AthenaArray<Real> r_cell_global_;
+  AthenaArray<Real> r_face_global_;
+
+  AthenaArray<Real> vol_;
+
 
   Real& BlackHoleMassStorage();
   const Real& BlackHoleMassStorage() const;

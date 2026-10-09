@@ -9,7 +9,9 @@
 #include "../metric/metric.hpp"
 #include "../coordinates/coordinates.hpp"
 #include "../parameter_input.hpp"
+#include "../eos/eos.hpp"
 
+#include "rgps_gravity.hpp"
 #include "rgps_gravity_driver.hpp"
 #include "dynamic_metric_driver.hpp"
 
@@ -22,7 +24,7 @@ namespace{
   
 }
 
-RGPSGravity::RGPSGravity(Mesh *pm, ParameterInput *pin)
+RGPSGravityDriver::RGPSGravityDriver(Mesh *pm, ParameterInput *pin)
   : pmy_mesh_(pm) {
 
   if (pm->multilevel) {
@@ -35,17 +37,71 @@ RGPSGravity::RGPSGravity(Mesh *pm, ParameterInput *pin)
   
   nr_ = pm->mesh_size.nx1;
 
-  dm_dt_shell_global_.NewAthenaArray(nr_);
-  dm_dr_shell_global_.NewAthenaArray(nr_);
-  dphi_dr_shell_global_.NewAthenaArray(nr_);
-  mgrav_face_global_.NewAthenaArray(nr_ + 1);
-  Phi_face_global_.NewAthenaArray(nr_ + 1);
+  r_cell_global_.NewAthenaArray(nr_);
+  r_face_global_.NewAthenaArray(nr_+1);
 
-  dm_dt_shell_global_.ZeroClear();
-  dm_dr_shell_global_.ZeroClear();
-  dphi_dr_shell_global_.ZeroClear();
+  vol_.NewAthenaArray(pmy_mesh_->block_size.nx1+2*NGHOST);
+
+  calE_shell_global_.NewAthenaArray(nr_);
+  // Srr_shell_global_.NewAthenaArray(nr_);
+  // Sr_shell_global_.NewAthenaArray(nr_);
+  // dmgrav_dr_global_.NewAthenaArray(nr_);
+  // dmgrav_dt_global_.NewAthenaArray(nr_);
+  // dphi_dr_global_.NewAthenaArray(nr_);
+  mgrav_face_global_.NewAthenaArray(nr_ + 1);
+  // phi_face_global_.NewAthenaArray(nr_ + 1);
+
+  calE_shell_global_.ZeroClear();
+  // Srr_shell_global_.ZeroClear();
+  // Sr_shell_global_.ZeroClear();
+  // dmgrav_dr_global_.ZeroClear();
+  // dmgrav_dt_global_.ZeroClear();
+  // dphi_dr_global_.ZeroClear();
   mgrav_face_global_.ZeroClear();
-  Phi_face_global_.ZeroClear();
+  // phi_face_global_.ZeroClear();
+
+  AthenaArray<Real> r_sum, rf_sum;
+  AthenaArray<int> count, countf;
+
+  r_sum.NewAthenaArray(nr_);
+  rf_sum.NewAthenaArray(nr_+1);
+  count.NewAthenaArray(nr_);
+  countf.NewAthenaArray(nr_+1);
+
+  r_sum.ZeroClear();
+  rf_sum.ZeroClear();
+  count.ZeroClear();
+  countf.ZeroClear();
+  
+  for (int b=0; b<pmy_mesh_->nblocal; ++b) {
+    MeshBlock *pmb = pmy_mesh_->my_blocks(b);
+    
+    for (int i=pmb->is; i<=pmb->ie; ++i) {
+      const int ig = GlobalRadialIndex(pmb, i);
+      r_sum(ig) += pmb->pcoord->x1v(i);
+      count(ig)++;
+    }
+    
+    for (int i=pmb->is; i<=pmb->ie+1; ++i) {
+      const int igf = pmb->loc.lx1*pmb->block_size.nx1 + (i-pmb->is);
+      rf_sum(igf) += pmb->pcoord->x1f(i);
+      count(igf)++;
+    }
+  }
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, r_sum.data(), nr_, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, rf_sum.data(), nr_+1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, count.data(), nr_, MPI_ATHENA_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, countf.data(), nr_+1, MPI_ATHENA_INT, MPI_SUM, MPI_COMM_WORLD);
+#endif
+
+  for(int i=0; i<nr_;++i){
+    r_cell_global_(i) = r_sum(i)/count(i);
+  }
+
+  for(int i=0; i<nr_+1;++i){
+    r_face_global_(i) = rf_sum(i)/countf(i);
+  }
   
   const Real bh_mass = GetBlackHoleMass();
   const Real bh_spin = GetBlackHoleSpin();
@@ -60,23 +116,26 @@ RGPSGravity::RGPSGravity(Mesh *pm, ParameterInput *pin)
 
 }
 
-RGPSGravity::~RGPSGravity() {
-  dm_dt_shell_global_.DeleteAthenaArray();
-  dm_dr_shell_global_.DeleteAthenaArray();
-  dphi_dr_shell_global_.DeleteAthenaArray();
+RGPSGravityDriver::~RGPSGravityDriver() {
+  calE_shell_global_.DeleteAthenaArray();
+  // Srr_shell_global_.DeleteAthenaArray();
+  // Sr_shell_global_.DeleteAthenaArray();
+  // dmgrav_dr_global_.DeleteAthenaArray();
+  // dmgrav_dt_global_.DeleteAthenaArray();
+  // dphi_dr_global_.DeleteAthenaArray();
   mgrav_face_global_.DeleteAthenaArray();
-  Phi_face_global_.DeleteAthenaArray();
+  // phi_face_global_.DeleteAthenaArray();
 }
 
 
-void RGPSGravity::Update(){
+void RGPSGravityDriver::Update(){
 
   const Real bh_mass = GetBlackHoleMass();
 
-  AthenaArray<Real> vol;
-  vol.NewAthenaArray(pmy_mesh_->block_size.nx1+2*NGHOST);
+  // AthenaArray<Real> vol;
+  // vol.NewAthenaArray(pmy_mesh_->block_size.nx1+2*NGHOST);
   
-  dm_dr_shell_global_.ZeroClear();
+  calE_shell_global_.DeleteAthenaArray();
   
   // run over MeshBlocks
   for (int b=0; b<pmy_mesh_->nblocal; ++b) {
@@ -84,13 +143,12 @@ void RGPSGravity::Update(){
     
     for (int k=pmb->ks; k<=pmb->ke; ++k) {
       for (int j=pmb->js; j<=pmb->je; ++j) {
-        pmy_mesh_->my_blocks(b)->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+        pmy_mesh_->my_blocks(b)->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol_);
         for (int i=pmb->is; i<=pmb->ie; ++i) {
           
           int ig = GlobalRadialIndex(pmb, i);
 
-          dm_shell_global_(ig) += pmb->phydro->u(IEN,k,j,i) 
-            * vol(i);
+          calE_shell_global_(ig) += pmb->phydro->u(IEN,k,j,i) * vol_(i);
         }
       }
     }
@@ -98,79 +156,70 @@ void RGPSGravity::Update(){
 
 #ifdef MPI_PARALLEL
   MPI_Allreduce(MPI_IN_PLACE,
-                dm_shell_global_.data(),
+                calE_shell_global_.data(),
                 nr_,
                 MPI_ATHENA_REAL,
                 MPI_SUM,
                 MPI_COMM_WORLD);
 #endif
+
+  // Get angular average value by dividing with the shell volume.
+  for(int i=0; i<nr_; ++i){
+    const Real rm = r_face_global_(i);
+    const Real rp = r_face_global_(i+1);
+
+    const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
+    calE_shell_global_(i) /= dV;
+  }
   
+  // calE has units of mass. Convert to length for the later use.
   const Real mass_to_length =
     pmy_mesh_->punit->grav_const_code
     / SQR(pmy_mesh_->punit->speed_of_light_code);
   
   for(int i=0; i<nr_; ++i){
-    dm_shell_global_(i) *= mass_to_length;
+    calE_shell_global_(i) *= mass_to_length;
   }
-  
-  delta_m_face_global_(0) = 0.0;
+
+  mgrav_face_global_(0) = bh_mass;
   for (int i=0; i<nr_; ++i) {
-    delta_m_face_global_(i+1) = delta_m_face_global_(i) + dm_shell_global_(i);
+    const Real mL = mgrav_face_global_(i);
+    const Real rc = r_cell_global_(i);
+    const Real rm = r_face_global_(i);
+    const Real rp = r_face_global_(i+1);
+
+    const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
+    const Real dVm= 4.0*M_PI/3.0 * (rc*rc*rc - rm*rm*rm);
+
+    const Real Eatmos = pmy_mesh_->my_blocks(0)->peos->GetEnergyFloor(r_cell_global_(i));
+
+    // Energy in units of code length.
+    const Real dcalE_len = calE_shell_global_(i)*dVm * mass_to_length;
+    const Real dEat_len = Eatmos*dVm * mass_to_length;
+    
+    const Real b  = dcalE_len/rc;
+    const Real cm = 1.0 - 2.0*(mL-dEat_len)/rc;
+    
+    const Real Xinv = cm/(b + std::sqrt(b*b + cm));
+    
+    mgrav_face_global_(i+1) = mL + std::max(dcalE_len*Xinv - dEat_len, 0.0);
   }
   
-  dm_shell_global_.ZeroClear();
-  // run over MeshBlocks
+
   for (int b=0; b<pmy_mesh_->nblocal; ++b) {
     MeshBlock *pmb = pmy_mesh_->my_blocks(b);
     
-    for (int k=pmb->ks; k<=pmb->ke; ++k) {
-      for (int j=pmb->js; j<=pmb->je; ++j) {
-        pmy_mesh_->my_blocks(b)->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
-        for (int i=pmb->is; i<=pmb->ie; ++i) {
-          
-          int ig = GlobalRadialIndex(pmb, i);
-          
-          const Real r = pmb->pcoord->x1v(i);
-          dm_shell_global_(ig) += 
-            pmb->phydro->w(IDN,k,j,i)/(r-2.0*bh_mass) * vol(i) * mass_to_length;
-        }
-      }
-    }
-  }
+    auto &mgrav_face1=MgravFace1(pmb);
 
-#ifdef MPI_PARALLEL
-  MPI_Allreduce(MPI_IN_PLACE,
-                dm_shell_global_.data(),
-                nr_,
-                MPI_ATHENA_REAL,
-                MPI_SUM,
-                MPI_COMM_WORLD);
-#endif
-  
-  Psi_face_global_(nr_) = 0.0;
-  for (int i=nr_-1; i>=0; --i) {
-    Psi_face_global_(i) = Psi_face_global_(i+1) + dm_shell_global_(i);
-  }
-
-  // Provide global delta_m and Psi to MeshBlock-local storage
-  for (int b=0; b<pmy_mesh_->nblocal; ++b) {
-    MeshBlock *pmb = pmy_mesh_->my_blocks(b);
-    
-    auto &dm  = DeltaMFace1(pmb);
-    auto &Psi = PsiFace1(pmb);
-    
     for (int i=0; i<=pmb->ncells1; ++i) {
       int igf = pmb->loc.lx1 * pmb->block_size.nx1 + (i - pmb->is);
       
       if (igf < 0) {
-        dm(i)  = delta_m_face_global_(0);
-        Psi(i) = Psi_face_global_(0);
+        mgrav_face1(i)  = mgrav_face_global_(0);
       } else if (igf > nr_) {
-        dm(i)  = delta_m_face_global_(nr_);
-        Psi(i) = Psi_face_global_(nr_);
+        mgrav_face1(i)  = mgrav_face_global_(nr_);
       } else {
-        dm(i)  = delta_m_face_global_(igf);
-        Psi(i) = Psi_face_global_(igf);
+        mgrav_face1(i)  = mgrav_face_global_(igf);
       }
     }
   }
@@ -178,30 +227,30 @@ void RGPSGravity::Update(){
 }
 
 
-Real& RGPSGravity::BlackHoleMassStorage() {
+Real& RGPSGravityDriver::BlackHoleMassStorage() {
   return pmy_mesh_->ruser_mesh_data[0](0);
 }
 
-const Real& RGPSGravity::BlackHoleMassStorage() const {
+const Real& RGPSGravityDriver::BlackHoleMassStorage() const {
   return pmy_mesh_->ruser_mesh_data[0](0);
 }
 
-Real& RGPSGravity::BlackHoleSpinStorage() {
+Real& RGPSGravityDriver::BlackHoleSpinStorage() {
   return pmy_mesh_->ruser_mesh_data[1](0);
 }
 
-const Real& RGPSGravity::BlackHoleSpinStorage() const {
+const Real& RGPSGravityDriver::BlackHoleSpinStorage() const {
   return pmy_mesh_->ruser_mesh_data[1](0);
 }
 
-Real RGPSGravity::GetBlackHoleMass() const {
+Real RGPSGravityDriver::GetBlackHoleMass() const {
   return BlackHoleMassStorage();
 }
-Real RGPSGravity::GetBlackHoleSpin() const {
+Real RGPSGravityDriver::GetBlackHoleSpin() const {
   return BlackHoleSpinStorage();
 }
 
-Real RGPSGravity::BlackHoleMassAccretionRate() const {
+Real RGPSGravityDriver::BlackHoleMassAccretionRate() const {
   
   Real mdot = 0.0;
   
@@ -243,7 +292,7 @@ Real RGPSGravity::BlackHoleMassAccretionRate() const {
 }
 
 
-void RGPSGravity::UpdateBlackHoleMass(int stage){
+void RGPSGravityDriver::UpdateBlackHoleMass(int stage){
    
   mdot_bh_ = BlackHoleMassAccretionRate();
 
@@ -259,41 +308,40 @@ void RGPSGravity::UpdateBlackHoleMass(int stage){
   BlackHoleMassStorage() = bh_mass_pending_;
 }
 
-Real RGPSGravity::GetBlackHoleMassAccretionRate() const {
+Real RGPSGravityDriver::GetBlackHoleMassAccretionRate() const {
   return mdot_bh_;
 }
 
-void RGPSGravity::CellMetricRadialDerivatives(
+void RGPSGravityDriver::CellMetricRadialDerivatives(
          MeshBlock *pmb,
          const int k, const int j,
 	 const int il, const int iu,
 	 AthenaArray<Real> &d1_g00,
 	 AthenaArray<Real> &d1_g11) const{
   
-  const auto &Psi_face1 = PsiFace1(pmb);
-  const auto &delta_m_face1 = DeltaMFace1(pmb);
-  const Real bh_mass = GetBlackHoleMass();
+  const auto &Phi_face1 = PhiFace1(pmb);
+  const auto &mgrav_face1 = MgravFace1(pmb);
   const Real theta = pmb->pcoord->x2v(j);
   const Real phi = pmb->pcoord->x3v(k);
 
   for (int i = il; i <= iu; ++i) {
 
     const Real r = pmb->pcoord->x1v(i);
-    const Real Psi = CellPsi(pmb,i);
-    const Real delta_m = CellDeltaM(pmb,i);
+    const Real Phi = CellPhi(pmb,i);
+    const Real mgrav = CellMgrav(pmb,i);
     const Real dxf = pmb->pcoord->x1f(i+1)-pmb->pcoord->x1f(i);
-    const Real d1_Psi = (Psi_face1(i+1) - Psi_face1(i))/dxf;
-    const Real d1_delta_m = (delta_m_face1(i+1) - delta_m_face1(i))/dxf;
+    const Real d1_Phi = (Phi_face1(i+1) - Phi_face1(i))/dxf;
+    const Real d1_mgrav = (mgrav_face1(i+1) - mgrav_face1(i))/dxf;
     
     gravity_model_.MetricRadialDerivatives(
-       r, theta, phi, Psi, delta_m, bh_mass,
-       d1_Psi, d1_delta_m,
+       r, theta, phi, Phi, mgrav,
+       d1_Phi, d1_mgrav,
        d1_g00(i), d1_g11(i));
 
   }
 }  
 
-void RGPSGravity::Face1Metric(
+void RGPSGravityDriver::Face1Metric(
          MeshBlock *pmb,
 	 const int k, const int j, 
 	 const int il, const int iu,
@@ -302,10 +350,9 @@ void RGPSGravity::Face1Metric(
     // Extract geometric quantities that do not depend on r
   Coordinates *pcoord = pmb->pcoord;
 
-  const auto &Psi_face1 = PsiFace1(pmb);
-  const auto &delta_m_face1 = DeltaMFace1(pmb);
-  const Real bh_mass = GetBlackHoleMass();
-  
+  const auto &Phi_face1 = PhiFace1(pmb);
+  const auto &mgrav_face1 = MgravFace1(pmb);
+
   const Real theta = pcoord->x2v(j);
   const Real phi = pcoord->x3v(k);
   
@@ -318,10 +365,10 @@ void RGPSGravity::Face1Metric(
     Real g00, g01, g02, g03;
     Real g11, g12, g13, g22, g23, g33;
 
-    Real Psi = Psi_face1(i);
-    Real dm = delta_m_face1(i);
+    Real Phi = Phi_face1(i);
+    Real mgrav = mgrav_face1(i);
 
-    gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+    gravity_model_.ConstructCovariantMetric(r, theta, phi, Phi, mgrav,
         g00, g01, g02, g03,
         g11, g12, g13, g22, g23, g33);
 
@@ -351,7 +398,7 @@ void RGPSGravity::Face1Metric(
 
 }
 
-void RGPSGravity::Face2Metric(
+void RGPSGravityDriver::Face2Metric(
          MeshBlock *pmb,
 	 const int k, const int j, 
 	 const int il, const int iu,
@@ -359,8 +406,6 @@ void RGPSGravity::Face2Metric(
 	 AthenaArray<Real> &g_inv) const {
 
   Coordinates *pcoord = pmb->pcoord;
-
-  const Real bh_mass = GetBlackHoleMass();
   
   const Real theta = pcoord->x2f(j);
   const Real phi = pcoord->x3v(k);
@@ -375,10 +420,10 @@ void RGPSGravity::Face2Metric(
     Real g00, g01, g02, g03;
     Real g11, g12, g13, g22, g23, g33;
     
-    Real Psi = CellPsi(pmb, i);
-    Real dm = CellDeltaM(pmb, i);
+    Real Phi = CellPhi(pmb, i);
+    Real mgrav = CellMgrav(pmb, i);
     
-    gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+    gravity_model_.ConstructCovariantMetric(r, theta, phi, Phi, mgrav,
         g00, g01, g02, g03,
         g11, g12, g13, g22, g23, g33);
 
@@ -418,7 +463,7 @@ void RGPSGravity::Face2Metric(
 }
 
 
-void RGPSGravity::Face3Metric(
+void RGPSGravityDriver::Face3Metric(
          MeshBlock *pmb,
 	 const int k, const int j, 
 	 const int il, const int iu,
@@ -442,10 +487,10 @@ void RGPSGravity::Face3Metric(
     Real g00, g01, g02, g03;
     Real g11, g12, g13, g22, g23, g33;
     
-    Real Psi = CellPsi(pmb, i);
-    Real dm = CellDeltaM(pmb, i);
+    Real Phi = CellPhi(pmb, i);
+    Real mgrav = CellMgrav(pmb, i);
     
-    gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+    gravity_model_.ConstructCovariantMetric(r, theta, phi, Phi, mgrav,
         g00, g01, g02, g03,
         g11, g12, g13, g22, g23, g33);
 
@@ -475,7 +520,7 @@ void RGPSGravity::Face3Metric(
 }
 
 
-void RGPSGravity::CellMetric(
+void RGPSGravityDriver::CellMetric(
     MeshBlock *pmb,
     const int k, const int j,
     const int il, const int iu,
@@ -520,15 +565,15 @@ void RGPSGravity::CellMetric(
 
 }
 
-void RGPSGravity::ConstructCellCovariantMetric(
+void RGPSGravityDriver::ConstructCellCovariantMetric(
          MeshBlock *pmb,
 	 int k, int j, int i,
 	 Real &g00, Real &g01, Real &g02, Real &g03,
 	 Real &g11, Real &g12, Real &g13,
 	 Real &g22, Real &g23, Real &g33) const {
 
-  const Real Psi = CellPsi(pmb, i);
-  const Real dm  = CellDeltaM(pmb, i);
+  const Real Phi = CellPhi(pmb, i);
+  const Real mgrav  = CellMgrav(pmb, i);
   const Real bh_mass = GetBlackHoleMass();
 
   const Real r = pmb->pcoord->x1v(i);
@@ -536,14 +581,14 @@ void RGPSGravity::ConstructCellCovariantMetric(
   const Real phi = pmb->pcoord->x3v(k);
   
   gravity_model_.ConstructCovariantMetric(
-      r, theta, phi, Psi, dm, bh_mass,
+      r, theta, phi, Phi, mgrav,
       g00, g01, g02, g03,
       g11, g12, g13,
       g22, g23, g33);
     
 }
 
-Real RGPSGravity::SqrtMinusG(
+Real RGPSGravityDriver::SqrtMinusG(
          MeshBlock *pmb,
 	 const int k, const int j, const int i) const {
   Real g00, g01, g02, g03;
@@ -565,7 +610,7 @@ Real RGPSGravity::SqrtMinusG(
 
 
 
-Real RGPSGravity::CellDensitizationFactor(
+Real RGPSGravityDriver::CellDensitizationFactor(
         MeshBlock *pmb, int k, int j, int i) const {
   const Real sqrt_minus_g = SqrtMinusG(pmb,k,j,i);
   const Real r = pmb->pcoord->x1v(i);
@@ -584,24 +629,24 @@ Real RGPSGravity::CellDensitizationFactor(
   //return g11;
 }
 
-Real RGPSGravity::Face1DensitizationFactor(
+Real RGPSGravityDriver::Face1DensitizationFactor(
 	MeshBlock *pmb, int k, int j, int i) const {
   Coordinates *pcoord = pmb->pcoord;
 
-  auto &Psi_face1 = PsiFace1(pmb);
-  auto &delta_m_face1 = DeltaMFace1(pmb);
+  auto &Phi_face1 = PhiFace1(pmb);
+  auto &mgrav_face1 = MgravFace1(pmb);
   const Real bh_mass = GetBlackHoleMass();
   
   const Real r = pcoord->x1f(i);
   const Real theta = pcoord->x2v(j);
   const Real phi = pcoord->x3v(k);
-  const Real Psi = Psi_face1(i);
-  const Real dm = delta_m_face1(i);
+  const Real Phi = Phi_face1(i);
+  const Real mgrav = mgrav_face1(i);
   
   Real g00, g01, g02, g03;
   Real g11, g12, g13, g22, g23, g33;
   
-  gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+  gravity_model_.ConstructCovariantMetric(r, theta, phi, Phi, mgrav,
         g00, g01, g02, g03,
         g11, g12, g13, g22, g23, g33);
 
@@ -609,7 +654,7 @@ Real RGPSGravity::Face1DensitizationFactor(
 
 }
 
-Real RGPSGravity::Face2DensitizationFactor(
+Real RGPSGravityDriver::Face2DensitizationFactor(
 	MeshBlock *pmb, int k, int j, int i) const {
   Coordinates *pcoord = pmb->pcoord;
 
@@ -618,13 +663,13 @@ Real RGPSGravity::Face2DensitizationFactor(
   const Real r = pcoord->x1v(i);
   const Real theta = pcoord->x2f(j);
   const Real phi = pcoord->x3v(k);
-  const Real Psi = CellPsi(pmb,i);
-  const Real dm = CellDeltaM(pmb,i);
+  const Real Phi = CellPhi(pmb,i);
+  const Real mgrav = CellMgrav(pmb,i);
   
   Real g00, g01, g02, g03;
   Real g11, g12, g13, g22, g23, g33;
   
-  gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+  gravity_model_.ConstructCovariantMetric(r, theta, phi, Phi, mgrav,
         g00, g01, g02, g03,
         g11, g12, g13, g22, g23, g33);
 
@@ -632,7 +677,7 @@ Real RGPSGravity::Face2DensitizationFactor(
 
 }
 
-Real RGPSGravity::Face3DensitizationFactor(
+Real RGPSGravityDriver::Face3DensitizationFactor(
 	MeshBlock *pmb, int k, int j, int i) const {
   Coordinates *pcoord = pmb->pcoord;
 
@@ -641,13 +686,13 @@ Real RGPSGravity::Face3DensitizationFactor(
   const Real r = pcoord->x1v(i);
   const Real theta = pcoord->x2v(j);
   const Real phi = pcoord->x3f(k);
-  const Real Psi = CellPsi(pmb,i);
-  const Real dm = CellDeltaM(pmb,i);
+  const Real Phi = CellPhi(pmb,i);
+  const Real mgrav = CellMgrav(pmb,i);
   
   Real g00, g01, g02, g03;
   Real g11, g12, g13, g22, g23, g33;
   
-  gravity_model_.ConstructCovariantMetric(r, theta, phi, Psi, dm, bh_mass,
+  gravity_model_.ConstructCovariantMetric(r, theta, phi, Phi, mgrav,
         g00, g01, g02, g03,
         g11, g12, g13, g22, g23, g33);
 
@@ -655,59 +700,59 @@ Real RGPSGravity::Face3DensitizationFactor(
 
 }
 
-Real RGPSGravity::GetEnclosedMassAtInnerBoundary(
+Real RGPSGravityDriver::GetEnclosedMassAtInnerBoundary(
     MeshBlock *pmb) const {
-  return DeltaMFace1(pmb)(pmb->is);
+  return MgravFace1(pmb)(pmb->is);
 }
 
 
 
-AthenaArray<Real>& RGPSGravity::PsiFace1(MeshBlock *pmb) {
+AthenaArray<Real>& RGPSGravityDriver::PhiFace1(MeshBlock *pmb) {
   return pmb->ruser_meshblock_data[0];
 }
 
-const AthenaArray<Real>& RGPSGravity::PsiFace1(MeshBlock *pmb) const {
+const AthenaArray<Real>& RGPSGravityDriver::PhiFace1(MeshBlock *pmb) const {
   return pmb->ruser_meshblock_data[0];
 }
 
-AthenaArray<Real>& RGPSGravity::DeltaMFace1(MeshBlock *pmb) {
+AthenaArray<Real>& RGPSGravityDriver::MgravFace1(MeshBlock *pmb) {
   return pmb->ruser_meshblock_data[1];
 }
 
-const AthenaArray<Real>& RGPSGravity::DeltaMFace1(MeshBlock *pmb) const {
+const AthenaArray<Real>& RGPSGravityDriver::MgravFace1(MeshBlock *pmb) const {
   return pmb->ruser_meshblock_data[1];
 }
 
-Real RGPSGravity::CellPsi(MeshBlock *pmb, int i) const {
-  const auto &psi = PsiFace1(pmb);
-  return 0.5*(psi(i) + psi(i+1));
+Real RGPSGravityDriver::CellPhi(MeshBlock *pmb, int i) const {
+  const auto &phi = PhiFace1(pmb);
+  return 0.5*(phi(i) + phi(i+1));
 }
 
-Real RGPSGravity::CellDeltaM(MeshBlock *pmb, int i) const {
-  const auto &dm = DeltaMFace1(pmb);
-  return 0.5*(dm(i) + dm(i+1));
+Real RGPSGravityDriver::CellMgrav(MeshBlock *pmb, int i) const {
+  const auto &mgrav = MgravFace1(pmb);
+  return 0.5*(mgrav(i) + mgrav(i+1));
 }
 
 
 
 
-int RGPSGravity::NumModelOutputVariables() const {
+int RGPSGravityDriver::NumModelOutputVariables() const {
   return 3;
 }
 
-const char *RGPSGravity::ModelOutputVariableName(int n) const {
-  if(n==0)return "Psi";
-  if(n==1)return "X";
+const char *RGPSGravityDriver::ModelOutputVariableName(int n) const {
+  if(n==0)return "Phi";
+  if(n==1)return "Mgrav";
   if(n==2)return "q";
   return "";
 }
 
-Real RGPSGravity::ModelOutputVariable(
+Real RGPSGravityDriver::ModelOutputVariable(
     MeshBlock *pmb,
     int n,
     int k, int j, int i) const{
-    if (n == 0) return CellDeltaM(pmb, i);
-    if (n == 1) return CellPsi(pmb, i);
+    if (n == 0) return CellPhi(pmb, i);
+    if (n == 1) return CellMgrav(pmb, i);
     if (n == 2) return CellDensitizationFactor(pmb, k,j,i);
     return 0.0;
 }
