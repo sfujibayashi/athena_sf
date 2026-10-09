@@ -182,7 +182,7 @@ void RGPSGravityDriver::ConstructMgravFromPrimitive(){
 	  const Real rhoh = rho + egas + pgas;
 	  
 	  const Real kr = rhoh*uu1*uu1;
-	  const Real ka = rhoh*r*r*(uu2*uu2 + uu2*uu2*sintheta*sintheta);
+	  const Real ka = rhoh*r*r*(uu2*uu2 + uu3*uu3*sintheta*sintheta);
 	  
           int ig = GlobalRadialIndex(pmb, i);
           Em_shell_global(ig) += (rhoh-pgas) * vol_(i);
@@ -210,6 +210,57 @@ void RGPSGravityDriver::ConstructMgravFromPrimitive(){
     Ea_shell_global(i) /= dV;
   }
   
+  // E has code units of mass density
+  const Real mass_to_length =
+    pmy_mesh_->punit->grav_const_code
+    / SQR(pmy_mesh_->punit->speed_of_light_code);
+  
+  mgrav_face_global_(0) = bh_mass;
+  for (int i=0; i<nr_; ++i) {
+    const Real mL = mgrav_face_global_(i);
+    const Real rc = r_cell_global_(i);
+    const Real rm = r_face_global_(i);
+    const Real rp = r_face_global_(i+1);
+
+    const Real dVm= 4.0*M_PI/3.0 * (rc*rc*rc - rm*rm*rm);
+    
+    const Real Eatmos = pmy_mesh_->my_blocks(0)->peos->GetEnergyFloor(r_cell_global_(i));
+
+    // Energy in units of code length.
+    const Real dEr_len    = Er_shell_global(i)*dVm * mass_to_length;
+    const Real dErest_len = (Em_shell_global(i) + Ea_shell_global(i) - Eatmos)*dVm * mass_to_length;
+    
+    const Real b = 0.5*(1.0 - 2.0/rc*(mL + dEr_len + dErest_len));
+    const Real c = 2.0*dEr_len/rc;
+    
+    const Real Xinv_sq = -c/(b + std::sqrt(b*b - c));
+    const Real X_sq = 1.0/Xinv_sq;
+
+    const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
+    const Real dm_full = dV*(Em_shell_global(i) + Er_shell_global(i)*X_sq + Ea_shell_global(i) - Eatmos)*mass_to_length;
+    mgrav_face_global_(i+1) = mL + dm_full;
+    // mgrav_face_global_(i+1) = mL + std::max(dcalE_len*Xinv - dEat_len, 0.0);
+  }
+  
+
+  for (int b=0; b<pmy_mesh_->nblocal; ++b) {
+    MeshBlock *pmb = pmy_mesh_->my_blocks(b);
+    
+    auto &mgrav_face1=MgravFace1(pmb);
+
+    for (int i=0; i<=pmb->ncells1; ++i) {
+      int igf = pmb->loc.lx1 * pmb->block_size.nx1 + (i - pmb->is);
+      
+      if (igf < 0) {
+        mgrav_face1(i)  = mgrav_face_global_(0);
+      } else if (igf > nr_) {
+        mgrav_face1(i)  = mgrav_face_global_(nr_);
+      } else {
+        mgrav_face1(i)  = mgrav_face_global_(igf);
+      }
+    }
+  } 
+
   
   
 }
@@ -315,7 +366,7 @@ void RGPSGravityDriver::ConstructMgravFromConserved(){
     const Real Xinv = cm/(b + std::sqrt(b*b + cm));
 
     const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);  
-    const Real dm_full = dV*(calE_shell_global_(i)*Xinv + Eatmos)*mass_to_length;
+    const Real dm_full = dV*(calE_shell_global_(i)*Xinv - Eatmos)*mass_to_length;
 
     mgrav_face_global_(i+1) = mL + dm_full;
     // mgrav_face_global_(i+1) = mL + std::max(dcalE_len*Xinv - dEat_len, 0.0);
