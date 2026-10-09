@@ -100,6 +100,16 @@ void RGPSGravityDriver::InitializeRadialGrid(){
   AthenaArray<Real> r_sum, rf_sum;
   AthenaArray<int> count, countf;
 
+  r_sum.NewAthenaArray(nr_);
+  rf_sum.NewAthenaArray(nr_+1);
+  count.NewAthenaArray(nr_);
+  countf.NewAthenaArray(nr_+1);
+
+  r_sum.ZeroClear();
+  rf_sum.ZeroClear();
+  count.ZeroClear();
+  countf.ZeroClear();
+  
   for (int b=0; b<pmy_mesh_->nblocal; ++b) {
     MeshBlock *pmb = pmy_mesh_->my_blocks(b);
     
@@ -122,16 +132,6 @@ void RGPSGravityDriver::InitializeRadialGrid(){
   MPI_Allreduce(MPI_IN_PLACE, countf.data(), nr_+1, MPI_ATHENA_INT, MPI_SUM, MPI_COMM_WORLD);
 #endif
 
-  r_sum.NewAthenaArray(nr_);
-  rf_sum.NewAthenaArray(nr_+1);
-  count.NewAthenaArray(nr_);
-  countf.NewAthenaArray(nr_+1);
-
-  r_sum.ZeroClear();
-  rf_sum.ZeroClear();
-  count.ZeroClear();
-  countf.ZeroClear();
-  
   for(int i=0; i<nr_;++i){
     r_cell_global_(i) = r_sum(i)/count(i);
   }
@@ -210,8 +210,8 @@ void RGPSGravityDriver::UpdateBeforeCons2Prim(){
     
     const Real Xinv = cm/(b + std::sqrt(b*b + cm));
 
-    const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);    
-    const Real dm_full = dV*(calE_shell_global_(i) + Eatmos)*mass_to_length;
+    const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);  
+    const Real dm_full = dV*(calE_shell_global_(i)*Xinv + Eatmos)*mass_to_length;
 
     mgrav_face_global_(i+1) = mL + dm_full;
     // mgrav_face_global_(i+1) = mL + std::max(dcalE_len*Xinv - dEat_len, 0.0);
