@@ -472,6 +472,7 @@ if args['eos'] == 'isothermal':
     definitions['NHYDRO_VARIABLES'] = '4'
 elif args['eos'] == 'adiabatic':
     definitions['NHYDRO_VARIABLES'] = '5'
+    makefile_options['GENERAL_EOS_FILE'] = 'ideal'
 else:
     definitions['GENERAL_EOS'] = '1'
     makefile_options['GENERAL_EOS_FILE'] = 'general'
