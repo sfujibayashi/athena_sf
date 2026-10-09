@@ -95,6 +95,7 @@ RGPSGravityDriver::~RGPSGravityDriver() {
   // dphi_dr_global_.DeleteAthenaArray();
   mgrav_face_global_.DeleteAthenaArray();
   Phi_face_global_.DeleteAthenaArray();
+  X_sq_cell_global_.DeleteAthenaArray();
 }
 
 void RGPSGravityDriver::InitializeRadialGrid(){
@@ -343,10 +344,10 @@ void RGPSGravityDriver::ConstructPhiFromPrimitive(){
     const Real dr = rp-rm;
     
     // cell-centered values
-    const Real mgrav = 0.5*(mgrav_face_global_(i+1) + mgrav_face_global_(i));
     const Real r = r_cell_global_(i);
+    const Real X_sq = X_sq_cell_global_(i);
+    const Real mgrav = 0.5*r*(1.0-1.0/X_sq);
     const Real Sr_r = Sr_r_shell_global(i);
-    const Real X_sq = 1.0/(1.0-2.0*mgrav/r);
 
     const Real Patm = pmy_mesh_->my_blocks(0)->peos->GetPressureFloor(r);
     
@@ -443,7 +444,9 @@ void RGPSGravityDriver::ConstructMgravFromConserved(){
     const Real cm = 1.0 - 2.0*(mL-dEat_len)/rc;
     
     const Real Xinv = cm/(b + std::sqrt(b*b + cm));
-
+    const Real X_sq = 1.0/(Xinv*Xinv);
+    X_sq_cell_global_(i) = X_sq;
+    
     const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);  
     const Real dm_full = dV*(calE_shell_global_(i)*Xinv - Eatmos)*mass_to_length;
 
