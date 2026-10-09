@@ -131,6 +131,7 @@ private:
   int nr_;
 
   AthenaArray<Real> calE_shell_global_;
+  AthenaArray<Real> Srr_shell_global_;
   AthenaArray<Real> mgrav_face_global_;
   AthenaArray<Real> Phi_face_global_;
 

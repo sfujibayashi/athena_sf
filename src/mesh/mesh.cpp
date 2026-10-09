@@ -561,12 +561,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   if (IM_RADIATION_ENABLED) {
     pimrad = new IMRadiation(this, pin);
   }
-
   
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = CreateDynamicMetricDriver(this, pin);
-#endif
-
   // create MeshBlock list for this process
   gids_ = nslist[Globals::my_rank];
   gide_ = gids_ + nblist[Globals::my_rank] - 1;
@@ -579,6 +574,10 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
                                        this, pin);
     my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
   }
+
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+#endif
 
   ResetLoadBalanceVariables();
 
@@ -984,12 +983,6 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     pimrad = new IMRadiation(this, pin);
   }
 
-  
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = CreateDynamicMetricDriver(this, pin);
-#endif
-
-
   // allocate data buffer
   int nbmin = nblist[0];
   for (int n = 1; n < Globals::nranks; ++n) {
@@ -1043,6 +1036,10 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
         ATHENA_ERROR(msg);
     }
   }
+
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+#endif
 
   ResetLoadBalanceVariables();
 
@@ -2790,10 +2787,6 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
     pimrad = new IMRadiation(this, pin);
   }
 
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = CreateDynamicMetricDriver(this, pin);
-#endif
-
   // allocate data buffer
   int nbmin = nblist[0];
   for (int n = 1; n < Globals::nranks; ++n) {
@@ -2839,6 +2832,10 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
 	      << ruser_mesh_data[0](0)
 	      << std::endl;
   }
+
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+#endif
   
   // reconstruct delta_m and Psi
   // MeshBlocks have already been reconstructed.
