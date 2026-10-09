@@ -141,6 +141,9 @@ private:
   AthenaArray<Real> X_sq_cell_global_;
   AthenaArray<Real> Phi_face_global_;
 
+  AthenaArray<Real> dmgrav_dr_cell_global_;
+  AthenaArray<Real> dPhi_dr_cell_global_;
+
   AthenaArray<Real> r_cell_global_;
   AthenaArray<Real> r_face_global_;
 
