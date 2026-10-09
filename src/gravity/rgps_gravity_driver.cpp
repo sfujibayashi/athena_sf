@@ -512,6 +512,11 @@ void RGPSGravityDriver::InitializeFromPrimitive() {
   ConstructPhiFromPrimitive();
 }
 
+void RGPSGravityDriver::InitializeFromRestart() {
+  ConstructMgravFromConserved();
+  ConstructPhiFromPrimitive();
+}
+
 void RGPSGravityDriver::UpdateBeforeCons2Prim(int stage){
   UpdateBlackHoleMass(stage);
   ConstructMgravFromConserved();

@@ -66,6 +66,10 @@ MonopoleGravityDriver::~MonopoleGravityDriver() {
 void MonopoleGravityDriver::InitializeFromPrimitive() {
 }
 
+void MonopoleGravityDriver::InitializeFromRestart() {
+  UpdateAfterCons2Prim();
+}
+
 void MonopoleGravityDriver::UpdateBeforeCons2Prim(int stage){
 }
 

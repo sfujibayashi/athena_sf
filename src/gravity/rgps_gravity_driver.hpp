@@ -36,6 +36,7 @@ public:
   void ConstructPhiFromPrimitive();
 
   void InitializeFromPrimitive() override;
+  void InitializeFromRestart() override;
   void UpdateBeforeCons2Prim(int stage) override;
   void UpdateAfterCons2Prim() override;
 

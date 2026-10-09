@@ -1019,10 +1019,6 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
   }
 
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver->InitializeFromPrimitive();
-#endif
-
   delete [] mbdata;
   // check consistency
   if ( (NR_RADIATION_ENABLED || IM_RADIATION_ENABLED) &&
@@ -1044,6 +1040,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 
 #if DYNAMIC_METRIC_ENABLED
   pmetric_driver = CreateDynamicMetricDriver(this, pin);
+  pmetric_driver->InitializeFromRestart();
 #endif
 
   ResetLoadBalanceVariables();
@@ -1693,8 +1690,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         pmb->pbval->CheckUserBoundaries();
       }
     }
-
-  const bool initial_metric_update =
+    
+    const bool initial_metric_update =
     pin->GetOrAddBoolean("coord", "initial_metric_update", true);
   
 #if DYNAMIC_METRIC_ENABLED
@@ -1702,24 +1699,24 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       pmetric_driver->InitializeFromPrimitive();
 //       pmetric_driver->UpdateAfterCons2Prim();
       
-//       // Convert primitive -> conserved after getting metric (it requires primitive rho)
-//       for (int i=0; i<nblocal; ++i) {
-//         MeshBlock *pmb = my_blocks(i);
-
-//         AthenaArray<Real> bb;
-//         bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
-//         bb.ZeroClear();
+      // Convert primitive -> conserved after getting metric (it requires primitive rho)
+      for (int i=0; i<nblocal; ++i) {
+        MeshBlock *pmb = my_blocks(i);
+	
+        AthenaArray<Real> bb;
+        bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
+        bb.ZeroClear();
         
-//         pmb->peos->PrimitiveToConserved(
-//            pmb->phydro->w, bb, pmb->phydro->u, pmb->pcoord,
-//            pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
+        pmb->peos->PrimitiveToConserved(
+           pmb->phydro->w, bb, pmb->phydro->u, pmb->pcoord,
+           pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
 
-// #if NSCALARS > 0
-// 	pmb->peos->PassiveScalarPrimitiveToConserved(
-//            pmb->pscalars->r, pmb->phydro->u, pmb->pscalars->s, pmb->pcoord,
-//            pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
-// #endif
-//      }
+#if NSCALARS > 0
+	pmb->peos->PassiveScalarPrimitiveToConserved(
+           pmb->pscalars->r, pmb->phydro->u, pmb->pscalars->s, pmb->pcoord,
+           pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
+#endif
+      }
     }
 #endif
 
@@ -2881,7 +2878,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   }
   
 #if DYNAMIC_METRIC_ENABLED
-  pmetric_driver->InitializeFromPrimitive();
+  pmetric_driver->InitializeFromRestart();
   // pmetric_driver->UpdateAfterCons2Prim();
   
   // for (int b=0; b<nblocal; ++b) {

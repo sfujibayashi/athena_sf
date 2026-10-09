@@ -14,6 +14,7 @@ public:
   virtual ~DynamicMetricDriver() = default;
   
   virtual void InitializeFromPrimitive() = 0;
+  virtual void InitializeFromRestart() = 0;
   virtual void UpdateBeforeCons2Prim(int stage) = 0;
   virtual void UpdateAfterCons2Prim() = 0;
   virtual void UpdateBlackHoleMass(int stage) = 0;
