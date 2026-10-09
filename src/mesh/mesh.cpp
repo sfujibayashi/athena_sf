@@ -1018,6 +1018,11 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
                                        block_bcs, costlist[i], mbdata);
     my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
   }
+
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver->InitializeFromPrimitive();
+#endif
+
   delete [] mbdata;
   // check consistency
   if ( (NR_RADIATION_ENABLED || IM_RADIATION_ENABLED) &&
@@ -1694,26 +1699,27 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
   
 #if DYNAMIC_METRIC_ENABLED
     if (res_flag==0 and initial_metric_update) {
-      pmetric_driver->UpdateAfterCons2Prim();
+      pmetric_driver->InitializeFromPrimitive();
+//       pmetric_driver->UpdateAfterCons2Prim();
       
-      // Convert primitive -> conserved after getting metric (it requires primitive rho)
-      for (int i=0; i<nblocal; ++i) {
-        MeshBlock *pmb = my_blocks(i);
+//       // Convert primitive -> conserved after getting metric (it requires primitive rho)
+//       for (int i=0; i<nblocal; ++i) {
+//         MeshBlock *pmb = my_blocks(i);
 
-        AthenaArray<Real> bb;
-        bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
-        bb.ZeroClear();
+//         AthenaArray<Real> bb;
+//         bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
+//         bb.ZeroClear();
         
-        pmb->peos->PrimitiveToConserved(
-           pmb->phydro->w, bb, pmb->phydro->u, pmb->pcoord,
-           pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
+//         pmb->peos->PrimitiveToConserved(
+//            pmb->phydro->w, bb, pmb->phydro->u, pmb->pcoord,
+//            pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
 
-#if NSCALARS > 0
-	pmb->peos->PassiveScalarPrimitiveToConserved(
-           pmb->pscalars->r, pmb->phydro->u, pmb->pscalars->s, pmb->pcoord,
-           pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
-#endif
-      }
+// #if NSCALARS > 0
+// 	pmb->peos->PassiveScalarPrimitiveToConserved(
+//            pmb->pscalars->r, pmb->phydro->u, pmb->pscalars->s, pmb->pcoord,
+//            pmb->is, pmb->ie, pmb->js, pmb->je, pmb->ks, pmb->ke);
+// #endif
+//      }
     }
 #endif
 
@@ -2875,23 +2881,24 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   }
   
 #if DYNAMIC_METRIC_ENABLED
-  pmetric_driver->UpdateAfterCons2Prim();
+  pmetric_driver->InitializeFromPrimitive();
+  // pmetric_driver->UpdateAfterCons2Prim();
   
-  for (int b=0; b<nblocal; ++b) {
-    MeshBlock *pmb = my_blocks(b);
+  // for (int b=0; b<nblocal; ++b) {
+  //   MeshBlock *pmb = my_blocks(b);
       
-    AthenaArray<Real> bb;
-    bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
-    bb.ZeroClear();
+  //   AthenaArray<Real> bb;
+  //   bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
+  //   bb.ZeroClear();
       
-    pmb->peos->PrimitiveToConserved(pmb->phydro->w,
-				    bb,
-				    pmb->phydro->u,
-				    pmb->pcoord,
-				    pmb->is, pmb->ie,
-				    pmb->js, pmb->je,
-				    pmb->ks, pmb->ke);
-  }
+  //   pmb->peos->PrimitiveToConserved(pmb->phydro->w,
+  // 				    bb,
+  // 				    pmb->phydro->u,
+  // 				    pmb->pcoord,
+  // 				    pmb->is, pmb->ie,
+  // 				    pmb->js, pmb->je,
+  // 				    pmb->ks, pmb->ke);
+  // }
 #endif
   
   if (Globals::my_rank == 0) {

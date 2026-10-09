@@ -2235,10 +2235,6 @@ TaskStatus TimeIntegratorTaskList::Prolongation(MeshBlock *pmb, int stage) {
 
 TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
 
-#if DYNAMIC_METRIC_ENABLED
-  pmb->pmy_mesh->pmetric_driver->UpdateBeforeCons2Prim(stage);
-#endif
-
   Hydro *ph = pmb->phydro;
   Field *pf = pmb->pfield;
   PassiveScalars *ps = pmb->pscalars;
@@ -2253,6 +2249,14 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
   if (pbval->nblevel[2][1][1] != -1) ku += NGHOST;
 
   if (stage <= nstages) {
+
+
+#if DYNAMIC_METRIC_ENABLED
+    if (TIME_METRIC_UPDATE) {
+      pmb->pmy_mesh->pmetric_driver->UpdateBeforeCons2Prim(stage);
+    }
+#endif
+
     // At beginning of this task, ph->w contains previous stage's W(U) output
     // and ph->w1 is used as a register to store the current stage's output.
     // For the second order integrators VL2 and RK2, the prim_old initial guess for the
@@ -2321,7 +2325,9 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
     // ps->r.SwapAthenaArray(ps->r1);
     
 #if DYNAMIC_METRIC_ENABLED
-    pmb->pmy_mesh->pmetric_driver->UpdateAfterCons2Prim();
+    if (TIME_METRIC_UPDATE) {
+      pmb->pmy_mesh->pmetric_driver->UpdateAfterCons2Prim();
+    }
 #endif
 
     return TaskStatus::success;

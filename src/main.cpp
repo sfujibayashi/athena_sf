@@ -515,12 +515,12 @@ int main(int argc, char *argv[]) {
       ptlist->DoTaskListOneStage(pmesh, stage);
       if (ptlist->CheckNextMainStage(stage)) {
         
-#if DYNAMIC_METRIC_ENABLED
-        if (ptlist->TimeMetricUpdateEnabled()) {
-          pmesh->pmetric_driver->UpdateBlackHoleMass(stage);
-          pmesh->pmetric_driver->UpdateAfterCons2Prim();
-        }
-#endif
+// #if DYNAMIC_METRIC_ENABLED
+//         if (ptlist->TimeMetricUpdateEnabled()) {
+//           pmesh->pmetric_driver->UpdateBlackHoleMass(stage);
+//           pmesh->pmetric_driver->UpdateAfterCons2Prim();
+//         }
+// #endif
         
         if (SELF_GRAVITY_ENABLED == 1) // fft (0: discrete kernel, 1: continuous kernel)
           pmesh->pfgrd->Solve(stage, 0);
