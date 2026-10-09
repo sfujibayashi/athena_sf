@@ -63,8 +63,10 @@ MonopoleGravityDriver::~MonopoleGravityDriver() {
   Psi_face_global_.DeleteAthenaArray();
 }
 
+void MonopoleGravityDriver::UpdateBeforeCons2Prim(){
+}
 
-void MonopoleGravityDriver::Update(){
+void MonopoleGravityDriver::UpdateAfterCons2Prim(){
 
   const Real bh_mass = GetBlackHoleMass();
 

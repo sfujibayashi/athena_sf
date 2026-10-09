@@ -51,7 +51,7 @@ RGPSGravityDriver::RGPSGravityDriver(Mesh *pm, ParameterInput *pin)
   r_face_global_.NewAthenaArray(nr_+1);
   vol_.NewAthenaArray(pmy_mesh_->block_size.nx1+2*NGHOST);
 
-  InitializeRadialGrid()
+  InitializeRadialGrid();
 
   calE_shell_global_.NewAthenaArray(nr_);
   Srr_shell_global_.NewAthenaArray(nr_);
@@ -141,7 +141,7 @@ void RGPSGravityDriver::InitializeRadialGrid(){
   }
 }
 
-void RGPSGravityDriver::Update(){
+void RGPSGravityDriver::UpdateBeforeCons2Prim(){
   
   const Real bh_mass = GetBlackHoleMass();
 
@@ -238,7 +238,7 @@ void RGPSGravityDriver::Update(){
 }
 
 
-void RGPSGravityDriver::UpdateAfterConservedToPrimitive(){
+void RGPSGravityDriver::UpdateAfterCons2Prim(){
   
 }
 

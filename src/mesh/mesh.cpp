@@ -1694,7 +1694,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
   
 #if DYNAMIC_METRIC_ENABLED
     if (res_flag==0 and initial_metric_update) {
-      pmetric_driver->Update();
+      pmetric_driver->UpdateAfterCons2Prim();
       
       // Convert primitive -> conserved after getting metric (it requires primitive rho)
       for (int i=0; i<nblocal; ++i) {
@@ -2875,7 +2875,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   }
   
 #if DYNAMIC_METRIC_ENABLED
-  pmetric_driver->Update();
+  pmetric_driver->UpdateAfterCons2Prim();
   
   for (int b=0; b<nblocal; ++b) {
     MeshBlock *pmb = my_blocks(b);

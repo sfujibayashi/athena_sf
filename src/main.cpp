@@ -518,7 +518,7 @@ int main(int argc, char *argv[]) {
 #if DYNAMIC_METRIC_ENABLED
         if (ptlist->TimeMetricUpdateEnabled()) {
           pmesh->pmetric_driver->UpdateBlackHoleMass(stage);
-          pmesh->pmetric_driver->Update();
+          pmesh->pmetric_driver->UpdateAfterCons2Prim();
         }
 #endif
         
