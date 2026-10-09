@@ -118,6 +118,7 @@ public:
 
   Real CellPhi(MeshBlock *pmb, int i) const;
   Real CellMgrav(MeshBlock *pmb, int i) const;
+  Real CellXsq(MeshBlock *pmb, int i) const;
 
   // output
   int NumModelOutputVariables() const override;

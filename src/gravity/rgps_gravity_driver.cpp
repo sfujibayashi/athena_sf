@@ -986,6 +986,22 @@ Real RGPSGravityDriver::CellPhi(MeshBlock *pmb, int i) const {
   const Real rc = pmb->pcoord->x1v(i);
   const Real rm = pmb->pcoord->x1f(i);
   const int ig = GlobalRadialIndex(pmb, i);
+
+  if (ig < 0) {
+    const Real r = pmb->pcoord->x1v(i);
+    const Real rin = r_face_global_(0);
+    const Real bh_mass = GetBlackHoleMass();
+
+    return Phi_face_global_(0)
+      + 0.5*std::log((1.0 - 2.0*bh_mass/r)/(1.0 - 2.0*bh_mass/rin));
+  }
+
+  if(ig >= 0){
+    const Real r = pmb->pcoord->x1v(i);
+    const Real mout = mgrav_face_global_(nr_);
+    return 0.5*std::log(1.0 - 2.0*mout/r);
+  }
+  
   const Real dPhi_dr = dPhi_dr_cell_global_(ig);
   return Phi(i) + (rc-rm)*dPhi_dr;
 }
@@ -1002,19 +1018,23 @@ Real RGPSGravityDriver::CellMgrav(MeshBlock *pmb, int i) const {
   return mgrav;
 }
 
-// Real RGPSGravityDriver::CellXsq(MeshBlock *pmb, int i) const {
-//   int ig = GlobalRadialIndex(pmb, i);
+Real RGPSGravityDriver::CellXsq(MeshBlock *pmb, int i) const {
+  int ig = GlobalRadialIndex(pmb, i);
 
-//   if (ig < 0) return X_sq_cell_global_(ig);
-//   if (ig >= nr_){
-//     const Real mgrav = mgrav_face_global_(ig+1);
-//     const Real r = pmb->pcoord->x1v(i);
-//     const X_sq = 1.0 / ( 1.0 - 2.0*mgrav/r);
-//     return X_sq;
-//   };
-
-//   return X_sq_cell_global_(ig);
-// }
+  if (ig < 0) {
+    const Real mgrav = mgrav_face_global_(0); // = bh_mass
+    const Real r = pmb->pcoord->x1v(i);
+    return 1.0 / ( 1.0 - 2.0*mgrav/r);
+  }
+  
+  if (ig >= nr_){
+    const Real mgrav = mgrav_face_global_(ig+1);
+    const Real r = pmb->pcoord->x1v(i);
+    return 1.0 / ( 1.0 - 2.0*mgrav/r);
+  };
+  
+  return X_sq_cell_global_(ig);
+}
 
 int RGPSGravityDriver::NumModelOutputVariables() const {
   return 3;
