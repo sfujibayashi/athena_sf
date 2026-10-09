@@ -670,3 +670,11 @@ Real EquationOfState::GetPressureFloor(Real r) const {
     return pressure_floor_;
   }
 }
+
+Real EquationOfState::GetEnergyFloor(Real r) const {
+  const Real gamma_adi = gamma_;
+  const Real rho = GetDensityFloor(r);
+  const Real pgas = GetPressureFloor(r);
+  Real wgas = rho + gamma_adi/(gamma_adi-1.0) * pgas;
+  return wgas - pgas;
+}
