@@ -1106,7 +1106,7 @@ void RGPSGravityDriver::CellExtrinsicCurvature(
 
 Real RGPSGravityDriver::GetEnclosedMassAtInnerBoundary(
     MeshBlock *pmb) const {
-  return MgravFace1(pmb)(pmb->is);
+  return MgravFace1(pmb)(pmb->is) - GetBlackHoleMass();
 }
 
 
