@@ -992,14 +992,29 @@ Real RGPSGravityDriver::CellPhi(MeshBlock *pmb, int i) const {
 
 Real RGPSGravityDriver::CellMgrav(MeshBlock *pmb, int i) const {
   const int ig = GlobalRadialIndex(pmb, i);
-  const Real X_sq = X_sq_cell_global_(ig);
+  if (ig < 0) return GetBlackHoleMass();
+  if ( ig >= nr_ ){
+    return mgrav_face_global_(ig+1);
+  }
+  const Real X_sq  = X_sq_cell_global_(ig);
   const Real r = r_cell_global_(ig);
   const Real mgrav = 0.5*r*(1.0-1.0/X_sq);
   return mgrav;
-  //const auto &mgrav = MgravFace1(pmb);
-  //return 0.5*(mgrav(i) + mgrav(i+1));
 }
 
+// Real RGPSGravityDriver::CellXsq(MeshBlock *pmb, int i) const {
+//   int ig = GlobalRadialIndex(pmb, i);
+
+//   if (ig < 0) return X_sq_cell_global_(ig);
+//   if (ig >= nr_){
+//     const Real mgrav = mgrav_face_global_(ig+1);
+//     const Real r = pmb->pcoord->x1v(i);
+//     const X_sq = 1.0 / ( 1.0 - 2.0*mgrav/r);
+//     return X_sq;
+//   };
+
+//   return X_sq_cell_global_(ig);
+// }
 
 int RGPSGravityDriver::NumModelOutputVariables() const {
   return 3;
