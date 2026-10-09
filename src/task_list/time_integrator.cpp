@@ -37,6 +37,7 @@
 #include "task_list.hpp"
 
 #include "../metric/metric.hpp"
+#include "../gravity/dynamic_metric_driver.hpp"
 
 //----------------------------------------------------------------------------------------
 //! TimeIntegratorTaskList constructor
@@ -2233,6 +2234,11 @@ TaskStatus TimeIntegratorTaskList::Prolongation(MeshBlock *pmb, int stage) {
 
 
 TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
+
+#if DYNAMIC_METRIC_ENABLED
+  pmb->pmy_mesh->pmetric_driver->UpdateBeforeCons2Prim(stage);
+#endif
+
   Hydro *ph = pmb->phydro;
   Field *pf = pmb->pfield;
   PassiveScalars *ps = pmb->pscalars;
@@ -2314,6 +2320,10 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
     // r1/r_old for GR is currently unused:
     // ps->r.SwapAthenaArray(ps->r1);
     
+#if DYNAMIC_METRIC_ENABLED
+    pmb->pmy_mesh->pmetric_driver->UpdateAfterCons2Prim();
+#endif
+
     return TaskStatus::success;
   }
   return TaskStatus::fail;
