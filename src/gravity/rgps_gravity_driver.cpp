@@ -60,7 +60,7 @@ RGPSGravityDriver::RGPSGravityDriver(Mesh *pm, ParameterInput *pin)
   // dmgrav_dt_global_.NewAthenaArray(nr_);
   // dphi_dr_global_.NewAthenaArray(nr_);
   mgrav_face_global_.NewAthenaArray(nr_ + 1);
-  // phi_face_global_.NewAthenaArray(nr_ + 1);
+  Phi_face_global_.NewAthenaArray(nr_ + 1);
 
   calE_shell_global_.ZeroClear();
   Srr_shell_global_.ZeroClear();
@@ -69,7 +69,7 @@ RGPSGravityDriver::RGPSGravityDriver(Mesh *pm, ParameterInput *pin)
   // dmgrav_dt_global_.ZeroClear();
   // dphi_dr_global_.ZeroClear();
   mgrav_face_global_.ZeroClear();
-  // phi_face_global_.ZeroClear();
+  Phi_face_global_.ZeroClear();
   
   const Real bh_mass = GetBlackHoleMass();
   const Real bh_spin = GetBlackHoleSpin();
@@ -92,7 +92,7 @@ RGPSGravityDriver::~RGPSGravityDriver() {
   // dmgrav_dt_global_.DeleteAthenaArray();
   // dphi_dr_global_.DeleteAthenaArray();
   mgrav_face_global_.DeleteAthenaArray();
-  // phi_face_global_.DeleteAthenaArray();
+  Phi_face_global_.DeleteAthenaArray();
 }
 
 void RGPSGravityDriver::InitializeRadialGrid(){
@@ -279,7 +279,9 @@ void RGPSGravityDriver::ConstructMgravFromPrimitive(){
 
 void RGPSGravityDriver::ConstructPhiFromPrimitive(){
 
-  const Real bh_mass = GetBlackHoleMass();
+  const Real mass_to_length =
+    pmy_mesh_->punit->grav_const_code
+    / SQR(pmy_mesh_->punit->speed_of_light_code);
   
   AthenaArray<Real> Sr_r_shell_global;
   Sr_r_shell_global.NewAthenaArray(nr_);
@@ -320,23 +322,55 @@ void RGPSGravityDriver::ConstructPhiFromPrimitive(){
   MPI_Allreduce(MPI_IN_PLACE, Sr_r_shell_global.data(), nr_, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
 #endif
   
+  // Get angular average value by dividing with the shell volume.
+  for(int i=0; i<nr_; ++i){
+    const Real rm = r_face_global_(i);
+    const Real rp = r_face_global_(i+1);
+
+    const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
+    Sr_r_shell_global(i) /= dV;
+  }
+  
+
   const Real mout = mgrav_face_global_(nr_);
   const Real rout = r_face_global_(nr_);
   Phi_face_global_(nr_) = 0.5*std::log(1.0 - 2.0*mout/rout);
-  for (int i=nr_; i>0; --i) {
+  for (int i=nr_-1; i>=0; --i) {
     const Real rm = r_face_global_(i);
     const Real rp = r_face_global_(i+1);
     const Real dr = rp-rm;
-
-    // cell-centered values
-    const Real mgrav = 0.5*(mgrav_face_global_(i) + mgrav_face_global_(i-1));
-    const Real r = r_cell_global_(i-1);
-    const Real Sr_r = Sr_r_shell_global(i-1);
-    const Real X_sq = 1.0/(1.0-2.0*mgrav/r);
     
-    Phi_face_global_(i-1) = Phi_face_global_(i) 
-      + dr*X_sq*(mgrav/(r*r) + 4.0*M_PI*Sr_r);
+    // cell-centered values
+    const Real mgrav = 0.5*(mgrav_face_global_(i+1) + mgrav_face_global_(i));
+    const Real r = r_cell_global_(i);
+    const Real Sr_r = Sr_r_shell_global(i);
+    const Real X_sq = 1.0/(1.0-2.0*mgrav/r);
+
+    const Real Patm = pmy_mesh_->my_blocks(0)->peos->GetPressureFloor(r);
+    
+    Phi_face_global_(i) = Phi_face_global_(i+1)
+      - dr*X_sq*(mgrav/(r*r) + 4.0*M_PI*r*(Sr_r-Patm)*mass_to_length);
   }
+
+  
+  for (int b=0; b<pmy_mesh_->nblocal; ++b) {
+    MeshBlock *pmb = pmy_mesh_->my_blocks(b);
+    
+    auto &Phi_face1=PhiFace1(pmb);
+
+    for (int i=0; i<=pmb->ncells1; ++i) {
+      int igf = pmb->loc.lx1 * pmb->block_size.nx1 + (i - pmb->is);
+      
+      if (igf < 0) {
+        Phi_face1(i)  = Phi_face_global_(0);
+      } else if (igf > nr_) {
+        Phi_face1(i)  = Phi_face_global_(nr_);
+      } else {
+        Phi_face1(i)  = Phi_face_global_(igf);
+      }
+    }
+  } 
+
 }
 
 void RGPSGravityDriver::ConstructMgravFromConserved(){
