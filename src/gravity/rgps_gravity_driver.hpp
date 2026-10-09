@@ -29,7 +29,9 @@ public:
   RGPSGravityDriver(Mesh *pm, ParameterInput *pin);
   ~RGPSGravityDriver() override;
   
+  void InitializeRadialGrid();
   void Update() override;
+  void UpdateAfterConservedToPrimitive() override;
 
   Real bh_mass_prev_, bh_spin_prev_;
   Real bh_mass_pending_, bh_spin_pending_;
