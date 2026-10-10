@@ -20,10 +20,6 @@
 #include "hdf5_reader.hpp"
 #include "../globals.hpp"
 
-#ifndef HDF5OUTPUT
-#error "gr_collapsar with outflow injection requires HDF5 support"
-#endif
-
 #ifdef HDF5OUTPUT
 
 #include <hdf5.h>
@@ -317,6 +313,75 @@ void OutflowBoundaryData::Analyze(Real gamma_ad) const {
 	    << " E(bern) = " << Eej_bern << " erg"
 	    << " E(bind) = " << Eej_bind << " erg" << std::endl;
 
+}
+
+#else
+
+namespace {
+void HDF5RequiredError() {
+  std::stringstream msg;
+  msg << "### FATAL ERROR: Outflow injection requires HDF5 support."
+      << std::endl;
+  ATHENA_ERROR(msg);
+}
+}
+
+
+OutflowBoundaryData::OutflowBoundaryData(const std::string &filename) {
+  std::stringstream msg;
+  msg << "### FATAL ERROR in OutflowBoundaryData" << std::endl
+      << "Outflow injection requires HDF5 support." << std::endl
+      << "Reconfigure Athena++ with -hdf5." << std::endl;
+  ATHENA_ERROR(msg);
+}
+
+OutflowBoundaryData::~OutflowBoundaryData() {
+}
+
+OutflowState OutflowBoundaryData::Interpolate(
+    Real time, Real theta) const {
+  HDF5RequiredError();
+  return OutflowState{};
+}
+
+OutflowState OutflowBoundaryData::GetState(int it, int j) const {
+  HDF5RequiredError();
+  return OutflowState{};
+}
+
+Real OutflowBoundaryData::GetTimeMin() const {
+  HDF5RequiredError();
+  return 0.0;
+}
+
+Real OutflowBoundaryData::GetTimeMax() const {
+  HDF5RequiredError();
+  return 0.0;
+}
+
+Real OutflowBoundaryData::GetThetaMin() const {
+  HDF5RequiredError();
+  return 0.0;
+}
+
+Real OutflowBoundaryData::GetThetaMax() const {
+  HDF5RequiredError();
+  return 0.0;
+}
+
+Real OutflowBoundaryData::GetNTime() const {
+  HDF5RequiredError();
+  return 0.0;
+}
+
+Real OutflowBoundaryData::GetNTheta() const {
+  HDF5RequiredError();
+  return 0.0;
+}
+
+void OutflowBoundaryData::Analyze(Real gamma_ad) const {
+  HDF5RequiredError();
+  return;
 }
 
 #endif  // HDF5OUTPUT

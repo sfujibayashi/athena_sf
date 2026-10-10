@@ -23,6 +23,7 @@
 // C headers
 
 // C++ headers
+#include <sstream>
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -107,4 +108,18 @@ void __attribute__((weak)) MeshBlock::UserWorkInLoop() {
 void __attribute__((weak)) MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
   // do nothing
   return;
+}
+
+//========================================================================================
+//! \fn void MeshBlock::InitializeAtmosphere(ParameterInput *pin)
+//! \brief Default implementation for initializing newly-added restart blocks.
+//========================================================================================
+
+void __attribute__((weak))
+MeshBlock::InitializeAtmosphere(ParameterInput *pin) {
+  std::stringstream msg;
+  msg << "### FATAL ERROR in MeshBlock::InitializeAtmosphere" << std::endl
+      << "InitializeAtmosphere() is not implemented for this problem generator."
+      << std::endl;
+  ATHENA_ERROR(msg);
 }
