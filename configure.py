@@ -559,7 +559,8 @@ if args['g']:
     makefile_options['RSOLVER_FILE'] += '_rel'
     if not args['t']:
         makefile_options['RSOLVER_FILE'] += '_no_transform'
-
+        if args['coord'] == 'gr_dynamic_valencia':
+            makefile_options['RSOLVER_FILE'] += '_valencia'
 
 # -radiation argument
 definitions['NRAD_VARIABLES'] = '0'
