@@ -632,7 +632,7 @@ void HLLENonTransformingValencia(MeshBlock *pmb, const int k, const int j,
 
     const Real E_l = wgas_l*gamma_l*gamma_l - pgas_l;
     const Real Ji_l = rho_l*ucon_l[IVY];
-    const Real Ti0_l = wgas_l*ucon_l[IVY]*ucon_l[0] + pgas_l*g03;
+    const Real Ti0_l = wgas_l*ucon_l[IVY]*ucon_l[0] + pgas_l*g02;
 
     // Calculate conserved quantities in L region (rho u^0 and T^0_\mu)
     Real cons_l[NWAVE];
@@ -653,15 +653,16 @@ void HLLENonTransformingValencia(MeshBlock *pmb, const int k, const int j,
 
     const Real E_r = wgas_r*gamma_r*gamma_r - pgas_r;
     const Real Ji_r = rho_r*ucon_r[IVY];
-    const Real Ti0_r = wgas_r*ucon_r[IVY]*ucon_r[0] + pgas_r*g03;
+    const Real Ti0_r = wgas_r*ucon_r[IVY]*ucon_r[0] + pgas_r*g02;
 
     // Calculate conserved quantities in R region (rho u^0 and T^0_\mu)
     Real cons_r[NWAVE];
-    cons_r[IDN] = gamma_l * rho_l;
+    cons_r[IDN] = gamma_r * rho_r;
     cons_r[IEN] = E_r - cons_r[IDN];
     cons_r[IVX] = wgas_r * gamma_r * ucov_r[1];
     cons_r[IVY] = wgas_r * gamma_r * ucov_r[2];
     cons_r[IVZ] = wgas_r * gamma_r * ucov_r[3];
+    flux_l[IVY] += alpha*pgas_r;
 
     // Calculate fluxes in R region (rho u^i and T^i_\mu, where i = IVY)
     Real flux_r[NWAVE];
@@ -670,7 +671,7 @@ void HLLENonTransformingValencia(MeshBlock *pmb, const int k, const int j,
     flux_r[IM1] = alpha*wgas_r*ucon_r[IVY]*ucov_r[1];
     flux_r[IM2] = alpha*wgas_r*ucon_r[IVY]*ucov_r[2];
     flux_r[IM3] = alpha*wgas_r*ucon_r[IVY]*ucov_r[3];
-    flux_r[IVY] += pgas_r;
+    flux_r[IVY] += alpha*pgas_r;
 
     // Calculate fluxes in HLL region
     Real flux_hll[NWAVE];

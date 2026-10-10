@@ -174,7 +174,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     flux_l[IM1] = alpha*wgas_l*ucon_l[ivx]*ucov_l[1];
     flux_l[IM2] = alpha*wgas_l*ucon_l[ivx]*ucov_l[2];
     flux_l[IM3] = alpha*wgas_l*ucon_l[ivx]*ucov_l[3];
-    flux_l[ivx] += pgas_l;
+    flux_l[ivx] += alpha*pgas_l;
 
     const Real E_r = wgas_r*gamma_r*gamma_r - pgas_r;
     const Real Ji_r = rho_r*ucon_r[ivx];
@@ -182,7 +182,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     
     // Calculate conserved quantities in R region (rho u^0 and T^0_\mu)
     Real cons_r[NWAVE];
-    cons_r[IDN] = gamma_l * rho_l;
+    cons_r[IDN] = gamma_r * rho_r;
     cons_r[IEN] = E_r - cons_r[IDN];
     cons_r[IVX] = wgas_r * gamma_r * ucov_r[1];
     cons_r[IVY] = wgas_r * gamma_r * ucov_r[2];
@@ -195,7 +195,7 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     flux_r[IM1] = alpha*wgas_r*ucon_r[ivx]*ucov_r[1];
     flux_r[IM2] = alpha*wgas_r*ucon_r[ivx]*ucov_r[2];
     flux_r[IM3] = alpha*wgas_r*ucon_r[ivx]*ucov_r[3];
-    flux_r[ivx] += pgas_r;
+    flux_r[ivx] += alpha*pgas_r;
 
     // Calculate fluxes in HLL region
     Real flux_hll[NWAVE];
