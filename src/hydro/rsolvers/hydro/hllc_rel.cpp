@@ -649,7 +649,7 @@ void HLLENonTransformingValencia(MeshBlock *pmb, const int k, const int j,
     flux_l[IM1] = alpha*wgas_l*ucon_l[IVY]*ucov_l[1];
     flux_l[IM2] = alpha*wgas_l*ucon_l[IVY]*ucov_l[2];
     flux_l[IM3] = alpha*wgas_l*ucon_l[IVY]*ucov_l[3];
-    flux_l[IVY] += pgas_l;
+    flux_l[IVY] += alpha*pgas_l;
 
     const Real E_r = wgas_r*gamma_r*gamma_r - pgas_r;
     const Real Ji_r = rho_r*ucon_r[IVY];
@@ -662,7 +662,6 @@ void HLLENonTransformingValencia(MeshBlock *pmb, const int k, const int j,
     cons_r[IVX] = wgas_r * gamma_r * ucov_r[1];
     cons_r[IVY] = wgas_r * gamma_r * ucov_r[2];
     cons_r[IVZ] = wgas_r * gamma_r * ucov_r[3];
-    flux_l[IVY] += alpha*pgas_r;
 
     // Calculate fluxes in R region (rho u^i and T^i_\mu, where i = IVY)
     Real flux_r[NWAVE];

@@ -91,6 +91,9 @@
 // enable dynamical metric? default=0 (false)
 #define DYNAMIC_METRIC_ENABLED @DYNAMIC_METRIC_ENABLED@
 
+// Valencia formulation used?
+#define VALENCIA_FORMULATION @VALENCIA_FORMULATION@
+
 // use single precision floating-point values (binary32)? default=0 (false; use binary64)
 #define SINGLE_PRECISION_ENABLED @SINGLE_PRECISION_ENABLED@
 
