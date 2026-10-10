@@ -67,7 +67,11 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
                           AthenaArray<Real> &prim_l, AthenaArray<Real> &prim_r,
                           AthenaArray<Real> &flux, const AthenaArray<Real> &dxw) {
   if (GENERAL_RELATIVITY && ivx == IVY && pmy_block->pcoord->IsPole(j)) {
+#if VALENCIA_FORMULATION
+    HLLENonTransformingValencia(pmy_block, k, j, il, iu, g_, gi_, prim_l, prim_r, flux);
+#else
     HLLENonTransforming(pmy_block, k, j, il, iu, g_, gi_, prim_l, prim_r, flux);
+#endif
   } else {
     HLLCTransforming(pmy_block, k, j, il, iu, ivx, g_, gi_, prim_l, prim_r, cons_, flux);
   }

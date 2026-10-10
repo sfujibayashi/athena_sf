@@ -460,6 +460,9 @@ definitions['COORDINATE_SYSTEM'] = makefile_options['COORDINATES_FILE'] = args['
 definitions['DYNAMIC_METRIC_ENABLED'] = \
     '1' if args['coord'] in ('gr_dynamic','gr_dynamic_valencia') else '0'
 
+definitions['VALENCIA_FORMULATION'] = \
+    '1' if args['coord'] == 'gr_dynamic_valencia' else '0'
+
 # --eos=[name] argument
 definitions['NON_BAROTROPIC_EOS'] = '0' if args['eos'] == 'isothermal' else '1'
 makefile_options['EOS_FILE'] = args['eos']
