@@ -29,6 +29,8 @@ public:
   RGPSGravityDriver(Mesh *pm, ParameterInput *pin);
   ~RGPSGravityDriver() override;
   
+  void InitializeMeshGeometry() override;
+
   void InitializeRadialGrid();
 
   void ConstructMgravFromPrimitive();

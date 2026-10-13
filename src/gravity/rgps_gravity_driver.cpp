@@ -51,8 +51,6 @@ RGPSGravityDriver::RGPSGravityDriver(Mesh *pm, ParameterInput *pin)
   r_face_global_.NewAthenaArray(nr_+1);
   vol_.NewAthenaArray(pmy_mesh_->block_size.nx1+2*NGHOST);
 
-  InitializeRadialGrid();
-
   calE_shell_global_.NewAthenaArray(nr_);
   Srr_shell_global_.NewAthenaArray(nr_);
   // Sr_shell_global_.NewAthenaArray(nr_);
@@ -96,6 +94,10 @@ RGPSGravityDriver::~RGPSGravityDriver() {
   mgrav_face_global_.DeleteAthenaArray();
   Phi_face_global_.DeleteAthenaArray();
   X_sq_cell_global_.DeleteAthenaArray();
+}
+
+void RGPSGravityDriver::InitializeMeshGeometry() {
+  InitializeRadialGrid();
 }
 
 void RGPSGravityDriver::InitializeRadialGrid(){

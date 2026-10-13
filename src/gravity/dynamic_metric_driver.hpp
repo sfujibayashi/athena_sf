@@ -12,6 +12,8 @@ class ParameterInput;
 class DynamicMetricDriver {
 public:
   virtual ~DynamicMetricDriver() = default;
+
+  virtual void InitializeMeshGeometry() = 0;
   
   virtual void InitializeFromPrimitive() = 0;
   virtual void InitializeFromRestart() = 0;

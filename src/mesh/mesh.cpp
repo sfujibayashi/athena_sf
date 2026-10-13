@@ -562,6 +562,10 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     pimrad = new IMRadiation(this, pin);
   }
   
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+#endif
+
   // create MeshBlock list for this process
   gids_ = nslist[Globals::my_rank];
   gide_ = gids_ + nblist[Globals::my_rank] - 1;
@@ -576,9 +580,9 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   }
 
 #if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+  pmetric_driver->InitializeMeshGeometry();
 #endif
-
+  
   ResetLoadBalanceVariables();
 
   if (turb_flag > 0) // TurbulenceDriver depends on the MeshBlock ctor
@@ -983,6 +987,10 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     pimrad = new IMRadiation(this, pin);
   }
 
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver->InitializeMeshGeometry();
+#endif
+
   // allocate data buffer
   int nbmin = nblist[0];
   for (int n = 1; n < Globals::nranks; ++n) {
@@ -1039,7 +1047,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   }
 
 #if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+  pmetric_driver->InitializeMeshGeometry();
   pmetric_driver->InitializeFromRestart();
 #endif
 
@@ -2790,6 +2798,10 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
     pimrad = new IMRadiation(this, pin);
   }
 
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+#endif
+
   // allocate data buffer
   int nbmin = nblist[0];
   for (int n = 1; n < Globals::nranks; ++n) {
@@ -2837,8 +2849,9 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   }
 
 #if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+  pmetric_driver->InitializeMeshGeometry();
 #endif
+
   
   // reconstruct delta_m and Psi
   // MeshBlocks have already been reconstructed.
