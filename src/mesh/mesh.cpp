@@ -997,7 +997,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   nblocal = nblist[Globals::my_rank];
 
 #if DYNAMIC_METRIC_ENABLED
-  pmetric_driver->InitializeMeshGeometry();
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
 #endif
 
   gids_ = nslist[Globals::my_rank];
