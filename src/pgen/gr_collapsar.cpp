@@ -246,27 +246,6 @@ namespace {
     return pmb->pmy_mesh->pmetric_driver->GetBlackHoleMassAccretionRate();
   }
 
-  Real HistoryOuterMassFlux(MeshBlock *pmb, int iout) {
-    // This block does not touch the physical outer-x1 boundary.
-    if (pmb->pbval->block_bcs[BoundaryFace::outer_x1]== BoundaryFlag::block) {
-      return 0.0;
-    }
-    
-    Real mdot_out = 0.0;
-    
-    for (int k=pmb->ks; k<=pmb->ke; ++k) {
-      for (int j=pmb->js; j<=pmb->je; ++j) {
-        const Real area = pmb->pcoord->GetFace1Area(k, j, pmb->ie+1);
-        mdot_out += area * pmb->phydro->flux[X1DIR](IDN,k,j,pmb->ie+1);
-      }
-    }
-    
-    // make it units of Msun s^-1
-    return mdot_out/pmb->pmy_mesh->punit->solar_mass_code
-      /pmb->pmy_mesh->punit->code_time_cgs;
-  }
-
-
   Real HistoryMInnerBlocks(MeshBlock *pmb, int iout) {
     // This block does not touch the physical outer-x1 boundary.
     if (pmb->pbval->block_bcs[BoundaryFace::inner_x1] == BoundaryFlag::block) {
@@ -382,7 +361,7 @@ namespace {
   };
 
   enum BoundaryFluxCache {
-    MDOT_IN_BC,
+    MDOT_IN_BC = 0,
     EDOT_IN_BC,
     MDOT_IN_NUM,
     EDOT_IN_NUM,
@@ -394,6 +373,21 @@ namespace {
     MDOT_OUT,
     
     NBOUNDARY_FLUX_CACHE
+  };
+
+  enum BoundaryFluxIntegral {
+    MASS_IN_BC = 0,
+    ENERGY_IN_BC,
+    MASS_IN_NUM,
+    ENERGY_IN_NUM,
+    MASS_OUT_BC,
+    ENERGY_OUT_BC,
+    MASS_OUT_NUM,
+    ENERGY_OUT_NUM,
+
+    MASS_OUT,
+    
+    NBOUNDARY_FLUX_INTEGRAL
   };
   
   Real HistorySumAbs2Mom(MeshBlock *pmb, int iout) {
@@ -675,6 +669,14 @@ namespace {
     return false;
   }
 
+  Real HistoryOuterMassFlux(MeshBlock *pmb, int iout) {
+    Real mdot = pmb->ruser_meshblock_data[3](MDOT_OUT);
+    // make it units of Msun s^-1
+    return mdot
+      /pmb->pmy_mesh->punit->solar_mass_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
   Real HistoryMdotInBC(MeshBlock *pmb, int iout) {
     
     Real mdot = pmb->ruser_meshblock_data[3](MDOT_IN_BC);
@@ -739,6 +741,70 @@ namespace {
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
+
+
+  Real HistoryMassOut(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real mass = pm->ruser_mesh_data[3](MASS_OUT);
+    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+  }
+
+  Real HistoryMassInBC(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real mass = pm->ruser_mesh_data[3](MASS_IN_BC);
+    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+  }
+
+  Real HistoryMassOutBC(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real mass = pm->ruser_mesh_data[3](MASS_OUT_BC);
+    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+  }
+
+  Real HistoryEnergyInBC(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real energy = pm->ruser_mesh_data[3](ENERGY_IN_BC);
+    return energy
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code;
+  }
+
+  Real HistoryEnergyOutBC(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real energy = pm->ruser_mesh_data[3](ENERGY_OUT_BC);
+    return energy
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code;
+  }
+
+  Real HistoryMassInNum(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real mass = pm->ruser_mesh_data[3](MASS_IN_NUM);
+    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+  }
+
+  Real HistoryMassOutNum(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real mass = pm->ruser_mesh_data[3](MASS_OUT_NUM);
+    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+  }
+
+  Real HistoryEnergyInNum(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real energy = pm->ruser_mesh_data[3](ENERGY_IN_NUM);
+    return energy
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code;
+  }
+
+  Real HistoryEnergyOutNum(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real energy = pm->ruser_mesh_data[3](ENERGY_OUT_NUM);
+    return energy
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code;
+  }
+  
 } // namespace
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
@@ -855,13 +921,16 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     }
   }
   // output
-  AllocateUserHistoryOutput(21);
+  AllocateUserHistoryOutput(30);
 
   int iout=0;
   EnrollUserHistoryOutput(iout, HistoryBlackHoleMass, "m_bh",
                           UserHistoryOperation::max);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryBlackHoleMassAccretionRate, "mdot_bh",
+                          UserHistoryOperation::max);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMassOut, "mass_out",
                           UserHistoryOperation::max);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryOuterMassFlux, "mdot_out",
@@ -920,10 +989,34 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryEdotOutNum, "edot_out_num",
                           UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMassInBC, "mass_in_BC",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMassOutBC, "mass_out_BC",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEnergyInBC, "energy_in_BC",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEnergyOutBC, "energy_out_BC",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMassInNum, "mass_in_num",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMassOutNum, "mass_out_num",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEnergyInNum, "energy_in_num",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEnergyOutNum, "energy_out_num",
+                          UserHistoryOperation::sum);
 
 
   //
-  AllocateRealUserMeshDataField(2);
+  AllocateRealUserMeshDataField(3);
 
   // BH mass
   ruser_mesh_data[0].NewAthenaArray(1);
@@ -932,9 +1025,47 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
   ruser_mesh_data[0](0) = m_bh_code;
   ruser_mesh_data[1](0) = ang_bh_code;
+
+  // Integrated boundary fluxes
+  ruser_mesh_data[2].NewAthenaArray(NBOUNDARY_FLUX_INTEGRAL);
+  ruser_mesh_data[2].ZeroClear();
 }
 
 void Mesh::UserWorkInLoop(void) {
+
+  Real flux_sum[NBOUNDARY_FLUX_INTEGRAL] = {};
+
+  for (int b = 0; b < nblocal; ++b) {
+    MeshBlock *pmb = my_blocks(b);
+
+    const AthenaArray<Real> &cache = pmb->ruser_meshblock_data[3];
+
+    flux_sum[MASS_IN_BC]  += cache(MDOT_IN_BC);
+    flux_sum[ENERGY_IN_BC]  += cache(EDOT_IN_BC);
+    flux_sum[MASS_IN_NUM] += cache(MDOT_IN_NUM);
+    flux_sum[ENERGY_IN_NUM] += cache(EDOT_IN_NUM);
+
+    flux_sum[MASS_OUT_BC]  += cache(MDOT_OUT_BC);
+    flux_sum[ENERGY_OUT_BC]  += cache(EDOT_OUT_BC);
+    flux_sum[MASS_OUT_NUM] += cache(MDOT_OUT_NUM);
+    flux_sum[ENERGY_OUT_NUM] += cache(EDOT_OUT_NUM);
+
+    flux_sum[MASS_OUT] += cache(MDOT_OUT);
+  }
+
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE,
+		flux_sum,
+		NBOUNDARY_FLUX_INTEGRAL,
+		MPI_ATHENA_REAL,
+		MPI_SUM,
+		MPI_COMM_WORLD);
+#endif
+  
+  for (int n = 0; n < NBOUNDARY_FLUX_INTEGRAL; ++n) {
+    ruser_mesh_data[2](n) += dt * flux_sum[n];
+  }
+
 
   // write criteria for termination
   bool terminate = false;
