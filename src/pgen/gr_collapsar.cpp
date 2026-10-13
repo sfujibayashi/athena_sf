@@ -150,6 +150,7 @@ namespace {
   enum ScalarIndex {
     IYE = 0,
     IXINJ,
+    IXPHYS,
     
     IXNEUT,
     IXH1,
@@ -171,6 +172,7 @@ namespace {
     IXFE54,
     IXFE56,
     IXNI56,
+
     
     NSCALAR_REQUIRED
   };
@@ -1398,10 +1400,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         int ind = collapsed.CellIndexFromRadius(rad_cgs);
         
         Real rho_cgs, press_cgs, jrot_cgs, uu1, uu2, uu3;
-	Real ye, xinj, xprog[ProgenitorSpecies::NPROG_SPECIES];
+	Real ye, xphys, xinj, xprog[ProgenitorSpecies::NPROG_SPECIES];
         uu2 = 0.0;
         uu3 = 0.0;
 	xinj = 0.0;
+	xphys = 0.0;
         if( ind>=collapsed.ncell ){
           // outside the star atmosphere
           rho_cgs = rho_atmos;
@@ -1419,6 +1422,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           uu1 = collapsed.ur[ind] / Constants::speed_of_light_cgs;
 	  jrot_cgs = collapsed.jrot[ind];
 	  ye = collapsed.ye[ind];
+	  xphys = 1.0;
 	  for(int n=0; n<ProgenitorSpecies::NPROG_SPECIES; ++n){
 	    xprog[n] = collapsed.x[n][ind];
 	  }
@@ -1426,8 +1430,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           rho_cgs = collapsed.rho[ind_first];
           press_cgs= collapsed.press[ind_first];
           uu1 = collapsed.ur[ind_first]/Constants::speed_of_light_cgs;
-          ye = collapsed.ye[ind_first];
 	  jrot_cgs = collapsed.jrot[ind_first];
+          ye = collapsed.ye[ind_first];
+	  xphys = 1.0;
 	  for(int n=0; n<ProgenitorSpecies::NPROG_SPECIES; ++n){
 	    xprog[n] = collapsed.x[n][ind_first];
 	  }
@@ -1437,8 +1442,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           rho_cgs  = xx0*collapsed.rho[ind] + xx1*collapsed.rho[ind+1];
           press_cgs= xx0*collapsed.press[ind] + xx1*collapsed.press[ind+1];
           uu1 = (xx0*collapsed.ur[ind] + xx1*collapsed.ur[ind+1])/Constants::speed_of_light_cgs;
-	  ye = xx0*collapsed.ye[ind] + xx1*collapsed.ye[ind+1];
 	  jrot_cgs = xx0*collapsed.jrot[ind] + xx1*collapsed.jrot[ind+1];
+	  ye = xx0*collapsed.ye[ind] + xx1*collapsed.ye[ind+1];
+	  xphys = 1.0;
 	  for(int n=0; n<ProgenitorSpecies::NPROG_SPECIES; ++n){
 	    xprog[n] = xx0*collapsed.x[n][ind] + xx1*collapsed.x[n][ind+1];
 	  }
@@ -1469,6 +1475,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 	// pscalars
 	pscalars->r(IYE,k,j,i) = ye;
 	pscalars->r(IXINJ,k,j,i) = 0.0;
+	pscalars->r(IXPHYS,k,j,i) = xphys;
 	for (int n = IXNEUT; n < NSCALAR_REQUIRED; ++n) {
 	  pscalars->r(n,k,j,i) = 0.0;
 	}
@@ -1545,6 +1552,7 @@ void MeshBlock::InitializeAtmosphere(ParameterInput *pin) {
 #if NSCALARS > 0
 	pscalars->r(IYE,k,j,i)   = 0.5;
 	pscalars->r(IXINJ,k,j,i) = 0.0;
+	pscalars->r(IXPHYS,k,j,i) = 1.0;
 	
 	for (int n=IXNEUT; n<NSCALAR_REQUIRED; ++n) {
 	  pscalars->r(n,k,j,i) = 0.0;
@@ -1872,6 +1880,7 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
 #if NSCALARS > 0
 	pmb->pscalars->r(IYE,k,j,i)   = state.ye;
 	pmb->pscalars->r(IXINJ,k,j,i) = 1.0;
+	pmb->pscalars->r(IXPHYS,k,j,i) = 0.0;
 	for (int n=IXNEUT; n<NSCALAR_REQUIRED; ++n) {
 	  pmb->pscalars->r(n,k,j,i) = 0.0;
 	}
