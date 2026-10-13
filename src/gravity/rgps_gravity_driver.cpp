@@ -359,7 +359,8 @@ void RGPSGravityDriver::ConstructPhiFromPrimitive(){
   const Real mout = mgrav_face_global_(nr_);
   const Real rout = r_face_global_(nr_);
 
-  if (1.0 - 2.0*mout/rout <= 0.0) {
+  const Real f_out = 1.0 - 2.0*mout/rout;
+  if (!std::isfinite(f_out) || f_out <= 0.0) {
     std::stringstream msg;
     msg << "### FATAL ERROR in RGPSGravityDriver::ConstructPhiFromPrimitive" << std::endl
 	<< "2Mout/Rout > 1."
@@ -486,23 +487,24 @@ void RGPSGravityDriver::ConstructMgravFromConserved(){
     const Real cm = 1.0 - 2.0*(mL-dEat_len)/rc;
 
     const Real disc = b*b+cm;
-    if (disc < 0.0) {
+    if (!std::isfinite(disc) || disc < 0.0) {
       std::stringstream msg;
       msg << "### FATAL ERROR in RGPSGravityDriver::ConstructMgravFromConserved" << std::endl
-	  << "b^2-cm < 0."
+	  << "b^2+cm < 0."
 	  << std::endl;
       ATHENA_ERROR(msg);
     }
 
     const Real Xinv = cm/(b + std::sqrt(disc));
-    const Real X_sq = 1.0/(Xinv*Xinv);
-    if (X_sq <= 0.0) {
+    if (!std::isfinite(Xinv) || Xinv <= 0.0) {
       std::stringstream msg;
       msg << "### FATAL ERROR in RGPSGravityDriver::ConstructMgravFromConserved" << std::endl
-	  << "X_sq <= 0."
+	  << "Xinv <= 0."
 	  << std::endl;
       ATHENA_ERROR(msg);
     }
+
+    const Real X_sq = 1.0/(Xinv*Xinv);
 
     X_sq_cell_global_(i) = X_sq;
     
