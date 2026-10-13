@@ -1141,7 +1141,7 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
     }
   }  
   
-  AthenaArray<Real> &cache = ruser_meshblock_data[2];
+  AthenaArray<Real> &cache = ruser_meshblock_data[3];
 
   cache(MDOT_IN_BC) = mdot_in_bc;
   cache(EDOT_IN_BC) = edot_in_bc;
