@@ -299,9 +299,6 @@ namespace {
     AthenaArray<Real> vol;
     vol.NewAthenaArray(pmb->ncells1);
 
-    AthenaArray<Real> Xsq;
-    Xsq.NewAthenaArray(pmb->ncells1);
-
     Real E = 0.0;
     
     for (int k=pmb->ks; k<=pmb->ke; ++k) {
@@ -313,7 +310,9 @@ namespace {
 	  const Real qD   = pmb->phydro->u(IDN,k,j,i);
 	  const Real qtau = pmb->phydro->u(IEN,k,j,i);
 	  const Real q = pmb->pmy_mesh->pmetric_driver->CellSpatialDensitizationFactor(pmb, k,j,i);
-	  E += vol(i) * (qD+qtau)/q;
+	  const Real r = pmb->pcoord->x1v(i);
+	  const Real Eatmos = pmb->peos->GetEnergyFloor(r);
+	  E += vol(i) * ((qD+qtau)/q-Eatmos);
 #else
 	  const Real Tt_t = pmb->phydro->u(IEN,k,j,i);
 	  E += vol(i) * (-Tt_t);
@@ -322,7 +321,8 @@ namespace {
       }
     }
     
-    return E / pmb->pmy_mesh->punit->erg_code;
+    return E * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      / pmb->pmy_mesh->punit->erg_code;
   }
 
 
