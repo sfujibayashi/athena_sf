@@ -1051,7 +1051,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }
   }
 
-#if !DYNAMIC_METRIC_ENABLED  
+#if !DYNAMIC_METRIC_ENABLED
   // Convert primitive -> conserved
   AthenaArray<Real> bb;
   bb.NewAthenaArray(3, ke+1, je+1, ie+1);
@@ -1113,6 +1113,7 @@ void MeshBlock::InitializeAtmosphere(ParameterInput *pin) {
     }
   }
 
+#if !DYNAMIC_METRIC_ENABLED
   AthenaArray<Real> bb;
   bb.NewAthenaArray(3, ke+1, je+1, ie+1);
   bb.ZeroClear();
@@ -1125,7 +1126,8 @@ void MeshBlock::InitializeAtmosphere(ParameterInput *pin) {
   peos->PassiveScalarPrimitiveToConserved(
     pscalars->r, phydro->u, pscalars->s, pcoord,
     is, ie, js, je, ks, ke);
-#endif
+#endif // NSCALARS > 0
+#endif // !DYNAMIC_METRIC_ENABLED  
 }
 
 
