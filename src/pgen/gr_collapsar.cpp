@@ -745,6 +745,22 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     std::string fname = pin->GetString("problem", "outflow_file");
     poutflow = new OutflowBoundaryData(fname);
 
+    const Real rin_cgs  = mesh_size.x1min * punit->code_length_cgs;
+    const Real rext_cgs = poutflow->GetExtractionRadius();
+
+    const Real relerr = std::abs(rin_cgs - rext_cgs) / rext_cgs;
+    
+    if (relerr > 1.0e-10) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in Mesh::InitUserMeshData" << std::endl
+	  << "Inner boundary radius is inconsistent with the "
+	  << "outflow extraction radius." << std::endl
+	  << "Rin   = " << rin_cgs << " cm" << std::endl
+	  << "r_ext = " << rext_cgs << " cm" << std::endl
+	  << "relative difference = " << relerr << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    
     if(Globals::my_rank==0)poutflow->Analyze(gamma_gas);
     
     timescale_cut = pin->GetReal("problem", "timescale_cut");

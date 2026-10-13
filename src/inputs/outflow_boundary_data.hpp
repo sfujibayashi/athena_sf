@@ -65,6 +65,8 @@ public:
 
   Real GetNTheta() const;
   Real GetNTime() const;
+  
+  Real GetExtractionRadius() const;
 
 private:
   int ntime, ntheta;

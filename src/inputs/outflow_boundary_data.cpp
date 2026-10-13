@@ -153,6 +153,10 @@ Real OutflowBoundaryData::GetNTheta() const {
   return ntheta;
 }
 
+Real OutflowBoundaryData::GetExtractionRadius() const {
+  return r_ext_;
+}
+
 void OutflowBoundaryData::Analyze(Real gamma_ad) const {
   const Real dtheta = 0.5*M_PI/(Real)ntheta;
   const Real dt = (time_max - time_min)/(Real)(ntime-1);
@@ -382,6 +386,11 @@ Real OutflowBoundaryData::GetNTheta() const {
 void OutflowBoundaryData::Analyze(Real gamma_ad) const {
   HDF5RequiredError();
   return;
+}
+
+Real OutflowBoundaryData::GetExtractionRadius() const {
+  HDF5RequiredError();
+  return 0.0;
 }
 
 #endif  // HDF5OUTPUT
