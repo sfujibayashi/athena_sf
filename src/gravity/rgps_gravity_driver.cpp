@@ -2,7 +2,6 @@
 // C++ headers
 #include <sstream>
 #include <limits>
-#include <iomanip>
 
 // Athena++ headers
 #include "../mesh/mesh.hpp"
@@ -450,39 +449,6 @@ void RGPSGravityDriver::ConstructMgravFromConserved(){
           int ig = GlobalRadialIndex(pmb, i);
 
           calE_shell_global_(ig) += (pmb->phydro->u(IEN,k,j,i)+pmb->phydro->u(IDN,k,j,i)) * vol_(i);
-const Real qD   = pmb->phydro->u(IDN,k,j,i);
-const Real qtau = pmb->phydro->u(IEN,k,j,i);
-const Real vol  = vol_(i);
-
-if (!std::isfinite(qD) ||
-    !std::isfinite(qtau) ||
-    !std::isfinite(vol) ||
-    !std::isfinite((qD + qtau)*vol)) {
-
-  std::stringstream msg;
-  msg << std::scientific
-      << std::setprecision(16)
-      << "### Non-finite conserved state\n"
-      << "rank = " << Globals::my_rank
-      << " gid = " << pmb->gid << "\n"
-      << "cycle = " << pmy_mesh_->ncycle
-      << " time = " << pmy_mesh_->time << "\n"
-      << "ig = " << ig
-      << " i,j,k = " << i << "," << j << "," << k << "\n"
-      << "r = " << pmb->pcoord->x1v(i) << "\n"
-      << "qD = " << qD
-      << " qtau = " << qtau
-      << " volume = " << vol << "\n"
-      << "rho = " << pmb->phydro->w(IDN,k,j,i)
-      << " press = " << pmb->phydro->w(IPR,k,j,i)
-      << "u1 = " << pmb->phydro->w(IVX,k,j,i)
-      << " u2 = " << pmb->phydro->w(IVY,k,j,i)
-      << " u3 = " << pmb->phydro->w(IVZ,k,j,i)
-      << "\n";
-
-  ATHENA_ERROR(msg);
-}
-
         }
       }
     }
@@ -522,7 +488,6 @@ if (!std::isfinite(qD) ||
   
   mgrav_face_global_(0) = bh_mass;
   for (int i=0; i<nr_; ++i) {
-
     const Real mL = mgrav_face_global_(i);
     const Real rc = r_cell_global_(i);
     const Real rm = r_face_global_(i);
@@ -542,27 +507,9 @@ if (!std::isfinite(qD) ||
     const Real disc = b*b+cm;
     if (!std::isfinite(disc) || disc < 0.0) {
       std::stringstream msg;
-      // msg << "### FATAL ERROR in RGPSGravityDriver::ConstructMgravFromConserved" << std::endl
-      // 	  << "b^2+cm < 0."
-      // 	  << std::endl;
-msg << std::scientific
-      << std::setprecision(16)
-      << "### FATAL ERROR in "
-      << "RGPSGravityDriver::ConstructMgravFromConserved\n"
-      << "cycle = " << pmy_mesh_->ncycle
-      << " time = " << pmy_mesh_->time << "\n"
-      << "ig = " << i << "\n"
-      << "rm = " << rm << " rc = " << rc
-      << " rp = " << rp << "\n"
-      << "mL = " << mL
-      << " bh_mass = " << bh_mass << "\n"
-      << "2mL/rc = " << 2.0*mL/rc << "\n"
-      << "calE = " << calE_shell_global_(i)
-      << " Eatmos = " << Eatmos << "\n"
-      << "dcalE_len = " << dcalE_len
-      << " dEat_len = " << dEat_len << "\n"
-      << "b = " << b << " cm = " << cm
-      << " disc = " << disc << "\n";
+      msg << "### FATAL ERROR in RGPSGravityDriver::ConstructMgravFromConserved" << std::endl
+	  << "b^2+cm < 0."
+	  << std::endl;
       ATHENA_ERROR(msg);
     }
 

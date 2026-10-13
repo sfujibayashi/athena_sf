@@ -14,7 +14,6 @@
 #include <sstream>    // sstream
 #include <stdexcept>  // runtime_error
 #include <string>     // c_str()
-#include <iomanip>
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -1810,9 +1809,6 @@ TaskStatus TimeIntegratorTaskList::CalculateHydroFlux(MeshBlock *pmb, int stage)
       } else {
         phydro->CalculateFluxes(phydro->w,  pfield->b,  pfield->bcc, pmb->precon->xorder);
       }
-
-CheckFiniteHydroFlux(pmb, stage);
-
       const Real t_stage = pmb->pmy_mesh->time + stage_wghts[stage-1].sbeta * pmb->pmy_mesh->dt;
       pmb->UserWorkAfterHydroFlux(stage, t_stage);
     }
@@ -1950,7 +1946,6 @@ TaskStatus TimeIntegratorTaskList::IntegrateHydro(MeshBlock *pmb, int stage) {
         // writing out to u2 register
         pmb->WeightedAve(ph->u2, ph->u1, ph->u2, ph->u0, ph->fl_div, ave_wghts);
         ph->AddFluxDivergence(wght_ssp, ph->u2);
-CheckFiniteHydro(pmb, stage, "after flux update");
         // add coordinate (geometric) source terms
         pmb->pcoord->AddCoordTermsDivergence(wght_ssp, ph->flux, ph->w, pf->bcc, ph->u2);
       }
@@ -2017,13 +2012,9 @@ TaskStatus TimeIntegratorTaskList::AddSourceTerms(MeshBlock *pmb, int stage) {
                            + stage_wghts[(stage-1)].sbeta*pmb->pmy_mesh->dt;
       // Scaled coefficient for RHS update
       Real dt = (stage_wghts[(stage-1)].beta)*(pmb->pmy_mesh->dt);
-
-CheckFiniteHydro(pmb, stage, "before hydro source");
-
       // Evaluate the source terms at the time at the beginning of the stage
       ph->hsrc.AddSourceTerms(t_start_stage, dt, ph->flux, ph->w, ps->r, pf->bcc,
                                    ph->u, ps->s);
-CheckFiniteHydro(pmb, stage, "after hydro source");
     }
     return TaskStatus::next;
   }
