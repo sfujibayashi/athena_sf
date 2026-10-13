@@ -353,6 +353,9 @@ class Mesh {
   // restart flag
   bool restart_;
 
+  // flag for restart with modified blocks.
+  bool restart_modified_;
+
   // variables for load balancing control
   bool lb_flag_, lb_automatic_, lb_manual_;
   double lb_tolerance_;

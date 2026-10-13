@@ -138,7 +138,8 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     // new classes
     pmetric_driver(nullptr),
     poutflow(nullptr),
-    restart_(false)
+    restart_(false),
+    restart_modified_(false)
 {
   std::stringstream msg;
   BoundaryFlag block_bcs[6];
@@ -698,7 +699,8 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     // new classes
     pmetric_driver(nullptr),
     poutflow(nullptr),
-    restart_(true)
+    restart_(true),
+    restart_modified_(false)
 {
 
 
@@ -729,6 +731,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   
   // Modified path path to add/remove MeshBlocks
   if(modify_blocks){
+    restart_modified_=true;
     LoadRestartWithModifiedMesh(pin, resfile, mesh_test, 
 				remove_inner_blocks, add_outer_blocks);
 
@@ -1686,10 +1689,41 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
   // Before this, all MeshBlocks and Coordinates should exist.
   pmetric_driver->InitializeMeshGeometry();
   if (res_flag != 0) {
-    // GR Restart file has w, w1, and u, which are already loaded in Mesh restart constructor
-    pmetric_driver->InitializeFromRestart();
+    if (restart_modified_) {
+      // All primitives are valid:
+      // old blocks from restart, new blocks from InitializeAtmosphere()
+      pmetric_driver->InitializeFromPrimitive();
+      
+      for (int b=0; b<nblocal; ++b) {
+	MeshBlock *pmb = my_blocks(b);
+	
+	AthenaArray<Real> bb;
+	bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
+	bb.ZeroClear();
+	
+	pmb->peos->PrimitiveToConserved(
+          pmb->phydro->w, bb, pmb->phydro->u, pmb->pcoord,
+          pmb->is, pmb->ie,
+          pmb->js, pmb->je,
+          pmb->ks, pmb->ke);
+
+#if NSCALARS > 0
+	pmb->peos->PassiveScalarPrimitiveToConserved(
+          pmb->pscalars->r, pmb->phydro->u,
+          pmb->pscalars->s, pmb->pcoord,
+          pmb->is, pmb->ie,
+          pmb->js, pmb->je,
+          pmb->ks, pmb->ke);
+#endif // NSCALARS > 0
+      }
+
+    } else {
+      
+      // GR Restart file has w, w1, and u, which are already loaded in Mesh restart constructor
+      pmetric_driver->InitializeFromRestart();
+    }
   }
-#endif
+#endif // DYNAMIC_METRIC_ENABLED
   
   do {
     if (res_flag == 0) {
