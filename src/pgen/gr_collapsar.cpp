@@ -374,6 +374,11 @@ namespace {
     MDOT_OUT_NUM,
     EDOT_OUT_NUM,
 
+    BDOT_IN_BC,
+    BDOT_IN_NUM,
+    BDOT_OUT_BC,
+    BDOT_OUT_NUM,
+
     MDOT_OUT,
     
     NBOUNDARY_FLUX_CACHE
@@ -812,6 +817,74 @@ namespace {
       /pmb->pmy_mesh->punit->erg_code;
   }
 
+  Real HistoryBdotInBC(MeshBlock *pmb, int iout) {
+
+    Real edot = pmb->ruser_meshblock_data[3](BDOT_IN_BC);
+    return edot
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
+  Real HistoryBdotInNum(MeshBlock *pmb, int iout) {
+
+    Real edot = pmb->ruser_meshblock_data[3](BDOT_IN_NUM);
+    return edot
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+  
+  Real HistoryBdotOutBC(MeshBlock *pmb, int iout) {
+
+    Real edot = pmb->ruser_meshblock_data[3](BDOT_OUT_BC);
+    return edot
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
+  Real HistoryBdotOutNum(MeshBlock *pmb, int iout) {
+
+    Real edot = pmb->ruser_meshblock_data[3](BDOT_OUT_NUM);
+    return edot
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
+  Real HistoryBindInBC(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real energy = pm->ruser_mesh_data[2](BIND_IN_BC);
+    return energy
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code;
+  }
+
+  Real HistoryBindOutBC(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real energy = pm->ruser_mesh_data[2](BIND_OUT_BC);
+    return energy
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code;
+  }
+
+  Real HistoryBindInNum(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real energy = pm->ruser_mesh_data[2](BIND_IN_NUM);
+    return energy
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code;
+  }
+
+  Real HistoryBindOutNum(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real energy = pm->ruser_mesh_data[2](BIND_OUT_NUM);
+    return energy
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code;
+  }
+
   Real HistoryRemovedMass(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real mass = pm->ruser_mesh_data[2](MASS_REMOVED);
@@ -934,7 +1007,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     }
   }
   // output
-  AllocateUserHistoryOutput(31);
+  AllocateUserHistoryOutput(39);
 
   int iout=0;
   EnrollUserHistoryOutput(iout, HistoryBlackHoleMass, "m_bh",
@@ -1027,6 +1100,30 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(iout, HistoryEnergyOutNum, "energy_out_num",
                           UserHistoryOperation::max);
   ++iout;
+  EnrollUserHistoryOutput(iout, HistoryBdotInBC, "bdot_in_BC",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryBdotOutBC, "bdot_out_BC",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryBdotInNum, "bdot_in_num",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryBdotOutNum, "bdot_out_num",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryBindInBC, "bind_in_BC",
+                          UserHistoryOperation::max);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryBindOutBC, "bind_out_BC",
+                          UserHistoryOperation::max);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryBindInNum, "bind_in_num",
+                          UserHistoryOperation::max);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryBindOutNum, "bind_out_num",
+                          UserHistoryOperation::max);
+  ++iout;
   EnrollUserHistoryOutput(iout, HistoryRemovedMass, "removed_mass",
                           UserHistoryOperation::max);
 
@@ -1065,6 +1162,11 @@ void Mesh::UserWorkInLoop(void) {
     flux_sum[ENERGY_OUT_BC]  += cache(EDOT_OUT_BC);
     flux_sum[MASS_OUT_NUM] += cache(MDOT_OUT_NUM);
     flux_sum[ENERGY_OUT_NUM] += cache(EDOT_OUT_NUM);
+
+    flux_sum[BIND_IN_BC] += cache(BDOT_IN_BC);
+    flux_sum[BIND_IN_NUM] += cache(BDOT_IN_NUM);
+    flux_sum[BIND_OUT_BC] += cache(BDOT_OUT_BC);
+    flux_sum[BIND_OUT_NUM] += cache(BDOT_OUT_NUM);
 
     flux_sum[MASS_OUT] += cache(MDOT_OUT);
   }
@@ -1206,6 +1308,11 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
   Real mdot_out_num = 0.0;
   Real edot_out_num = 0.0;
 
+  Real bdot_in_bc = 0.0;
+  Real bdot_in_num = 0.0;
+  Real bdot_out_bc = 0.0;
+  Real bdot_out_num = 0.0;
+
   if (pbval->block_bcs[BoundaryFace::inner_x1] != BoundaryFlag::block){
 
     for (int k = ks; k <= ke; ++k) {
@@ -1252,9 +1359,11 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
 	if(F_D_bc>0.0){
 	  mdot_in_bc  += area * F_D_bc;
 	  edot_in_bc  += area * F_tau_bc;
+	  bdot_in_bc  += area * (alpha*(F_tau_bc + F_D_bc) - F_D_bc);
 	}else{
 	  mdot_out_bc  += area * F_D_bc;
 	  edot_out_bc  += area * F_tau_bc;
+	  bdot_out_bc  += area * (alpha*(F_tau_bc + F_D_bc) - F_D_bc);
 	}
 	
 	const Real F_D_num = phydro->flux[X1DIR](IDN,k,j,is);
@@ -1262,13 +1371,12 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
 	if(F_D_num>0.0){
 	  mdot_in_num += area * F_D_num;
 	  edot_in_num += area * F_tau_num;
+	  bdot_in_num += area * (alpha*(F_tau_num + F_D_num) - F_D_num);
 	}else{
 	  mdot_out_num += area * F_D_num;
 	  edot_out_num += area * F_tau_num;
+	  bdot_out_num += area * (alpha*(F_tau_num + F_D_num) - F_D_num);
 	}
-
-	//std::cout << "F_D_num = " << phydro->flux[X1DIR](IDN,k,j,is) << std::endl;
-
       }
     }
   }
@@ -1299,6 +1407,11 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
   cache(EDOT_OUT_BC) = edot_out_bc;
   cache(MDOT_OUT_NUM) = mdot_out_num;
   cache(EDOT_OUT_NUM) = edot_out_num;
+
+  cache(BDOT_IN_BC) = bdot_in_bc;
+  cache(BDOT_IN_NUM) = bdot_in_num;
+  cache(BDOT_OUT_BC) = bdot_out_bc;
+  cache(BDOT_OUT_NUM) = bdot_out_num;
 
   cache(MDOT_OUT) = mdot_out;
 }
