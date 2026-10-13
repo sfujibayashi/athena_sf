@@ -2889,7 +2889,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
       // initialize with atmosphere
       // Only w, w1, and r are set here.
       // Conserved (u and s) should be constructed after metric are obtained.
-      // It is donw in Mesh::Initialize.
+      // It is done in Mesh::Initialize.
       my_blocks(i-gids_)->InitializeAtmosphere(pin);
     }
 
