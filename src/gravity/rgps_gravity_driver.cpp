@@ -475,9 +475,26 @@ void RGPSGravityDriver::ConstructMgravFromConserved(){
     
     const Real b  = dcalE_len/rc;
     const Real cm = 1.0 - 2.0*(mL-dEat_len)/rc;
-    
-    const Real Xinv = cm/(b + std::sqrt(b*b + cm));
+
+    const Real disc = b*b+cm;
+    if (disc < 0.0) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in RGPSGravityDriver::ConstructMgravFromConserved" << std::endl
+	  << "b^2-cm < 0."
+	  << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    const Real Xinv = cm/(b + std::sqrt(disc));
     const Real X_sq = 1.0/(Xinv*Xinv);
+    if (X_sq <= 0.0) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in RGPSGravityDriver::ConstructMgravFromConserved" << std::endl
+	  << "X_sq <= 0."
+	  << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
     X_sq_cell_global_(i) = X_sq;
     
     const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
