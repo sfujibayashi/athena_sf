@@ -518,6 +518,27 @@ void ATHDF5Output<h5out_t>::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool 
                          H5P_DEFAULT);
   H5Awrite(attribute, H5T_NATIVE_DOUBLE, &time);
   H5Aclose(attribute);
+
+  // Write physical unit conversion factors
+  const double units_cgs[3] = {
+    pm->punit->code_mass_cgs,
+    pm->punit->code_length_cgs,
+    pm->punit->code_time_cgs
+  };
+  
+  const char* unit_names[3] = {
+    "MassUnitCGS",
+    "LengthUnitCGS",
+    "TimeUnitCGS"
+  };
+  
+  for (int n=0; n<3; ++n) {
+    hid_t attr = H5Acreate2(file, unit_names[n], H5T_IEEE_F64BE,
+			    dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(attr, H5T_NATIVE_DOUBLE, &units_cgs[n]);
+    H5Aclose(attr);
+  }
+  
   code_time = static_cast<mesh_t>(time); // output time for xdmf
 
   // Write coordinate system if requested
