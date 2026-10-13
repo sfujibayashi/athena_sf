@@ -449,7 +449,7 @@ if args['nr_radiation'] and args['implicit_radiation']:
                      + ' nr_radiation and implicit_radiation cannot be used together')
 
 
-if (args['coord'] == 'gr_dynamic_valencia' and not args['b']):
+if (args['coord'] == 'gr_dynamic_valencia' and args['b']):
     raise SystemExit('### CONFIGURE ERROR: MHD is not supported with Valencia formulation')
 
 # --- Step 3. Set definitions and Makefile options based on above argument
