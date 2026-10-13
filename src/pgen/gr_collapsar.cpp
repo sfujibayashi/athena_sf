@@ -377,7 +377,11 @@ namespace {
     MR2,
     MRVR,
     MVR2,
-    
+
+    NEJECTA_CACHE
+  };
+
+  enum BoundaryFluxCache {
     MDOT_IN_BC,
     EDOT_IN_BC,
     MDOT_IN_NUM,
@@ -388,8 +392,8 @@ namespace {
     EDOT_OUT_NUM,
 
     MDOT_OUT,
-
-    NEJECTA_CACHE
+    
+    NBOUNDARY_FLUX_CACHE
   };
   
   Real HistorySumAbs2Mom(MeshBlock *pmb, int iout) {
@@ -673,57 +677,65 @@ namespace {
 
   Real HistoryMdotInBC(MeshBlock *pmb, int iout) {
     
-    Real mdot = pmb->ruser_meshblock_data[2](MDOT_IN_BC);
+    Real mdot = pmb->ruser_meshblock_data[3](MDOT_IN_BC);
     return mdot/pmb->pmy_mesh->punit->solar_mass_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryMdotOutBC(MeshBlock *pmb, int iout) {
 
-    Real mdot = pmb->ruser_meshblock_data[2](MDOT_OUT_BC);
+    Real mdot = pmb->ruser_meshblock_data[3](MDOT_OUT_BC);
     return mdot/pmb->pmy_mesh->punit->solar_mass_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryEdotInBC(MeshBlock *pmb, int iout) {
     
-    Real edot = pmb->ruser_meshblock_data[2](EDOT_IN_BC);
-    return edot/pmb->pmy_mesh->punit->erg_code
+    Real edot = pmb->ruser_meshblock_data[3](EDOT_IN_BC);
+    return edot
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryEdotOutBC(MeshBlock *pmb, int iout) {
 
-    Real edot = pmb->ruser_meshblock_data[2](EDOT_OUT_BC);
-    return edot/pmb->pmy_mesh->punit->erg_code
+    Real edot = pmb->ruser_meshblock_data[3](EDOT_OUT_BC);
+    return edot
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryMdotInNum(MeshBlock *pmb, int iout) {
     
-    Real mdot = pmb->ruser_meshblock_data[2](MDOT_IN_NUM);
+    Real mdot = pmb->ruser_meshblock_data[3](MDOT_IN_NUM);
     return mdot/pmb->pmy_mesh->punit->solar_mass_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryMdotOutNum(MeshBlock *pmb, int iout) {
 
-    Real mdot = pmb->ruser_meshblock_data[2](MDOT_OUT_NUM);
+    Real mdot = pmb->ruser_meshblock_data[3](MDOT_OUT_NUM);
     return mdot/pmb->pmy_mesh->punit->solar_mass_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryEdotInNum(MeshBlock *pmb, int iout) {
     
-    Real edot = pmb->ruser_meshblock_data[2](EDOT_IN_NUM);
-    return edot/pmb->pmy_mesh->punit->erg_code
+    Real edot = pmb->ruser_meshblock_data[3](EDOT_IN_NUM);
+    return edot
+      *SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryEdotOutNum(MeshBlock *pmb, int iout) {
 
-    Real edot = pmb->ruser_meshblock_data[2](EDOT_OUT_NUM);
-    return edot/pmb->pmy_mesh->punit->erg_code
+    Real edot = pmb->ruser_meshblock_data[3](EDOT_OUT_NUM);
+    return edot
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+      /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
@@ -888,25 +900,25 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(iout, HistoryMdotInBC, "mdot_in_BC",
                           UserHistoryOperation::sum);
   ++iout;
-  EnrollUserHistoryOutput(iout, HistoryMdotInBC, "mdot_out_BC",
+  EnrollUserHistoryOutput(iout, HistoryMdotOutBC, "mdot_out_BC",
                           UserHistoryOperation::sum);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryEdotInBC, "edot_in_BC",
                           UserHistoryOperation::sum);
   ++iout;
-  EnrollUserHistoryOutput(iout, HistoryEdotInBC, "edot_out_BC",
+  EnrollUserHistoryOutput(iout, HistoryEdotOutBC, "edot_out_BC",
                           UserHistoryOperation::sum);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryMdotInNum, "mdot_in_num",
                           UserHistoryOperation::sum);
   ++iout;
-  EnrollUserHistoryOutput(iout, HistoryMdotInNum, "mdot_out_num",
+  EnrollUserHistoryOutput(iout, HistoryMdotOutNum, "mdot_out_num",
                           UserHistoryOperation::sum);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryEdotInNum, "edot_in_num",
                           UserHistoryOperation::sum);
   ++iout;
-  EnrollUserHistoryOutput(iout, HistoryEdotInNum, "edot_out_num",
+  EnrollUserHistoryOutput(iout, HistoryEdotOutNum, "edot_out_num",
                           UserHistoryOperation::sum);
 
 
@@ -976,7 +988,7 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   }
 
   //
-  AllocateRealUserMeshBlockDataField(3);
+  AllocateRealUserMeshBlockDataField(4);
   
   // [0] for Phi
   ruser_meshblock_data[0].NewAthenaArray(ncells1 + 1);
@@ -985,6 +997,9 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
 
   // [2] ejecta/history diagnostics cache
   ruser_meshblock_data[2].NewAthenaArray(NEJECTA_CACHE);
+
+  // [3] boundary flux diagnostics cache
+  ruser_meshblock_data[3].NewAthenaArray(NBOUNDARY_FLUX_CACHE);
   
   ruser_meshblock_data[0].ZeroClear();
   ruser_meshblock_data[1].ZeroClear();
@@ -1060,7 +1075,7 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
 	  &g20 = gi(I02,i), &g21 = gi(I12,i), &g22 = gi(I22,i), &g23 = gi(I23,i),
 	  &g30 = gi(I03,i), &g31 = gi(I13,i), &g32 = gi(I23,i), &g33 = gi(I33,i);
 	
-	const Real alpha = 1.0/std::sqrt(-1.0/g00);
+	const Real alpha = 1.0/std::sqrt(-g00);
 	
 	const Real area = pcoord->GetFace1Area(k,j,i);
 
@@ -1068,8 +1083,8 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
 	const Real rho = phydro->w(IDN,k,j,i-1);
 	const Real pgas= phydro->w(IPR,k,j,i-1);
 	const Real uu1 = phydro->w(IVX,k,j,i-1);
-	const Real uu2 = phydro->w(IVX,k,j,i-1);
-	const Real uu3 = phydro->w(IVX,k,j,i-1);
+	const Real uu2 = phydro->w(IVY,k,j,i-1);
+	const Real uu3 = phydro->w(IVZ,k,j,i-1);
 	const Real u_sq = g_11*SQR(uu1) + 2.0*g_12*uu1*uu2 + 2.0*g_13*uu1*uu3
                         + g_22*SQR(uu2) + 2.0*g_23*uu2*uu3
 	                + g_33*SQR(uu3);
@@ -1114,14 +1129,14 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
 
   // outer boundary
   Real mdot_out = 0.0;
-  if (pbval->block_bcs[BoundaryFace::inner_x1] != BoundaryFlag::block){
+  if (pbval->block_bcs[BoundaryFace::outer_x1] != BoundaryFlag::block){
 
     for (int k = ks; k <= ke; ++k) {
       for (int j = js; j <= je; ++j) {
-	const int i = ie;
-	const Real area = pcoord->GetFace1Area(k,j,i);
-	const Real F_D_num = phydro->flux[X1DIR](IDN,k,j,is);
-	mdot_in_num += area * F_D_num;
+	const int i = ie; //index of outermost active cell
+	const Real area = pcoord->GetFace1Area(k,j,i+1);
+	const Real F_D_num = phydro->flux[X1DIR](IDN,k,j,i+1);
+	mdot_out += area * F_D_num;
       }
     }
   }  
