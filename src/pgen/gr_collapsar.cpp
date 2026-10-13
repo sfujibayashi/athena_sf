@@ -1552,7 +1552,7 @@ void MeshBlock::InitializeAtmosphere(ParameterInput *pin) {
 #if NSCALARS > 0
 	pscalars->r(IYE,k,j,i)   = 0.5;
 	pscalars->r(IXINJ,k,j,i) = 0.0;
-	pscalars->r(IXPHYS,k,j,i) = 1.0;
+	pscalars->r(IXPHYS,k,j,i) = 0.0;
 	
 	for (int n=IXNEUT; n<NSCALAR_REQUIRED; ++n) {
 	  pscalars->r(n,k,j,i) = 0.0;
@@ -1880,7 +1880,7 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
 #if NSCALARS > 0
 	pmb->pscalars->r(IYE,k,j,i)   = state.ye;
 	pmb->pscalars->r(IXINJ,k,j,i) = 1.0;
-	pmb->pscalars->r(IXPHYS,k,j,i) = 0.0;
+	pmb->pscalars->r(IXPHYS,k,j,i) = 1.0;
 	for (int n=IXNEUT; n<NSCALAR_REQUIRED; ++n) {
 	  pmb->pscalars->r(n,k,j,i) = 0.0;
 	}
