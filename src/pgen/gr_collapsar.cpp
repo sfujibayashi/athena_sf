@@ -947,10 +947,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   if (std::strcmp(COORDINATE_SYSTEM, "schwarzschild") != 0 && 
       std::strcmp(COORDINATE_SYSTEM, "minkowski") != 0 && 
+      std::strcmp(COORDINATE_SYSTEM, "gr_dynamic_valencia") != 0 && 
       std::strcmp(COORDINATE_SYSTEM, "gr_dynamic") != 0) {
     std::stringstream msg;
     msg << "### FATAL ERROR in gr_collapsar.cpp" << std::endl
-        << "This problem generator requires Schwarzschild/Minkowski coordinates."
+        << "This problem generator requires Schwarzschild/Minkowski/gr_dynamic/gr_dynamic_valencia coordinates."
         << std::endl;
     ATHENA_ERROR(msg);
   }
