@@ -39,6 +39,8 @@
 #include "../gravity/dynamic_metric_driver.hpp"
 #include "../inputs/outflow_boundary_data.hpp"
 
+#include "gr_collapsar_history.hpp"
+
 struct CollapsedProfile {
   int nface = 0;
   int ncell = 0;
@@ -375,20 +377,23 @@ namespace {
     NBOUNDARY_FLUX_CACHE
   };
 
-  enum BoundaryFluxIntegral {
-    MASS_IN_BC = 0,
-    ENERGY_IN_BC,
-    MASS_IN_NUM,
-    ENERGY_IN_NUM,
-    MASS_OUT_BC,
-    ENERGY_OUT_BC,
-    MASS_OUT_NUM,
-    ENERGY_OUT_NUM,
+  // enum BoundaryFluxIntegral {
+  //   MASS_IN_BC = 0,
+  //   ENERGY_IN_BC,
+  //   MASS_IN_NUM,
+  //   ENERGY_IN_NUM,
+  //   MASS_OUT_BC,
+  //   ENERGY_OUT_BC,
+  //   MASS_OUT_NUM,
+  //   ENERGY_OUT_NUM,
 
-    MASS_OUT,
+  //   MASS_OUT,
+
+  //   MASS_REMOVED,
     
-    NBOUNDARY_FLUX_INTEGRAL
-  };
+  //   NBOUNDARY_FLUX_INTEGRAL
+  // };
+  using namespace GRCollapsarHistory;
   
   Real HistorySumAbs2Mom(MeshBlock *pmb, int iout) {
     // This block does not touch the physical outer-x1 boundary.
@@ -804,6 +809,12 @@ namespace {
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
   }
+
+  Real HistoryRemovedMass(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real mass = pm->ruser_mesh_data[2](MASS_REMOVED);
+    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+  }
   
 } // namespace
 
@@ -921,7 +932,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     }
   }
   // output
-  AllocateUserHistoryOutput(30);
+  AllocateUserHistoryOutput(31);
 
   int iout=0;
   EnrollUserHistoryOutput(iout, HistoryBlackHoleMass, "m_bh",
@@ -1012,6 +1023,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
                           UserHistoryOperation::max);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryEnergyOutNum, "energy_out_num",
+                          UserHistoryOperation::max);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryRemovedMass, "removed_mass",
                           UserHistoryOperation::max);
 
 

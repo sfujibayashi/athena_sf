@@ -65,6 +65,8 @@
 #include "../gravity/dynamic_metric_driver.hpp"
 #include "../metric/metric.hpp"
 
+#include "../pgen/gr_collapsar_history.hpp"
+
 // MPI/OpenMP header
 #ifdef MPI_PARALLEL
 #include <mpi.h>
@@ -2848,6 +2850,99 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   char *mbdata = new char[datasize];
   my_blocks.NewAthenaArray(nblocal);
 
+  {
+    Real removed_hydro_mass = 0.0;
+
+    // Old hydro array dimensions
+    const int nc1 = block_size.nx1 + 2*NGHOST;
+    const int nc2 = f2 ? block_size.nx2 + 2*NGHOST : 1;
+    const int nc3 = f3 ? block_size.nx3 + 2*NGHOST : 1;
+
+    const int is_old = NGHOST;
+    const int js_old = f2 ? NGHOST : 0;
+    const int ks_old = f3 ? NGHOST : 0;
+
+    const Real dtheta =
+      (old_mesh_size.x2max - old_mesh_size.x2min)
+      / old_mesh_size.nx2;
+
+    const Real dphi =
+      (old_mesh_size.x3max - old_mesh_size.x3min)
+      / old_mesh_size.nx3;
+
+    // Temporary storage for the old hydro conserved variables
+    AthenaArray<Real> u_old;
+    u_old.NewAthenaArray(NHYDRO, nc3, nc2, nc1);
+
+    char *old_mbdata = new char[datasize];
+
+    for (int old_gid = 0; old_gid < old_nbtotal; ++old_gid) {
+
+      // Distribute old blocks across MPI ranks.
+      if (old_gid % Globals::nranks != Globals::my_rank)
+	continue;
+
+      const LogicalLocation &loc = old_loclist[old_gid];
+
+      // Only removed radial blocks
+      if (loc.lx1 >= remove_inner_blocks)
+	continue;
+
+      if (resfile.Read_at(old_mbdata, datasize, 1,
+			  headeroffset + old_gid*datasize) != 1) {
+	std::stringstream msg;
+	msg << "### FATAL ERROR in Mesh::LoadRestartWithModifiedMesh" << std::endl
+	    << "Failed to read removed MeshBlock data."
+	    << std::endl;
+	ATHENA_ERROR(msg);
+      }
+
+      // Hydro conserved array is first in the restart block data.
+      std::memcpy(u_old.data(), old_mbdata,
+		  u_old.GetSizeInBytes());
+
+      for (int k = ks_old; k < ks_old + block_size.nx3; ++k) {
+	for (int j = js_old; j < js_old + block_size.nx2; ++j) {
+	  for (int i = is_old; i < is_old + block_size.nx1; ++i) {
+
+	    const int ig =
+	      loc.lx1 * block_size.nx1 + (i - is_old);
+	    const int jg =
+	      loc.lx2 * block_size.nx2 + (j - js_old);
+
+	    const Real rm =
+	      old_mesh_size.x1min * std::pow(q, ig);
+	    const Real rp =
+	      old_mesh_size.x1min * std::pow(q, ig+1);
+
+	    const Real theta_m =
+	      old_mesh_size.x2min + jg*dtheta;
+	    const Real theta_p = theta_m + dtheta;
+
+	    const Real vol =
+	      (rp*rp*rp - rm*rm*rm)/3.0
+	      * (std::cos(theta_m) - std::cos(theta_p))
+	      * dphi;
+
+	    removed_hydro_mass +=
+	      u_old(IDN,k,j,i) * vol;
+	  }
+	}
+      }
+    }
+
+    delete [] old_mbdata;
+
+#ifdef MPI_PARALLEL
+    MPI_Allreduce(MPI_IN_PLACE,
+		  &removed_hydro_mass,
+		  1, MPI_ATHENA_REAL,
+		  MPI_SUM, MPI_COMM_WORLD);
+#endif
+    ruser_mesh_data[2](GRCollapsarHistory::MASS_REMOVED) += removed_hydro_mass;
+  }
+
+
   // read restart data for new block configuration
   for (int i=gids_; i<=gide_; i++) {
     const int old_gid = old_gid_for_new_gid[i];
@@ -2897,7 +2992,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   }
 
   if (Globals::my_rank == 0) {
-    std::cout << "old bh_mass = "
+    std::cout << "old bh_mass (gravitating mass inside) = "
 	      << ruser_mesh_data[0](0)
 	      << std::endl;
   }
@@ -2923,7 +3018,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
 #endif
     
     if (Globals::my_rank == 0) {
-      std::cout << "removed mass =" << removed_mass << std::endl;
+      std::cout << "removed (gravitating) mass =" << removed_mass << std::endl;
 
       const Real mass_to_length =
 	punit->grav_const_code
@@ -2931,7 +3026,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
       const Real removed_mass_code =
 	removed_mass / mass_to_length;
 
-      std::cout << "removed mass (Msun) = "
+      std::cout << "removed (gravitating)  mass (Msun) = "
 		<< removed_mass_code / punit->solar_mass_code
 		<< std::endl;
     }
@@ -2940,7 +3035,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
   }
     
   if (Globals::my_rank == 0) {
-    std::cout << "new bh_mass = "
+    std::cout << "new bh_mass (gravitating mass inside) = "
 	      << ruser_mesh_data[0](0)
 	      << std::endl;
   }

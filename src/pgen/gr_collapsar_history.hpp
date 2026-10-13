@@ -1,0 +1,23 @@
+#ifndef GR_COLLAPSAR_HISTORY_HPP_
+#define GR_COLLAPSAR_HISTORY_HPP_
+
+namespace GRCollapsarHistory {
+
+enum BoundaryFluxIntegral {
+  MASS_IN_BC = 0,
+  ENERGY_IN_BC,
+  MASS_IN_NUM,
+  ENERGY_IN_NUM,
+  MASS_OUT_BC,
+  ENERGY_OUT_BC,
+  MASS_OUT_NUM,
+  ENERGY_OUT_NUM,
+  MASS_OUT,
+  MASS_REMOVED,
+
+  NBOUNDARY_FLUX_INTEGRAL
+};
+
+} // namespace GrCollapsarHistory
+
+#endif // GR_COLLAPSAR_HISTORY_HPP_
