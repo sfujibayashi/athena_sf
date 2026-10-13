@@ -399,6 +399,10 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
 
       int iout = 1;
       std::fprintf(pfile,"# Athena++ history data\n"); // descriptor is first line
+      // Unit conversion factors (1 code unit in CGS)
+      std::fprintf(pfile,"# TimeUnitCGS = %.17e s\n", pm->punit->code_time_cgs);
+      std::fprintf(pfile,"# LengthUnitCGS = %.17e cm\n", pm->punit->code_length_cgs);
+      std::fprintf(pfile,"# MassUnitCGS = %.17e g\n", pm->punit->code_mass_cgs);
       std::fprintf(pfile,"# [%d]=time     ", iout++);
       std::fprintf(pfile,"[%d]=dt       ", iout++);
       std::fprintf(pfile,"[%d]=mass     ", iout++);
