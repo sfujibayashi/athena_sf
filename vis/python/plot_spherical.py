@@ -255,7 +255,7 @@ def main(**kwargs):
                 dy_dr = sin_phi
                 dx_dphi = -r_vals * sin_phi
                 dy_dphi = r_vals * cos_phi
-            if not (coordinates == 'schwarzschild' or coordinates == 'kerr-schild' or coordinates == 'gr_dynamic'):
+            if not (coordinates == 'schwarzschild' or coordinates == 'kerr-schild' or coordinates == 'gr_dynamic' or coordinates == 'gr_dynamic_valencia'):
                 dx_dphi /= r_vals
                 dy_dphi /= r_vals
             vals_x = dx_dr * vals_r + dx_dphi * vals_phi
@@ -273,7 +273,7 @@ def main(**kwargs):
                 dz_dr = cos_theta
                 dx_dtheta = r_vals * cos_theta
                 dz_dtheta = -r_vals * sin_theta
-            if not (coordinates == 'schwarzschild' or coordinates == 'kerr-schild' or coordinates == 'gr_dynamic'):
+            if not (coordinates == 'schwarzschild' or coordinates == 'kerr-schild' or coordinates == 'gr_dynamic' or coordinates == 'gr_dynamic_valencia'):
                 dx_dtheta /= r_vals
                 dz_dtheta /= r_vals
             vals_x = dx_dr * vals_r + dx_dtheta * vals_theta
