@@ -63,8 +63,8 @@ public:
   Real GetThetaMin() const;
   Real GetThetaMax() const;
 
-  Real GetNTheta() const;
-  Real GetNTime() const;
+  int GetNTheta() const;
+  int GetNTime() const;
   
   Real GetExtractionRadius() const;
 

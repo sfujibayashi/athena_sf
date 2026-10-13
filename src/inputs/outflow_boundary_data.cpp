@@ -145,11 +145,11 @@ Real OutflowBoundaryData::GetThetaMax() const {
   return theta_max;
 }
 
-Real OutflowBoundaryData::GetNTime() const {
+int OutflowBoundaryData::GetNTime() const {
   return ntime;
 }
 
-Real OutflowBoundaryData::GetNTheta() const {
+int OutflowBoundaryData::GetNTheta() const {
   return ntheta;
 }
 
@@ -373,14 +373,14 @@ Real OutflowBoundaryData::GetThetaMax() const {
   return 0.0;
 }
 
-Real OutflowBoundaryData::GetNTime() const {
+int OutflowBoundaryData::GetNTime() const {
   HDF5RequiredError();
-  return 0.0;
+  return 0;
 }
 
-Real OutflowBoundaryData::GetNTheta() const {
+int OutflowBoundaryData::GetNTheta() const {
   HDF5RequiredError();
-  return 0.0;
+  return 0;
 }
 
 void OutflowBoundaryData::Analyze(Real gamma_ad) const {
