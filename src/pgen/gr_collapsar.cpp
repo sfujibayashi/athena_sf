@@ -199,6 +199,37 @@ namespace {
   
   // Real HistoryBlackHoleMass(MeshBlock *pmb, int iout);
   // Real HistoryBlackHoleMassAccretionRate(MeshBlock *pmb, int iout);
+
+  Real CellSpecificBindingEnergy(MeshBlock *pmb, int k, int j, int i,
+			     const AthenaArray<Real> &gi) {
+
+#if VALENCIA_FORMULATION
+
+    const Real qD   = pmb->phydro->u(IDN,k,j,i);
+    const Real qtau = pmb->phydro->u(IEN,k,j,i);
+    const Real qS_1  = pmb->phydro->u(IM1,k,j,i);
+    const Real qS_2  = pmb->phydro->u(IM2,k,j,i);
+    const Real qS_3  = pmb->phydro->u(IM3,k,j,i);
+
+    const Real alpha = std::sqrt(-1.0/gi(I00,i));
+
+    const Real beta1 = alpha*alpha*gi(I01,i);
+    const Real beta2 = alpha*alpha*gi(I02,i);
+    const Real beta3 = alpha*alpha*gi(I03,i);
+
+    return (alpha*(qD + qtau)
+	    - beta1*qS_1 - beta2*qS_2 - beta3*qS_3)/qD - 1.0;
+
+#else
+
+    const Real rho_ut = pmb->phydro->u(IDN,k,j,i);
+    const Real Tt_t   = pmb->phydro->u(IEN,k,j,i);
+
+    return -Tt_t/rho_ut - 1.0;
+
+#endif
+  }
+
   
   Real HistoryBlackHoleMass(MeshBlock *pmb, int iout) {
     const Real mass_to_length =
@@ -250,8 +281,8 @@ namespace {
       for (int j=pmb->js; j<=pmb->je; ++j) {
         pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
 	for (int i=pmb->is; i<=pmb->ie; ++i) {
-	  const Real rho_ut = pmb->phydro->u(IDN,k,j,i);
-	  mass += vol(i) * rho_ut;
+	  const Real qD = pmb->phydro->u(IDN,k,j,i);
+	  mass += vol(i) * qD;
 	}
       }
     }
@@ -268,14 +299,25 @@ namespace {
     AthenaArray<Real> vol;
     vol.NewAthenaArray(pmb->ncells1);
 
+    AthenaArray<Real> Xsq;
+    Xsq.NewAthenaArray(pmb->ncells1);
+
     Real E = 0.0;
     
     for (int k=pmb->ks; k<=pmb->ke; ++k) {
       for (int j=pmb->js; j<=pmb->je; ++j) {
         pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+
 	for (int i=pmb->is; i<=pmb->ie; ++i) {
+#if VALENCIA_FORMULATION
+	  const Real qD   = pmb->phydro->u(IDN,k,j,i);
+	  const Real qtau = pmb->phydro->u(IEN,k,j,i);
+	  const Real q = pmb->pmy_mesh->pmetric_driver->CellSpatialDensitizationFactor(pmb, k,j,i);
+	  E += vol(i) * (qD+qtau)/q;
+#else
 	  const Real Tt_t = pmb->phydro->u(IEN,k,j,i);
-	  E += vol(i) * Tt_t;
+	  E += vol(i) * (-Tt_t);
+#endif
 	}
       }
     }
@@ -299,8 +341,13 @@ namespace {
       for (int j=pmb->js; j<=pmb->je; ++j) {
         pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
 	for (int i=pmb->is; i<=pmb->ie; ++i) {
+#if VALENCIA_FORMULATION
+	  const Real qS_3 = pmb->phydro->u(IM3,k,j,i);
+	  J += vol(i) * qS_3;
+#else
 	  const Real Tt_3 = pmb->phydro->u(IM3,k,j,i);
 	  J += vol(i) * Tt_3;
+#endif
 	}
       }
     }
@@ -410,8 +457,6 @@ namespace {
 
 	  const Real rho_ut = pmb->phydro->u(IDN,k,j,i);
 
-	  const Real Tt_t = pmb->phydro->u(IEN,k,j,i);
-
 	  if (rho_ut <= 0.0) continue;
 	
 	  const Real dm = vol(i)*rho_ut;
@@ -419,8 +464,8 @@ namespace {
 	  // Three definitions of specific ejecta energy
 	  const Real egeom = -u_t - 1.0;
 	  const Real ebern = -h*u_t - 1.0;
-	  const Real ebind = -Tt_t/rho_ut - 1.0;
-
+	  const Real ebind = CellSpecificBindingEnergy(pmb, k,j,i, gi);
+	  
 	  // --------------------------------------------------
 	  // Ejecta masses and energies
 	  // --------------------------------------------------
