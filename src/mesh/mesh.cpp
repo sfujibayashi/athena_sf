@@ -1701,12 +1701,9 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       }
     }
     
-    const bool initial_metric_update =
-    pin->GetOrAddBoolean("coord", "initial_metric_update", true);
-  
 #if DYNAMIC_METRIC_ENABLED
 
-    if (res_flag==0 and initial_metric_update) {
+    if (res_flag==0) {
       pmetric_driver->InitializeFromPrimitive();
       
       // Convert primitive -> conserved after getting metric (it requires primitive rho)

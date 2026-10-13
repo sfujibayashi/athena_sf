@@ -1051,6 +1051,20 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }
   }
 
+#if DYNAMIC_METRIC_ENABLED
+  const bool initial_metric_update =
+    pin->GetOrAddBoolean("coord", "initial_metric_update", true);
+  
+  if (!initial_metric_update) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in Mesh::Initialize" << std::endl
+	<< "Dynamic metric fresh start requires initial_metric_update=true."
+	<< std::endl;
+    ATHENA_ERROR(msg);
+  }
+#endif
+
+
 #if !DYNAMIC_METRIC_ENABLED
   // Convert primitive -> conserved
   AthenaArray<Real> bb;
