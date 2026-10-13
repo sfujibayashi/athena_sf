@@ -1057,7 +1057,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   
   if (!initial_metric_update) {
     std::stringstream msg;
-    msg << "### FATAL ERROR in Mesh::Initialize" << std::endl
+    msg << "### FATAL ERROR in gr_collapsar::ProblemGenerator" << std::endl
 	<< "Dynamic metric fresh start requires initial_metric_update=true."
 	<< std::endl;
     ATHENA_ERROR(msg);
