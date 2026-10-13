@@ -1160,6 +1160,7 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
 #if NSCALARS > 0
   pscalars->SetScalarName(IYE,    "Ye");
   pscalars->SetScalarName(IXINJ,  "Xinj");
+  pscalars->SetScalarName(IXPHYS, "Xphys");
 
   pscalars->SetScalarName(IXNEUT, "Xn");
   pscalars->SetScalarName(IXH1,   "XH1");
