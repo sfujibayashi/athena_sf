@@ -235,6 +235,13 @@ Reconstruction::Reconstruction(MeshBlock *pmb, ParameterInput *pin) :
     curvilinear_[X1DIR] = true;
     curvilinear_[X2DIR] = true;
   }
+  if (std::strcmp(COORDINATE_SYSTEM, "gr_dynamic_valencia") == 0) {
+    // gr_dynamic_valencia is schwarzschild-like. so coordinate system is essentially spherical polar.
+    curvilinear_[X1DIR] = true;
+    curvilinear_[X2DIR] = true;
+  }
+
+  
   
   // for all coordinate systems, nonuniform geometric spacing or user-defined
   // MeshGenerator ---> use nonuniform reconstruction weights and limiter terms
