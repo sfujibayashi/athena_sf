@@ -211,6 +211,16 @@ void RGPSGravityDriver::ConstructMgravFromPrimitive(){
     Er_shell_global(i) /= dV;
     Ea_shell_global(i) /= dV;
   }
+
+  const Real f_in = 1.0 - 2.0*bh_mass/r_face_global_(0);
+  if (!std::isfinite(f_in) || f_in < 0.0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in RGPSGravityDriver::ConstructMgravFromPrimitive" << std::endl
+	<< "1 - 2Min/Rin < 0."
+	<< std::endl;
+    ATHENA_ERROR(msg);
+  }
+  
   
   // E has code units of mass density
   const Real mass_to_length =
@@ -461,6 +471,15 @@ void RGPSGravityDriver::ConstructMgravFromConserved(){
 
     const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
     calE_shell_global_(i) /= dV;
+  }
+
+  const Real f_in = 1.0 - 2.0*bh_mass/r_face_global_(0);
+  if (!std::isfinite(f_in) || f_in < 0.0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in RGPSGravityDriver::ConstructMgravFromPrimitive" << std::endl
+	<< "1 - 2Min/Rin < 0."
+	<< std::endl;
+    ATHENA_ERROR(msg);
   }
   
   // calE has code units of mass density
