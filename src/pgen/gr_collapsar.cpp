@@ -745,25 +745,25 @@ namespace {
 
   Real HistoryMassOut(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
-    Real mass = pm->ruser_mesh_data[3](MASS_OUT);
+    Real mass = pm->ruser_mesh_data[2](MASS_OUT);
     return mass/pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryMassInBC(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
-    Real mass = pm->ruser_mesh_data[3](MASS_IN_BC);
+    Real mass = pm->ruser_mesh_data[2](MASS_IN_BC);
     return mass/pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryMassOutBC(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
-    Real mass = pm->ruser_mesh_data[3](MASS_OUT_BC);
+    Real mass = pm->ruser_mesh_data[2](MASS_OUT_BC);
     return mass/pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryEnergyInBC(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
-    Real energy = pm->ruser_mesh_data[3](ENERGY_IN_BC);
+    Real energy = pm->ruser_mesh_data[2](ENERGY_IN_BC);
     return energy
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
@@ -771,7 +771,7 @@ namespace {
 
   Real HistoryEnergyOutBC(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
-    Real energy = pm->ruser_mesh_data[3](ENERGY_OUT_BC);
+    Real energy = pm->ruser_mesh_data[2](ENERGY_OUT_BC);
     return energy
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
@@ -779,19 +779,19 @@ namespace {
 
   Real HistoryMassInNum(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
-    Real mass = pm->ruser_mesh_data[3](MASS_IN_NUM);
+    Real mass = pm->ruser_mesh_data[2](MASS_IN_NUM);
     return mass/pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryMassOutNum(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
-    Real mass = pm->ruser_mesh_data[3](MASS_OUT_NUM);
+    Real mass = pm->ruser_mesh_data[2](MASS_OUT_NUM);
     return mass/pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryEnergyInNum(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
-    Real energy = pm->ruser_mesh_data[3](ENERGY_IN_NUM);
+    Real energy = pm->ruser_mesh_data[2](ENERGY_IN_NUM);
     return energy
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
@@ -799,7 +799,7 @@ namespace {
 
   Real HistoryEnergyOutNum(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
-    Real energy = pm->ruser_mesh_data[3](ENERGY_OUT_NUM);
+    Real energy = pm->ruser_mesh_data[2](ENERGY_OUT_NUM);
     return energy
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
@@ -991,28 +991,28 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
                           UserHistoryOperation::sum);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryMassInBC, "mass_in_BC",
-                          UserHistoryOperation::sum);
+                          UserHistoryOperation::max);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryMassOutBC, "mass_out_BC",
-                          UserHistoryOperation::sum);
+                          UserHistoryOperation::max);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryEnergyInBC, "energy_in_BC",
-                          UserHistoryOperation::sum);
+                          UserHistoryOperation::max);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryEnergyOutBC, "energy_out_BC",
-                          UserHistoryOperation::sum);
+                          UserHistoryOperation::max);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryMassInNum, "mass_in_num",
-                          UserHistoryOperation::sum);
+                          UserHistoryOperation::max);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryMassOutNum, "mass_out_num",
-                          UserHistoryOperation::sum);
+                          UserHistoryOperation::max);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryEnergyInNum, "energy_in_num",
-                          UserHistoryOperation::sum);
+                          UserHistoryOperation::max);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryEnergyOutNum, "energy_out_num",
-                          UserHistoryOperation::sum);
+                          UserHistoryOperation::max);
 
 
   //
@@ -1135,6 +1135,7 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   ruser_meshblock_data[0].ZeroClear();
   ruser_meshblock_data[1].ZeroClear();
   ruser_meshblock_data[2].ZeroClear();
+  ruser_meshblock_data[3].ZeroClear();
   
   ruser_meshblock_data[2](HCYCLE) = -1.0;
 
@@ -1255,8 +1256,7 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
     }
   }
 
-  std::cout << "mdot = " << mdot_out_num << " " << mdot_in_num << std::endl;
-
+  //std::cout << "mdot = " << mdot_out_num << " " << mdot_in_num << std::endl;
 
   // outer boundary
   Real mdot_out = 0.0;
