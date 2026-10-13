@@ -390,6 +390,10 @@ if args['flux'] == 'lhlld' and args['eos'] == 'isothermal':
 if args['flux'] == 'lhlld' and not args['b']:
     raise SystemExit('### CONFIGURE ERROR: LHLLD flux can only be used with MHD')
 
+if (args['flux'] == 'llf' and args['coord'] == 'gr_dynamic_valencia' and not args['t']):
+    raise SystemExit('### CONFIGURE ERROR: Non-transforming LLF flux cannot be used with Valencia formulation')
+
+
 # Check relativity
 if args['s'] and args['g']:
     raise SystemExit('### CONFIGURE ERROR: '
