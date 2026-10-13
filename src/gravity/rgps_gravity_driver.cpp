@@ -133,8 +133,8 @@ void RGPSGravityDriver::InitializeRadialGrid(){
 #ifdef MPI_PARALLEL
   MPI_Allreduce(MPI_IN_PLACE, r_sum.data(), nr_, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, rf_sum.data(), nr_+1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, count.data(), nr_, MPI_ATHENA_INT, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, countf.data(), nr_+1, MPI_ATHENA_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, count.data(), nr_, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, countf.data(), nr_+1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 #endif
 
   for(int i=0; i<nr_;++i){
