@@ -891,10 +891,10 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(iout, HistoryMdotInBC, "mdot_out_BC",
                           UserHistoryOperation::sum);
   ++iout;
-  EnrollUserHistoryOutput(iout, HistoryMdotInBC, "edot_in_BC",
+  EnrollUserHistoryOutput(iout, HistoryEdotInBC, "edot_in_BC",
                           UserHistoryOperation::sum);
   ++iout;
-  EnrollUserHistoryOutput(iout, HistoryMdotInBC, "edot_out_BC",
+  EnrollUserHistoryOutput(iout, HistoryEdotInBC, "edot_out_BC",
                           UserHistoryOperation::sum);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryMdotInNum, "mdot_in_num",
@@ -903,10 +903,10 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(iout, HistoryMdotInNum, "mdot_out_num",
                           UserHistoryOperation::sum);
   ++iout;
-  EnrollUserHistoryOutput(iout, HistoryMdotInNum, "edot_in_num",
+  EnrollUserHistoryOutput(iout, HistoryEdotInNum, "edot_in_num",
                           UserHistoryOperation::sum);
   ++iout;
-  EnrollUserHistoryOutput(iout, HistoryMdotInNum, "edot_out_num",
+  EnrollUserHistoryOutput(iout, HistoryEdotInNum, "edot_out_num",
                           UserHistoryOperation::sum);
 
 
@@ -1102,9 +1102,15 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
 	  mdot_out_num += area * F_D_num;
 	  edot_out_num += area * F_tau_num;
 	}
+
+	//std::cout << "F_D_num = " << phydro->flux[X1DIR](IDN,k,j,is) << std::endl;
+
       }
     }
   }
+
+  std::cout << "mdot = " << mdot_out_num << " " << mdot_in_num << std::endl;
+
 
   // outer boundary
   Real mdot_out = 0.0;

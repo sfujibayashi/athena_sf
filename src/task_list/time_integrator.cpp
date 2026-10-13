@@ -1738,6 +1738,8 @@ TaskStatus TimeIntegratorTaskList::CalculateHydroFlux(MeshBlock *pmb, int stage)
       } else {
         phydro->CalculateFluxes(phydro->w,  pfield->b,  pfield->bcc, pmb->precon->xorder);
       }
+      const Real t_stage = pmb->pmy_mesh->time + stage_wghts[stage-1].sbeta * pmb->pmy_mesh->dt;
+      pmb->UserWorkAfterHydroFlux(stage, t_stage);
     }
     return TaskStatus::next;
   }
