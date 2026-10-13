@@ -92,7 +92,7 @@ parser.add_argument(
         'spherical_polar',
         'minkowski',
         'schwarzschild',
-        'gr_dynamic',
+#        'gr_dynamic',
         'gr_dynamic_valencia',
         'kerr-schild',
         'gr_user'],
