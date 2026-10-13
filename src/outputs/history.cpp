@@ -355,6 +355,29 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
   // only the master rank writes the file
   // create filename: "file_basename" + ".hst".  There is no file number.
   if (Globals::my_rank == 0) {
+    
+    const std::string mass_unit = pin->GetOrAddString(output_params.block_name,
+						      "mass_unit", "code");
+
+    if (mass_unit == "Msun") {
+      const Real factor = 1.0 / pm->punit->solar_mass_code;
+      
+      // Total mass
+      hst_data[0] *= factor;
+      
+      // Passive scalar masses
+      constexpr int scalar_offset = NHYDRO + 3 + (SELF_GRAVITY_ENABLED > 0) + NFIELD;
+      
+      for (int n=0; n<NSCALARS; ++n) {
+	hst_data[scalar_offset+n] *= factor;
+      }
+    } else if (mass_unit != "code") {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in HistoryOutput\n"
+	  << "Unknown mass_unit = " << mass_unit;
+      ATHENA_ERROR(msg);
+    }
+    
     std::string fname;
     fname.assign(output_params.file_basename);
     fname.append(".hst");
