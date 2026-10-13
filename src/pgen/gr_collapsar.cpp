@@ -959,15 +959,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real rho_atmos = pin->GetReal("problem", "rho_atmos");
   Real press_atmos = pin->GetReal("problem", "press_atmos");
   int ind_first = collapsed.FirstCellIndex();
-
-  // Prepare scratch arrays
-  AthenaArray<Real> g, gi;
-  g.NewAthenaArray(NMETRIC, ie+NGHOST+1);
-  gi.NewAthenaArray(NMETRIC, ie+NGHOST+1);
   
   for (int k=ks; k<=ke; k++) {
     for (int j=js; j<=je; j++) {
-      pcoord->CellMetric(k, j, is, ie, g, gi);
       for (int i=is; i<=ie; i++) {
         Real r = pcoord->x1v(i);
         Real rad_cgs = r * pmy_mesh->punit->code_length_cgs;
