@@ -105,7 +105,7 @@ void __attribute__((weak)) MeshBlock::UserWorkInLoop() {
 //! \brief Function called after CalculateHydroFlux.
 //========================================================================================
 
-void __attribute__((weak)) MeshBlock::UserWorkAfterHydroFlux() {
+void __attribute__((weak)) MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
   // do nothing
   return;
 }

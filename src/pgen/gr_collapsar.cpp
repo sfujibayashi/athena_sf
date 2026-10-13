@@ -378,6 +378,17 @@ namespace {
     MRVR,
     MVR2,
     
+    MDOT_IN_BC,
+    EDOT_IN_BC,
+    MDOT_IN_NUM,
+    EDOT_IN_NUM,
+    MDOT_OUT_BC,
+    EDOT_OUT_BC,
+    MDOT_OUT_NUM,
+    EDOT_OUT_NUM,
+
+    MDOT_OUT,
+
     NEJECTA_CACHE
   };
   
@@ -660,6 +671,62 @@ namespace {
     return false;
   }
 
+  Real HistoryMdotInBC(MeshBlock *pmb, int iout) {
+    
+    Real mdot = pmb->ruser_meshblock_data[2](MDOT_IN_BC);
+    return mdot/pmb->pmy_mesh->punit->solar_mass_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
+  Real HistoryMdotOutBC(MeshBlock *pmb, int iout) {
+
+    Real mdot = pmb->ruser_meshblock_data[2](MDOT_OUT_BC);
+    return mdot/pmb->pmy_mesh->punit->solar_mass_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
+  Real HistoryEdotInBC(MeshBlock *pmb, int iout) {
+    
+    Real edot = pmb->ruser_meshblock_data[2](EDOT_IN_BC);
+    return edot/pmb->pmy_mesh->punit->erg_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
+  Real HistoryEdotOutBC(MeshBlock *pmb, int iout) {
+
+    Real edot = pmb->ruser_meshblock_data[2](EDOT_OUT_BC);
+    return edot/pmb->pmy_mesh->punit->erg_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
+  Real HistoryMdotInNum(MeshBlock *pmb, int iout) {
+    
+    Real mdot = pmb->ruser_meshblock_data[2](MDOT_IN_NUM);
+    return mdot/pmb->pmy_mesh->punit->solar_mass_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
+  Real HistoryMdotOutNum(MeshBlock *pmb, int iout) {
+
+    Real mdot = pmb->ruser_meshblock_data[2](MDOT_OUT_NUM);
+    return mdot/pmb->pmy_mesh->punit->solar_mass_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
+  Real HistoryEdotInNum(MeshBlock *pmb, int iout) {
+    
+    Real edot = pmb->ruser_meshblock_data[2](EDOT_IN_NUM);
+    return edot/pmb->pmy_mesh->punit->erg_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
+  Real HistoryEdotOutNum(MeshBlock *pmb, int iout) {
+
+    Real edot = pmb->ruser_meshblock_data[2](EDOT_OUT_NUM);
+    return edot/pmb->pmy_mesh->punit->erg_code
+      /pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
 } // namespace
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
@@ -776,7 +843,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     }
   }
   // output
-  AllocateUserHistoryOutput(13);
+  AllocateUserHistoryOutput(21);
 
   int iout=0;
   EnrollUserHistoryOutput(iout, HistoryBlackHoleMass, "m_bh",
@@ -816,6 +883,30 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
                           UserHistoryOperation::sum);
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryJInnerBlocks, "J_inner_block",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMdotInBC, "mdot_in_BC",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMdotInBC, "mdot_out_BC",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMdotInBC, "edot_in_BC",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMdotInBC, "edot_out_BC",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMdotInNum, "mdot_in_num",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMdotInNum, "mdot_out_num",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMdotInNum, "edot_in_num",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMdotInNum, "edot_out_num",
                           UserHistoryOperation::sum);
 
 
@@ -887,9 +978,9 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   //
   AllocateRealUserMeshBlockDataField(3);
   
-  // [0] for Psi_face1
+  // [0] for Phi
   ruser_meshblock_data[0].NewAthenaArray(ncells1 + 1);
-  // [1] for delta_m_face1
+  // [1] for Mgrav
   ruser_meshblock_data[1].NewAthenaArray(ncells1 + 1);
 
   // [2] ejecta/history diagnostics cache
@@ -941,11 +1032,17 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
   g.NewAthenaArray(NMETRIC, ncells1 + 1);
   gi.NewAthenaArray(NMETRIC, ncells1 + 1);
 
-  Real mdot_bc = 0.0;
-  Real edot_bc = 0.0;
-  Real mdot_num = 0.0;
-  Real edot_num = 0.0;
-  if (pbval->block_bcs[BoundaryFace::inner_x1] != BoundaryFlag::user){
+  Real mdot_in_bc = 0.0;
+  Real edot_in_bc = 0.0;
+  Real mdot_in_num = 0.0;
+  Real edot_in_num = 0.0;
+
+  Real mdot_out_bc = 0.0;
+  Real edot_out_bc = 0.0;
+  Real mdot_out_num = 0.0;
+  Real edot_out_num = 0.0;
+
+  if (pbval->block_bcs[BoundaryFace::inner_x1] != BoundaryFlag::block){
 
     for (int k = ks; k <= ke; ++k) {
       for (int j = js; j <= je; ++j) {
@@ -987,16 +1084,56 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
 
 	const Real F_D_bc = alpha*J1;
 	const Real F_tau_bc = alpha*alpha*T10 - F_D_bc;
+
+	if(F_D_bc>0.0){
+	  mdot_in_bc  += area * F_D_bc;
+	  edot_in_bc  += area * F_tau_bc;
+	}else{
+	  mdot_out_bc  += area * F_D_bc;
+	  edot_out_bc  += area * F_tau_bc;
+	}
 	
-	mdot_bc  += area * F_D_bc;
-	edot_bc  += area * F_tau_bc;
-	
-	mdot_num += area * phydro->flux[X1DIR](IDN,k,j,is);
-	edot_num += area * phydro->flux[X1DIR](IEN,k,j,is);
+	const Real F_D_num = phydro->flux[X1DIR](IDN,k,j,is);
+	const Real F_tau_num = phydro->flux[X1DIR](IEN,k,j,is);
+	if(F_D_num>0.0){
+	  mdot_in_num += area * F_D_num;
+	  edot_in_num += area * F_tau_num;
+	}else{
+	  mdot_out_num += area * F_D_num;
+	  edot_out_num += area * F_tau_num;
+	}
       }
     }
   }
+
+  // outer boundary
+  Real mdot_out = 0.0;
+  if (pbval->block_bcs[BoundaryFace::inner_x1] != BoundaryFlag::block){
+
+    for (int k = ks; k <= ke; ++k) {
+      for (int j = js; j <= je; ++j) {
+	const int i = ie;
+	const Real area = pcoord->GetFace1Area(k,j,i);
+	const Real F_D_num = phydro->flux[X1DIR](IDN,k,j,is);
+	mdot_in_num += area * F_D_num;
+      }
+    }
+  }  
+  
+  AthenaArray<Real> &cache = ruser_meshblock_data[2];
+
+  cache(MDOT_IN_BC) = mdot_in_bc;
+  cache(EDOT_IN_BC) = edot_in_bc;
+  cache(MDOT_IN_NUM) = mdot_in_num;
+  cache(EDOT_IN_NUM) = edot_in_num;
+  cache(MDOT_OUT_BC) = mdot_out_bc;
+  cache(EDOT_OUT_BC) = edot_out_bc;
+  cache(MDOT_OUT_NUM) = mdot_out_num;
+  cache(EDOT_OUT_NUM) = edot_out_num;
+
+  cache(MDOT_OUT) = mdot_out;
 }
+
 
 
 void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
