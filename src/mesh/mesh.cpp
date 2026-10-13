@@ -580,10 +580,6 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
   }
 
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver->InitializeMeshGeometry();
-#endif
-  
   ResetLoadBalanceVariables();
 
   if (turb_flag > 0) // TurbulenceDriver depends on the MeshBlock ctor
@@ -1047,11 +1043,6 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
         ATHENA_ERROR(msg);
     }
   }
-
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver->InitializeMeshGeometry();
-  pmetric_driver->InitializeFromRestart();
-#endif
 
   ResetLoadBalanceVariables();
 
@@ -1691,6 +1682,15 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
   int inb = nbtotal;
   int nthreads = GetNumMeshThreads();
 
+#if DYNAMIC_METRIC_ENABLED
+  // Before this, all MeshBlocks and Coordinates should exist.
+  pmetric_driver->InitializeMeshGeometry();
+  if (res_flag != 0) {
+    // GR Restart file has w, w1, and u, which are already loaded in Mesh restart constructor
+    pmetric_driver->InitializeFromRestart();
+  }
+#endif
+  
   do {
     if (res_flag == 0) {
 #pragma omp parallel for num_threads(nthreads)
@@ -1705,9 +1705,9 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
     pin->GetOrAddBoolean("coord", "initial_metric_update", true);
   
 #if DYNAMIC_METRIC_ENABLED
+
     if (res_flag==0 and initial_metric_update) {
       pmetric_driver->InitializeFromPrimitive();
-//       pmetric_driver->UpdateAfterCons2Prim();
       
       // Convert primitive -> conserved after getting metric (it requires primitive rho)
       for (int i=0; i<nblocal; ++i) {
@@ -2851,11 +2851,6 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
 	      << std::endl;
   }
 
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver->InitializeMeshGeometry();
-#endif
-
-  
   // reconstruct delta_m and Psi
   // MeshBlocks have already been reconstructed.
   Real removed_mass = 0.0;
@@ -2892,28 +2887,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
     
     ruser_mesh_data[0](0) += removed_mass;
   }
-  
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver->InitializeFromRestart();
-  // pmetric_driver->UpdateAfterCons2Prim();
-  
-  // for (int b=0; b<nblocal; ++b) {
-  //   MeshBlock *pmb = my_blocks(b);
-      
-  //   AthenaArray<Real> bb;
-  //   bb.NewAthenaArray(3, pmb->ke+1, pmb->je+1, pmb->ie+1);
-  //   bb.ZeroClear();
-      
-  //   pmb->peos->PrimitiveToConserved(pmb->phydro->w,
-  // 				    bb,
-  // 				    pmb->phydro->u,
-  // 				    pmb->pcoord,
-  // 				    pmb->is, pmb->ie,
-  // 				    pmb->js, pmb->je,
-  // 				    pmb->ks, pmb->ke);
-  // }
-#endif
-  
+    
   if (Globals::my_rank == 0) {
     std::cout << "new bh_mass = "
 	      << ruser_mesh_data[0](0)

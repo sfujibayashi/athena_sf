@@ -1051,20 +1051,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }
   }
 
-  const bool initial_metric_update =
-    pin->GetOrAddBoolean("coord", "initial_metric_update", true);
-  
-  const bool time_metric_update =
-    pin->GetOrAddBoolean("coord", "time_metric_update", true);
-  
-  if (time_metric_update && !initial_metric_update) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in gr_collapsar.cpp" << std::endl
-        << "time_metric_update=true requires initial_metric_update=true."
-        << std::endl;
-    ATHENA_ERROR(msg);
-  }
-  
+#if !DYNAMIC_METRIC_ENABLED  
   // Convert primitive -> conserved
   AthenaArray<Real> bb;
   bb.NewAthenaArray(3, ke+1, je+1, ie+1);
@@ -1078,8 +1065,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   peos->PassiveScalarPrimitiveToConserved(
     pscalars->r, phydro->u, pscalars->s, pcoord,
     is, ie, js, je, ks, ke);
-#endif
-
+#endif // NSCALARS > 0
+#endif // !DYNAMIC_METRIC_ENABLED  
 }
 
 
