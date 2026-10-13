@@ -562,14 +562,15 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     pimrad = new IMRadiation(this, pin);
   }
   
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = CreateDynamicMetricDriver(this, pin);
-#endif
-
   // create MeshBlock list for this process
   gids_ = nslist[Globals::my_rank];
   gide_ = gids_ + nblist[Globals::my_rank] - 1;
   nblocal = nblist[Globals::my_rank];
+
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+#endif
+
   my_blocks.NewAthenaArray(nblocal);
   // create MeshBlocks for this node
   for (int i=gids_; i<=gide_; i++) {
@@ -987,10 +988,6 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     pimrad = new IMRadiation(this, pin);
   }
 
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver->InitializeMeshGeometry();
-#endif
-
   // allocate data buffer
   int nbmin = nblist[0];
   for (int n = 1; n < Globals::nranks; ++n) {
@@ -998,6 +995,11 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
       nbmin = nblist[n];
   }
   nblocal = nblist[Globals::my_rank];
+
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver->InitializeMeshGeometry();
+#endif
+
   gids_ = nslist[Globals::my_rank];
   gide_ = gids_ + nblocal - 1;
   char *mbdata = new char[datasize];
@@ -2798,10 +2800,6 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
     pimrad = new IMRadiation(this, pin);
   }
 
-#if DYNAMIC_METRIC_ENABLED
-  pmetric_driver = CreateDynamicMetricDriver(this, pin);
-#endif
-
   // allocate data buffer
   int nbmin = nblist[0];
   for (int n = 1; n < Globals::nranks; ++n) {
@@ -2809,6 +2807,11 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
       nbmin = nblist[n];
   }
   nblocal = nblist[Globals::my_rank];
+
+#if DYNAMIC_METRIC_ENABLED
+  pmetric_driver = CreateDynamicMetricDriver(this, pin);
+#endif
+
   gids_ = nslist[Globals::my_rank];
   gide_ = gids_ + nblocal - 1;
   char *mbdata = new char[datasize];
