@@ -14,6 +14,7 @@
 #include <sstream>    // sstream
 #include <stdexcept>  // runtime_error
 #include <string>     // c_str()
+#include <iomanip>
 
 // Athena++ headers
 #include "../athena.hpp"
