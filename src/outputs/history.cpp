@@ -19,6 +19,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <cctype>
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -394,87 +395,213 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
     }
 
     // If this is the first output, write header
-    if (output_params.file_number == 0) {
-      // NEW_OUTPUT_TYPES:
+    // if (output_params.file_number == 0) {
+    //   // NEW_OUTPUT_TYPES:
 
-      int iout = 1;
-      std::fprintf(pfile,"# Athena++ history data\n"); // descriptor is first line
-      // Unit conversion factors (1 code unit in CGS)
+    //   int iout = 1;
+    //   std::fprintf(pfile,"# Athena++ history data\n"); // descriptor is first line
+    //   // Unit conversion factors (1 code unit in CGS)
+    //   std::fprintf(pfile,"# TimeUnitCGS = %.17e s\n", pm->punit->code_time_cgs);
+    //   std::fprintf(pfile,"# LengthUnitCGS = %.17e cm\n", pm->punit->code_length_cgs);
+    //   std::fprintf(pfile,"# MassUnitCGS = %.17e g\n", pm->punit->code_mass_cgs);
+    //   std::fprintf(pfile,"# [%d]=time     ", iout++);
+    //   std::fprintf(pfile,"[%d]=dt       ", iout++);
+    //   std::fprintf(pfile,"[%d]=mass     ", iout++);
+    //   std::fprintf(pfile,"[%d]=1-mom    ", iout++);
+    //   std::fprintf(pfile,"[%d]=2-mom    ", iout++);
+    //   std::fprintf(pfile,"[%d]=3-mom    ", iout++);
+    //   std::fprintf(pfile,"[%d]=1-KE     ", iout++);
+    //   std::fprintf(pfile,"[%d]=2-KE     ", iout++);
+    //   std::fprintf(pfile,"[%d]=3-KE     ", iout++);
+    //   if (NON_BAROTROPIC_EOS) std::fprintf(pfile,"[%d]=tot-E   ", iout++);
+    //   if (SELF_GRAVITY_ENABLED) std::fprintf(pfile,"[%d]=grav-E   ", iout++);
+    //   if (MAGNETIC_FIELDS_ENABLED) {
+    //     std::fprintf(pfile,"[%d]=1-ME    ", iout++);
+    //     std::fprintf(pfile,"[%d]=2-ME    ", iout++);
+    //     std::fprintf(pfile,"[%d]=3-ME    ", iout++);
+    //   }
+    //   for (int n=0; n<NSCALARS; n++) {
+    // 	const std::string &user_name = psclr->GetScalarName(n);
+	
+    //     if (!user_name.empty()) {
+    // 	  std::fprintf(pfile, "[%d]=%s    ", iout++, user_name.c_str());
+    // 	} else if (CHEMISTRY_ENABLED) {
+    //       if (n < NSPECIES) {
+    //         std::fprintf(pfile,"[%d]=%s    ", iout++,
+    //                      psclr->chemnet.species_names[n].c_str());
+    //       } else {
+    //         std::fprintf(pfile,"[%d]=%d-scalar    ", iout++, n-NSPECIES);
+    //       }
+    //     } else {
+    //       std::fprintf(pfile,"[%d]=%d-scalar    ", iout++, n);
+    //     }
+    //   }
+    //   if (CHEMRADIATION_ENABLED) {
+    //     for (int n=0; n<pchemrad->nfreq; n++) {
+    //       std::fprintf(pfile,"[%d]=%d-rad    ", iout++, n);
+    //     }
+    //   }
+    //   if (NR_RADIATION_ENABLED || IM_RADIATION_ENABLED) {
+    //     if (pm->my_blocks(0)->pnrrad->nfreq == 1) {
+    //       std::fprintf(pfile,"[%d]=Er    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Fr1    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Fr2    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Fr3    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Er0    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Fr10    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Fr20    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Fr30    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Pr11    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Pr12    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Pr13    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Pr22    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Pr23    ", iout++);
+    //       std::fprintf(pfile,"[%d]=Pr33    ", iout++);
+    //     } else {
+    //       for (int ifr=0; ifr<pm->my_blocks(0)->pnrrad->nfreq; ++ifr) {
+    //         std::fprintf(pfile,"[%d]=Er   ", iout++);
+    //         std::fprintf(pfile,"[%d]=Fr1   ", iout++);
+    //         std::fprintf(pfile,"[%d]=Fr2   ", iout++);
+    //         std::fprintf(pfile,"[%d]=Fr3   ", iout++);
+    //       }
+    //     }
+    //   }
+    //   if (CR_ENABLED) {
+    //     std::fprintf(pfile,"[%d]=Ec    ", iout++);
+    //     std::fprintf(pfile,"[%d]=Fc1    ", iout++);
+    //     std::fprintf(pfile,"[%d]=Fc2    ", iout++);
+    //     std::fprintf(pfile,"[%d]=Fc3    ", iout++);
+    //   }
+    //   for (int n=0; n<pm->nuser_history_output_; n++)
+    //     std::fprintf(pfile,"[%d]=%-7s ", iout++,
+    //                  pm->user_history_output_names_[n].c_str());
+    //   std::fprintf(pfile,"\n");                              // terminate line
+    // }
+
+    // If this is the first output, write header
+    if (output_params.file_number == 0) {
+      const std::string &fmt = output_params.data_format;
+
+      // Extract field width from printf format, e.g. "%24.16e"
+      const std::size_t pos = fmt.find('%');
+
+      int width = 0;
+      if (pos != std::string::npos) {
+	std::size_t i = pos + 1;
+
+	// Skip flags
+	while (i < fmt.size() &&
+	       (fmt[i] == '-' || fmt[i] == '+' ||
+		fmt[i] == ' ' || fmt[i] == '0' || fmt[i] == '#')) {
+	  ++i;
+	}
+
+	// Read field width
+	while (i < fmt.size() && std::isdigit(static_cast<unsigned char>(fmt[i]))) {
+	  width = 10*width + (fmt[i] - '0');
+	  ++i;
+	}
+      }
+
+      // Include any leading spaces before '%'
+      const int leading_spaces = (pos == std::string::npos) ? 0 : static_cast<int>(pos);
+      const int column_width = width + leading_spaces;
+
+      // write header
+      std::fprintf(pfile, "# Athena++ history data\n");
+
       std::fprintf(pfile,"# TimeUnitCGS = %.17e s\n", pm->punit->code_time_cgs);
       std::fprintf(pfile,"# LengthUnitCGS = %.17e cm\n", pm->punit->code_length_cgs);
       std::fprintf(pfile,"# MassUnitCGS = %.17e g\n", pm->punit->code_mass_cgs);
-      std::fprintf(pfile,"# [%d]=time     ", iout++);
-      std::fprintf(pfile,"[%d]=dt       ", iout++);
-      std::fprintf(pfile,"[%d]=mass     ", iout++);
-      std::fprintf(pfile,"[%d]=1-mom    ", iout++);
-      std::fprintf(pfile,"[%d]=2-mom    ", iout++);
-      std::fprintf(pfile,"[%d]=3-mom    ", iout++);
-      std::fprintf(pfile,"[%d]=1-KE     ", iout++);
-      std::fprintf(pfile,"[%d]=2-KE     ", iout++);
-      std::fprintf(pfile,"[%d]=3-KE     ", iout++);
-      if (NON_BAROTROPIC_EOS) std::fprintf(pfile,"[%d]=tot-E   ", iout++);
-      if (SELF_GRAVITY_ENABLED) std::fprintf(pfile,"[%d]=grav-E   ", iout++);
-      if (MAGNETIC_FIELDS_ENABLED) {
-        std::fprintf(pfile,"[%d]=1-ME    ", iout++);
-        std::fprintf(pfile,"[%d]=2-ME    ", iout++);
-        std::fprintf(pfile,"[%d]=3-ME    ", iout++);
-      }
-      for (int n=0; n<NSCALARS; n++) {
-	const std::string &user_name = psclr->GetScalarName(n);
+
+      int iout = 1;
+
+      auto print_label = [&](const std::string &name) {
+	const std::string label =
+	  "[" + std::to_string(iout++) + "]=" + name;
 	
-        if (!user_name.empty()) {
-	  std::fprintf(pfile, "[%d]=%s    ", iout++, user_name.c_str());
-	} else if (CHEMISTRY_ENABLED) {
-          if (n < NSPECIES) {
-            std::fprintf(pfile,"[%d]=%s    ", iout++,
-                         psclr->chemnet.species_names[n].c_str());
-          } else {
-            std::fprintf(pfile,"[%d]=%d-scalar    ", iout++, n-NSPECIES);
-          }
-        } else {
-          std::fprintf(pfile,"[%d]=%d-scalar    ", iout++, n);
-        }
+	if (iout == 2) {
+	  // Initial '#' occupies one character
+	  std::fprintf(pfile, "#%*s", column_width-1, label.c_str());
+	} else {
+	  std::fprintf(pfile, "%*s",  column_width, label.c_str());
+	}
+      };
+
+      print_label("time");
+      print_label("dt");
+      print_label("mass");
+      print_label("1-mom");
+      print_label("2-mom");
+      print_label("3-mom");
+      print_label("1-KE");
+      print_label("2-KE");
+      print_label("3-KE");
+
+      if (NON_BAROTROPIC_EOS) print_label("tot-E");
+      if (SELF_GRAVITY_ENABLED) print_label("grav-E");
+
+      if (MAGNETIC_FIELDS_ENABLED) {
+	print_label("1-ME");
+	print_label("2-ME");
+	print_label("3-ME");
       }
+
+      for (int n=0; n<NSCALARS; ++n) {
+	const std::string &user_name = psclr->GetScalarName(n);
+
+	if (!user_name.empty()) {
+	  print_label(user_name);
+	} else if (CHEMISTRY_ENABLED && n < NSPECIES) {
+	  print_label(psclr->chemnet.species_names[n]);
+	} else if (CHEMISTRY_ENABLED) {
+	  print_label(std::to_string(n-NSPECIES) + "-scalar");
+	} else {
+	  print_label(std::to_string(n) + "-scalar");
+	}
+      }
+
       if (CHEMRADIATION_ENABLED) {
         for (int n=0; n<pchemrad->nfreq; n++) {
-          std::fprintf(pfile,"[%d]=%d-rad    ", iout++, n);
+	  print_label(std::to_string(n) + "-rad");
         }
       }
       if (NR_RADIATION_ENABLED || IM_RADIATION_ENABLED) {
         if (pm->my_blocks(0)->pnrrad->nfreq == 1) {
-          std::fprintf(pfile,"[%d]=Er    ", iout++);
-          std::fprintf(pfile,"[%d]=Fr1    ", iout++);
-          std::fprintf(pfile,"[%d]=Fr2    ", iout++);
-          std::fprintf(pfile,"[%d]=Fr3    ", iout++);
-          std::fprintf(pfile,"[%d]=Er0    ", iout++);
-          std::fprintf(pfile,"[%d]=Fr10    ", iout++);
-          std::fprintf(pfile,"[%d]=Fr20    ", iout++);
-          std::fprintf(pfile,"[%d]=Fr30    ", iout++);
-          std::fprintf(pfile,"[%d]=Pr11    ", iout++);
-          std::fprintf(pfile,"[%d]=Pr12    ", iout++);
-          std::fprintf(pfile,"[%d]=Pr13    ", iout++);
-          std::fprintf(pfile,"[%d]=Pr22    ", iout++);
-          std::fprintf(pfile,"[%d]=Pr23    ", iout++);
-          std::fprintf(pfile,"[%d]=Pr33    ", iout++);
+          print_label("Er");
+          print_label("Fr1");
+          print_label("Fr2");
+          print_label("Fr3");
+          print_label("Er0");
+          print_label("Fr10");
+          print_label("Fr20");
+          print_label("Fr30");
+          print_label("Pr11");
+          print_label("Pr12");
+          print_label("Pr13");
+          print_label("Pr22");
+          print_label("Pr23");
+          print_label("Pr33");
         } else {
           for (int ifr=0; ifr<pm->my_blocks(0)->pnrrad->nfreq; ++ifr) {
-            std::fprintf(pfile,"[%d]=Er   ", iout++);
-            std::fprintf(pfile,"[%d]=Fr1   ", iout++);
-            std::fprintf(pfile,"[%d]=Fr2   ", iout++);
-            std::fprintf(pfile,"[%d]=Fr3   ", iout++);
+            print_label("Er");
+            print_label("Fr1");
+            print_label("Fr2");
+            print_label("Fr3");
           }
         }
       }
       if (CR_ENABLED) {
-        std::fprintf(pfile,"[%d]=Ec    ", iout++);
-        std::fprintf(pfile,"[%d]=Fc1    ", iout++);
-        std::fprintf(pfile,"[%d]=Fc2    ", iout++);
-        std::fprintf(pfile,"[%d]=Fc3    ", iout++);
+        print_label("Ec");
+        print_label("Fc1");
+        print_label("Fc2");
+        print_label("Fc3");
       }
-      for (int n=0; n<pm->nuser_history_output_; n++)
-        std::fprintf(pfile,"[%d]=%-7s ", iout++,
-                     pm->user_history_output_names_[n].c_str());
-      std::fprintf(pfile,"\n");                              // terminate line
+
+      for (int n=0; n<pm->nuser_history_output_; n++){
+	print_label(pm->user_history_output_names_[n]);
+      }
+      std::fprintf(pfile,"\n");// terminate line
     }
 
     // write history variables
