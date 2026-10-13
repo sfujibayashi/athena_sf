@@ -174,6 +174,8 @@ class MeshBlock {
   void UserWorkBeforeOutput(ParameterInput *pin); // called in Mesh fn (friend class)
   void UserWorkInLoop();                          // called in TimeIntegratorTaskList
 
+  void UserWorkAfterHydroFlux(int stage, Real t_stage); // called in main after each CalculateHydroFlux
+  
  private:
   // data
   Real new_block_dt_, new_block_dt_hyperbolic_, new_block_dt_parabolic_,

@@ -930,7 +930,72 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
 #endif
   }
 
+
 void MeshBlock::UserWorkInLoop(void) {
+}
+
+void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
+  if(stage !=2 ) return;
+
+  AthenaArray<Real> g, gi;
+  g.NewAthenaArray(NMETRIC, ncells1 + 1);
+  gi.NewAthenaArray(NMETRIC, ncells1 + 1);
+
+  Real mdot_bc = 0.0;
+  Real edot_bc = 0.0;
+  Real mdot_num = 0.0;
+  Real edot_num = 0.0;
+  if (pbval->block_bcs[BoundaryFace::inner_x1] != BoundaryFlag::user){
+
+    for (int k = ks; k <= ke; ++k) {
+      for (int j = js; j <= je; ++j) {
+
+	pmetric->Face1Metric(k, j, is, is, g, gi);
+	const int i = is;
+	const Real 
+	  &g_00 = g(I00,i), &g_01 = g(I01,i), &g_02 = g(I02,i), &g_03 = g(I03,i),
+	  &g_10 = g(I01,i), &g_11 = g(I11,i), &g_12 = g(I12,i), &g_13 = g(I13,i),
+	  &g_20 = g(I02,i), &g_21 = g(I12,i), &g_22 = g(I22,i), &g_23 = g(I23,i),
+	  &g_30 = g(I03,i), &g_31 = g(I13,i), &g_32 = g(I23,i), &g_33 = g(I33,i);
+	const Real
+	  &g00 = gi(I00,i), &g01 = gi(I01,i), &g02 = gi(I02,i), &g03 = gi(I03,i),
+	  &g10 = gi(I01,i), &g11 = gi(I11,i), &g12 = gi(I12,i), &g13 = gi(I13,i),
+	  &g20 = gi(I02,i), &g21 = gi(I12,i), &g22 = gi(I22,i), &g23 = gi(I23,i),
+	  &g30 = gi(I03,i), &g31 = gi(I13,i), &g32 = gi(I23,i), &g33 = gi(I33,i);
+	
+	const Real alpha = 1.0/std::sqrt(-1.0/g00);
+	
+	const Real area = pcoord->GetFace1Area(k,j,i);
+
+	// primitives in the first ghost cell
+	const Real rho = phydro->w(IDN,k,j,i-1);
+	const Real pgas= phydro->w(IPR,k,j,i-1);
+	const Real uu1 = phydro->w(IVX,k,j,i-1);
+	const Real uu2 = phydro->w(IVX,k,j,i-1);
+	const Real uu3 = phydro->w(IVX,k,j,i-1);
+	const Real u_sq = g_11*SQR(uu1) + 2.0*g_12*uu1*uu2 + 2.0*g_13*uu1*uu3
+                        + g_22*SQR(uu2) + 2.0*g_23*uu2*uu3
+	                + g_33*SQR(uu3);
+	const Real gamma = std::sqrt(1.0 + u_sq);
+	const Real egas = peos->EgasFromRhoP(rho, pgas);
+	const Real wgas = rho + egas + pgas;
+	// u^a
+	const Real ucon0 = gamma/alpha;
+	const Real ucon1 = uu1 - alpha*gamma*g01;
+	const Real J1 = rho*ucon1;
+	const Real T10 = wgas*ucon1*ucon0 + pgas*g01;
+
+	const Real F_D_bc = alpha*J1;
+	const Real F_tau_bc = alpha*alpha*T10 - F_D_bc;
+	
+	mdot_bc  += area * F_D_bc;
+	edot_bc  += area * F_tau_bc;
+	
+	mdot_num += area * phydro->flux[X1DIR](IDN,k,j,is);
+	edot_num += area * phydro->flux[X1DIR](IEN,k,j,is);
+      }
+    }
+  }
 }
 
 

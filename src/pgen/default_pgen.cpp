@@ -101,6 +101,16 @@ void __attribute__((weak)) MeshBlock::UserWorkInLoop() {
 }
 
 //========================================================================================
+//! \fn void MeshBlock::UserWorkAfterHydroFlux()
+//! \brief Function called after CalculateHydroFlux.
+//========================================================================================
+
+void __attribute__((weak)) MeshBlock::UserWorkAfterHydroFlux() {
+  // do nothing
+  return;
+}
+
+//========================================================================================
 //! \fn void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin)
 //! \brief Function called before generating output files
 //========================================================================================
