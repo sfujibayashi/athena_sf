@@ -358,6 +358,15 @@ void RGPSGravityDriver::ConstructPhiFromPrimitive(){
 
   const Real mout = mgrav_face_global_(nr_);
   const Real rout = r_face_global_(nr_);
+
+  if (1.0 - 2.0*mout/rout <= 0.0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in RGPSGravityDriver::ConstructPhiFromPrimitive" << std::endl
+	<< "2Mout/Rout > 1."
+	<< std::endl;
+    ATHENA_ERROR(msg);
+  }
+  
   Phi_face_global_(nr_) = 0.5*std::log(1.0 - 2.0*mout/rout);
   for (int i=nr_-1; i>=0; --i) {
     const Real rm = r_face_global_(i);
