@@ -2865,11 +2865,31 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
       my_blocks(i-gids_) = new MeshBlock(i, i-gids_, this, pin, loclist[i], block_size,
 					 block_bcs, costlist[i], mbdata);
 
+#if NSCALARS > 0
+      // For old blocks, only scalar primitives (r) are missing.
+      // They are constructed from scalar conserved (s) and hydro conserved (u) here.
+      MeshBlock *pmb = my_blocks(i-gids_);
+
+      pmb->peos->PassiveScalarConservedToPrimitive(
+         pmb->pscalars->s,
+	 pmb->phydro->u,
+	 pmb->pscalars->r,
+	 pmb->pscalars->r,
+	 pmb->pcoord,
+	 pmb->is, pmb->ie,
+	 pmb->js, pmb->je,
+	 pmb->ks, pmb->ke);
+#endif
+
+
     } else {
       // newly added outer block
       my_blocks(i-gids_) = new MeshBlock(i, i-gids_, loclist[i], block_size,
 					 block_bcs, this, pin);
       // initialize with atmosphere
+      // Only w, w1, and r are set here.
+      // Conserved (u and s) should be constructed after metric are obtained.
+      // It is donw in Mesh::Initialize.
       my_blocks(i-gids_)->InitializeAtmosphere(pin);
     }
 
