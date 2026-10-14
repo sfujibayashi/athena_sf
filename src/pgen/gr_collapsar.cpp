@@ -136,9 +136,12 @@ CollapsedProfile CollapseProgenitor(const ProgenitorProfile &progenitor, Real t0
 void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
                       Real time, Real dt,
                       int il, int iu, int jl, int ju, int kl, int ku, int ngh);
-void DiodeOuterX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
-                      Real time, Real dt,
-                      int il, int iu, int jl, int ju, int kl, int ku, int ngh);
+// void DiodeInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
+//                       Real time, Real dt,
+//                       int il, int iu, int jl, int ju, int kl, int ku, int ngh);
+// void DiodeOuterX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
+//                       Real time, Real dt,
+//                       int il, int iu, int jl, int ju, int kl, int ku, int ngh);
 
 Real LogarithmicX1(Real x, RegionSize rs);
 
@@ -1081,10 +1084,10 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     }
   }
 
-  if (mesh_bcs[BoundaryFace::outer_x1] == BoundaryFlag::user) {
-    EnrollUserBoundaryFunction(BoundaryFace::outer_x1,
-			       DiodeOuterX1);
-  }
+  // if (mesh_bcs[BoundaryFace::outer_x1] == BoundaryFlag::user) {
+  //   EnrollUserBoundaryFunction(BoundaryFace::outer_x1,
+  // 			       DiodeOuterX1);
+  // }
   // output
   AllocateUserHistoryOutput(48);
 
@@ -2220,37 +2223,72 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
   }
 }
 
-void DiodeOuterX1(MeshBlock *pmb, Coordinates *pco,
-                  AthenaArray<Real> &prim, FaceField &b,
-                  Real time, Real dt,
-                  int il, int iu, int jl, int ju,
-                  int kl, int ku, int ngh) {
 
-  for (int k=kl; k<=ku; ++k) {
-    for (int j=jl; j<=ju; ++j) {
+// void DiodeInnerX1(MeshBlock *pmb, Coordinates *pco,
+//                   AthenaArray<Real> &prim, FaceField &b,
+//                   Real time, Real dt,
+//                   int il, int iu, int jl, int ju,
+//                   int kl, int ku, int ngh) {
 
-      const Real ur = std::max(prim(IVX,k,j,iu), 0.0);
+//   for (int k=kl; k<=ku; ++k) {
+//     for (int j=jl; j<=ju; ++j) {
+
+//       const Real ur =
+//           std::min(prim(IVX,k,j,il), 0.0);
+
+//       for (int i=il-ngh; i<il; ++i) {
+
+//         // Copy all primitive hydro variables
+//         for (int n=0; n<NHYDRO; ++n) {
+//           prim(n,k,j,i) = prim(n,k,j,il);
+//         }
+
+//         // Do not allow outward radial velocity
+//         prim(IVX,k,j,i) = ur;
+
+// #if NSCALARS > 0
+//         // Copy passive scalar mass fractions
+//         for (int n=0; n<NSCALARS; ++n) {
+//           pmb->pscalars->r(n,k,j,i) =
+//               pmb->pscalars->r(n,k,j,il);
+//         }
+// #endif
+//       }
+//     }
+//   }
+// }
+
+// void DiodeOuterX1(MeshBlock *pmb, Coordinates *pco,
+//                   AthenaArray<Real> &prim, FaceField &b,
+//                   Real time, Real dt,
+//                   int il, int iu, int jl, int ju,
+//                   int kl, int ku, int ngh) {
+
+//   for (int k=kl; k<=ku; ++k) {
+//     for (int j=jl; j<=ju; ++j) {
+
+//       const Real ur = std::max(prim(IVX,k,j,iu), 0.0);
       
-      for (int i=iu+1; i<=iu+ngh; ++i) {
+//       for (int i=iu+1; i<=iu+ngh; ++i) {
 
-        // Copy all primitive hydro variables
-        for (int n=0; n<NHYDRO; ++n) {
-          prim(n,k,j,i) = prim(n,k,j,iu);
-        }
+//         // Copy all primitive hydro variables
+//         for (int n=0; n<NHYDRO; ++n) {
+//           prim(n,k,j,i) = prim(n,k,j,iu);
+//         }
 
-        // Do not allow outward radial velocity
-        prim(IVX,k,j,i) = ur;
+//         // Do not allow inward radial velocity
+//         prim(IVX,k,j,i) = ur;
 
-#if NSCALARS > 0
-        // Copy passive scalar mass fractions
-        for (int n=0; n<NSCALARS; ++n) {
-          pmb->pscalars->r(n,k,j,i) = pmb->pscalars->r(n,k,j,iu);
-        }
-#endif
-      }
-    }
-  }
-}
+// #if NSCALARS > 0
+//         // Copy passive scalar mass fractions
+//         for (int n=0; n<NSCALARS; ++n) {
+//           pmb->pscalars->r(n,k,j,i) = pmb->pscalars->r(n,k,j,iu);
+//         }
+// #endif
+//       }
+//     }
+//   }
+// }
 
 
 

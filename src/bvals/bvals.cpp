@@ -68,6 +68,7 @@ BoundaryValues::BoundaryValues(MeshBlock *pmb, BoundaryFlag *input_bcs,
     switch (block_bcs[i]) {
       case BoundaryFlag::reflect:
       case BoundaryFlag::outflow:
+      case BoundaryFlag::diode:
       case BoundaryFlag::user:
       case BoundaryFlag::polar_wedge:
         apply_bndry_fn_[i] = true;
@@ -754,6 +755,7 @@ void BoundaryValues::DispatchBoundaryFunctions(
             break;
         }
         break;
+      case BoundaryFlag::diode:
       case BoundaryFlag::outflow:
         switch (face) {
           case BoundaryFace::undef:
@@ -831,6 +833,34 @@ void BoundaryValues::DispatchBoundaryFunctions(
         break;
     } // end switch (block_bcs[face])
   } // end loop over BoundaryVariable *
+
+  // Apply diode condition to radial velocity in ghost cells.
+  if (block_bcs[face] == BoundaryFlag::diode) {
+
+    if (face == BoundaryFace::inner_x1) {
+
+      // Inner boundary: prohibit outward (positive) velocity.
+      for (int k=kl; k<=ku; ++k) {
+        for (int j=jl; j<=ju; ++j) {
+          for (int i=il-ngh; i<il; ++i) {
+            prim(IVX,k,j,i) = std::min(prim(IVX,k,j,i), Real(0.0));
+          }
+        }
+      }
+
+    } else if (face == BoundaryFace::outer_x1) {
+
+      // Outer boundary: prohibit inward (negative) velocity.
+      for (int k=kl; k<=ku; ++k) {
+        for (int j=jl; j<=ju; ++j) {
+          for (int i=iu+1; i<=iu+ngh; ++i) {
+            prim(IVX,k,j,i) = std::max(prim(IVX,k,j,i), Real(0.0));
+          }
+        }
+      }
+    }
+  }
+
 }
 
 

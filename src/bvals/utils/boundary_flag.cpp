@@ -39,6 +39,8 @@ BoundaryFlag GetBoundaryFlag(const std::string& input_string) {
     return BoundaryFlag::polar;
   } else if (input_string == "polar_wedge") {
     return BoundaryFlag::polar_wedge;
+  } else if (input_string == "diode") {
+    return BoundaryFlag::diode;
   } else if (input_string == "none") {
     return BoundaryFlag::undef;
   } else if (input_string == "block") {
@@ -78,6 +80,8 @@ std::string GetBoundaryString(BoundaryFlag input_flag) {
       return "polar_wedge";
     case BoundaryFlag::shear_periodic:
       return "shear_periodic";
+    case BoundaryFlag::diode:
+      return "diode";
     default:
       std::stringstream msg;
       msg << "### FATAL ERROR in GetBoundaryString" << std::endl
@@ -108,6 +112,7 @@ void CheckBoundaryFlag(BoundaryFlag block_flag, CoordinateDirection dir) {
       switch(block_flag) {
         case BoundaryFlag::polar:
         case BoundaryFlag::polar_wedge:
+        case BoundaryFlag::diode:
         case BoundaryFlag::undef:
           ATHENA_ERROR(msg);
           break;
