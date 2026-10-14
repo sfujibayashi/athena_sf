@@ -485,6 +485,8 @@ namespace {
 	  const Real uu2 = pmb->phydro->w(IVY,k,j,i);
 	  const Real uu3 = pmb->phydro->w(IVZ,k,j,i);
 
+	  const Real Xphys = pmb->pscalars->r(IXPHYS,k,j,i);
+
 	  const Real usq =
 	    g(I11,i)*uu1*uu1
 	    + 2.0*g(I12,i)*uu1*uu2
@@ -504,7 +506,7 @@ namespace {
 
 	  if (rho_ut <= 0.0) continue;
 	
-	  const Real dm = vol(i)*rho_ut;
+	  const Real dm = vol(i)*rho_ut*Xphys;
 
 	  // Three definitions of specific ejecta energy
 	  const Real egeom = -u_t - 1.0;
@@ -564,7 +566,9 @@ namespace {
 	      cache(MRVR) += dm*r*vr;
 	      cache(MVR2) += dm*vr*vr;
 
-	      cache(RMAX) = std::max(cache(RMAX), r);
+	      if(Xphys>0.1){
+		cache(RMAX) = std::max(cache(RMAX), r);
+	      }
 	    }
 	  }
 
@@ -726,6 +730,11 @@ namespace {
 	  const Real r = pmb->pcoord->x1v(i);
 
 	  if (r < rstop) {
+	    break;
+	  }
+
+	  const Real Xphys = pmb->pscalars->r(IXPHYS,k,j,i);
+	  if (Xphys<0.1 ){
 	    break;
 	  }
 
