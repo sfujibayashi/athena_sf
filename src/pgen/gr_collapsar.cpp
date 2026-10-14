@@ -185,6 +185,9 @@ namespace {
     NSCALAR_REQUIRED
   };
   
+  static_assert(NSCALARS >= NSCALAR_REQUIRED,
+		"gr_collapsar requires more passive scalars");
+
   const int prog_to_scalar[ProgenitorSpecies::NPROG_SPECIES] = {
     IXNEUT,  // IPROG_NEUT
     IXH1,    // IPROG_PROT
