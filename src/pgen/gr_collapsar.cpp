@@ -1512,9 +1512,9 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
 	  edot_in_bc  += area * F_tau_bc;
 	  bdot_in_bc  += area * (alpha*(F_tau_bc + F_D_bc) - F_D_bc);
 	}else{
-	  mdot_out_bc  += area * F_D_bc;
-	  edot_out_bc  += area * F_tau_bc;
-	  bdot_out_bc  += area * (alpha*(F_tau_bc + F_D_bc) - F_D_bc);
+	  mdot_out_bc  -= area * F_D_bc;
+	  edot_out_bc  -= area * F_tau_bc;
+	  bdot_out_bc  -= area * (alpha*(F_tau_bc + F_D_bc) - F_D_bc);
 	}
 	
 	const Real F_D_num = phydro->flux[X1DIR](IDN,k,j,is);
@@ -1524,9 +1524,9 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
 	  edot_in_num += area * F_tau_num;
 	  bdot_in_num += area * (alpha*(F_tau_num + F_D_num) - F_D_num);
 	}else{
-	  mdot_out_num += area * F_D_num;
-	  edot_out_num += area * F_tau_num;
-	  bdot_out_num += area * (alpha*(F_tau_num + F_D_num) - F_D_num);
+	  mdot_out_num -= area * F_D_num;
+	  edot_out_num -= area * F_tau_num;
+	  bdot_out_num -= area * (alpha*(F_tau_num + F_D_num) - F_D_num);
 	}
       }
     }
@@ -1589,7 +1589,7 @@ void MeshBlock::UserWorkAfterScalarFlux(int stage, Real t_stage) {
 	if(F_Dinj>0.0){
 	  mdot_inj_in += area * F_Dinj;
 	}else{
-	  mdot_inj_out += area * F_Dinj;
+	  mdot_inj_out -= area * F_Dinj;
 	}
       }
     }
