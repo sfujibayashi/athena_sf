@@ -1050,7 +1050,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     }
   }
   // output
-  AllocateUserHistoryOutput(39);
+  AllocateUserHistoryOutput(45);
 
   int iout=0;
   EnrollUserHistoryOutput(iout, HistoryBlackHoleMass, "m_bh",
