@@ -111,6 +111,16 @@ void __attribute__((weak)) MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_s
 }
 
 //========================================================================================
+//! \fn void MeshBlock::UserWorkAfterHydroFlux()
+//! \brief Function called after CalculateHydroFlux.
+//========================================================================================
+
+void __attribute__((weak)) MeshBlock::UserWorkAfterScalarFlux(int stage, Real t_stage) {
+  // do nothing
+  return;
+}
+
+//========================================================================================
 //! \fn void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin)
 //! \brief Function called before generating output files
 //========================================================================================

@@ -175,6 +175,7 @@ class MeshBlock {
   void UserWorkInLoop();                          // called in TimeIntegratorTaskList
 
   void UserWorkAfterHydroFlux(int stage, Real t_stage); // called in main after each CalculateHydroFlux
+  void UserWorkAfterScalarFlux(int stage, Real t_stage); // called in main after each CalculateScalarFlux
   
  private:
   // data
