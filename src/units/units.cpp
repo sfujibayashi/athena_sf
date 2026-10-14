@@ -55,6 +55,10 @@ Units::Units(ParameterInput *pin) :
     code_mass_cgs_ = pin->GetReal("units", "mass_cgs");
     code_length_cgs_ = pin->GetReal("units", "length_cgs");
     code_time_cgs_ = pin->GetReal("units", "time_cgs");
+  } else if (unit_system.compare("relativistic") == 0) {
+    code_mass_cgs_ = pin->GetReal("units", "mass_cgs");
+    code_length_cgs_ = pin->GetReal("units", "length_cgs");
+    code_time_cgs_ = code_length_cgs_ / Constants::speed_of_light_cgs;
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in Units constructor" << std::endl
