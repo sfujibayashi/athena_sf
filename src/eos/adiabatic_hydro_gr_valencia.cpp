@@ -58,7 +58,8 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
     rho_min_{pin->GetOrAddReal("hydro", "rho_min", density_floor_)},
     rho_pow_{pin->GetOrAddReal("hydro", "rho_pow", 0.0)},
     pgas_min_{pin->GetOrAddReal("hydro", "pgas_min", pressure_floor_)},
-    pgas_pow_{pin->GetOrAddReal("hydro", "pgas_pow", 0.0)} {
+    pgas_pow_{pin->GetOrAddReal("hydro", "pgas_pow", 0.0)},
+    r0_pow_{pin->GetOrAddReal("hydro", "r0_pow", 1.0)} {
   int nc1 = pmb->ncells1;
   g_.NewAthenaArray(NMETRIC, nc1);
   g_inv_.NewAthenaArray(NMETRIC, nc1);
@@ -657,7 +658,7 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
 
 Real EquationOfState::GetDensityFloor(Real r) const {
   if (rho_pow_ != 0.0) {
-    return std::max(density_floor_, rho_min_ * std::pow(r, rho_pow_));
+    return std::max(density_floor_, rho_min_ * std::min(1.0, std::pow(r/r0_pow_, rho_pow_)));
   }else{
     return density_floor_;
   }
@@ -665,7 +666,7 @@ Real EquationOfState::GetDensityFloor(Real r) const {
 
 Real EquationOfState::GetPressureFloor(Real r) const {
   if (pgas_pow_ != 0.0) {
-    return std::max(pressure_floor_, pgas_min_ * std::pow(r, pgas_pow_));
+    return std::max(pressure_floor_, pgas_min_ * std::min(1.0, std::pow(r/r0_pow_, pgas_pow_)));
   }else{
     return pressure_floor_;
   }

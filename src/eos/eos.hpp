@@ -198,6 +198,7 @@ class EquationOfState {
   Real scalar_floor_; // dimensionless concentration floor
   Real sigma_max_, beta_min_;            // limits on ratios of gas quantities to pmag
   Real gamma_max_;                       // maximum Lorentz factor
+  Real r0_pow_;                           // variables to control power-law density and pressure floors
   Real rho_min_, rho_pow_;               // variables to control power-law denity floor
   Real pgas_min_, pgas_pow_;             // variables to control power-law pressure floor
   Real rho_unit_, inv_rho_unit_;         // physical unit/sim unit for mass density
