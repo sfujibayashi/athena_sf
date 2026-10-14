@@ -2852,6 +2852,7 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
 
   {
     Real removed_hydro_mass = 0.0;
+    Real removed_inj_mass = 0.0;
 
     // Old hydro array dimensions
     const int nc1 = block_size.nx1 + 2*NGHOST;
@@ -2873,6 +2874,37 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
     // Temporary storage for the old hydro conserved variables
     AthenaArray<Real> u_old;
     u_old.NewAthenaArray(NHYDRO, nc3, nc2, nc1);
+
+#if NSCALARS > 1
+    // IXINJ = 1 in gr_collapsar.cpp
+    constexpr int kIXINJ = 1;
+
+    AthenaArray<Real> s_old;
+    s_old.NewAthenaArray(NSCALARS, nc3, nc2, nc1);
+
+    // Restart layout for GR hydro:
+    // phydro->u, phydro->w, phydro->w1, pscalars->s
+    const std::size_t scalar_offset =
+        3 * u_old.GetSizeInBytes();
+
+    // This offset assumes hydro without magnetic fields,
+    // radiation, or cosmic-ray variables.
+    if (MAGNETIC_FIELDS_ENABLED ||
+        NR_RADIATION_ENABLED || IM_RADIATION_ENABLED ||
+        CR_ENABLED || CRDIFFUSION_ENABLED) {
+      std::stringstream msg;
+      msg << "### Scalar restart offset must be updated "
+          << "for this configuration.";
+      ATHENA_ERROR(msg);
+    }
+
+    if (scalar_offset + s_old.GetSizeInBytes() >
+        static_cast<std::size_t>(datasize)) {
+      std::stringstream msg;
+      msg << "### Invalid scalar offset in restart data.";
+      ATHENA_ERROR(msg);
+    }
+#endif
 
     char *old_mbdata = new char[datasize];
 
@@ -2901,6 +2933,11 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
       std::memcpy(u_old.data(), old_mbdata,
 		  u_old.GetSizeInBytes());
 
+#if NSCALARS > 1
+      std::memcpy(s_old.data(), old_mbdata + scalar_offset,
+                  s_old.GetSizeInBytes());
+#endif
+
       for (int k = ks_old; k < ks_old + block_size.nx3; ++k) {
 	for (int j = js_old; j < js_old + block_size.nx2; ++j) {
 	  for (int i = is_old; i < is_old + block_size.nx1; ++i) {
@@ -2924,8 +2961,12 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
 	      * (std::cos(theta_m) - std::cos(theta_p))
 	      * dphi;
 
-	    removed_hydro_mass +=
-	      u_old(IDN,k,j,i) * vol;
+	    removed_hydro_mass += u_old(IDN,k,j,i) * vol;
+
+#if NSCALARS > 1
+	    removed_inj_mass += s_old(kIXINJ,k,j,i) * vol;
+#endif
+
 	  }
 	}
       }
@@ -2934,12 +2975,25 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
     delete [] old_mbdata;
 
 #ifdef MPI_PARALLEL
+    Real removed_mass_pair[2] = 
+      {
+        removed_hydro_mass,
+        removed_inj_mass
+      };
+    
     MPI_Allreduce(MPI_IN_PLACE,
-		  &removed_hydro_mass,
-		  1, MPI_ATHENA_REAL,
-		  MPI_SUM, MPI_COMM_WORLD);
+                  removed_mass_pair,
+                  2,
+                  MPI_ATHENA_REAL,
+                  MPI_SUM,
+                  MPI_COMM_WORLD);
+
+    removed_hydro_mass = removed_mass_pair[0];
+    removed_inj_mass = removed_mass_pair[1];
 #endif
+
     ruser_mesh_data[2](GRCollapsarHistory::MASS_REMOVED) += removed_hydro_mass;
+    ruser_mesh_data[2](GRCollapsarHistory::MASS_INJ_OUT) += removed_inj_mass;
   }
 
 

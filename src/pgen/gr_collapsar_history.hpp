@@ -21,6 +21,9 @@ enum BoundaryFluxIntegral {
   MASS_OUT,
 
   MASS_REMOVED,
+  
+  MASS_INJ_IN,
+  MASS_INJ_OUT,
 
   NBOUNDARY_FLUX_INTEGRAL
 };

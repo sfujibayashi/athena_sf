@@ -380,6 +380,9 @@ namespace {
     BDOT_OUT_NUM,
 
     MDOT_OUT,
+
+    MDOT_INJ_IN,
+    MDOT_INJ_OUT,
     
     NBOUNDARY_FLUX_CACHE
   };
@@ -655,6 +658,14 @@ namespace {
     // Units of Msun cm c
   }
 
+  Real HistoryEjectaMassGeomOut(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
+    
+    Real mass = pmb->ruser_meshblock_data[2](MGEOM_OUT);
+    return mass / pmb->pmy_mesh->punit->solar_mass_code;
+    // Units of Msun cm c
+  }
+
   Real HistoryEjectaMassVelocitySq(MeshBlock *pmb, int iout) {
     UpdateEjectaHistoryCache(pmb);
     
@@ -795,9 +806,7 @@ namespace {
       /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
-
-
-
+  
   Real HistoryMassOut(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real mass = pm->ruser_mesh_data[2](MASS_OUT);
@@ -928,6 +937,18 @@ namespace {
       /pmb->pmy_mesh->punit->erg_code;
   }
 
+  Real HistoryMassInjOut(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real mass = pm->ruser_mesh_data[2](MASS_INJ_OUT);
+    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+  }
+
+  Real HistoryMassInjIn(MeshBlock *pmb, int iout) {
+    Mesh *pm = pmb->pmy_mesh;
+    Real mass = pm->ruser_mesh_data[2](MASS_INJ_IN);
+    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+  }
+
   Real HistoryRemovedMass(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real mass = pm->ruser_mesh_data[2](MASS_REMOVED);
@@ -1050,7 +1071,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     }
   }
   // output
-  AllocateUserHistoryOutput(45);
+  AllocateUserHistoryOutput(48);
 
   int iout=0;
   EnrollUserHistoryOutput(iout, HistoryBlackHoleMass, "m_bh",
@@ -1167,6 +1188,15 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(iout, HistoryBindOutNum, "bind_out_num",
                           UserHistoryOperation::max);
   ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMassInjIn, "mass_inj_in",
+                          UserHistoryOperation::max);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMassInjOut, "mass_inj_out",
+                          UserHistoryOperation::max);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaMassGeomOut, "mgeom_out",
+                          UserHistoryOperation::sum);
+  ++iout;
   EnrollUserHistoryOutput(iout, HistoryEjectaBallisticMass, "mejecta_ballistic",
                           UserHistoryOperation::sum);
   ++iout;
@@ -1230,6 +1260,9 @@ void Mesh::UserWorkInLoop(void) {
     flux_sum[BIND_OUT_NUM] += cache(BDOT_OUT_NUM);
 
     flux_sum[MASS_OUT] += cache(MDOT_OUT);
+
+    flux_sum[MASS_INJ_IN] += cache(MDOT_INJ_IN);
+    flux_sum[MASS_INJ_OUT] += cache(MDOT_INJ_OUT);
   }
 
 #ifdef MPI_PARALLEL
@@ -1532,6 +1565,39 @@ void MeshBlock::UserWorkAfterHydroFlux(int stage, Real t_stage) {
   cache(BDOT_OUT_NUM) = bdot_out_num;
 
   cache(MDOT_OUT) = mdot_out;
+}
+
+
+void MeshBlock::UserWorkAfterScalarFlux(int stage, Real t_stage) {
+  if(stage !=2 ) return;
+
+  AthenaArray<Real> g, gi;
+  g.NewAthenaArray(NMETRIC, ncells1 + 1);
+  gi.NewAthenaArray(NMETRIC, ncells1 + 1);
+
+  Real mdot_inj_in = 0.0;
+  Real mdot_inj_out = 0.0;
+
+  if (pbval->block_bcs[BoundaryFace::inner_x1] != BoundaryFlag::block){
+
+    for (int k = ks; k <= ke; ++k) {
+      for (int j = js; j <= je; ++j) {
+	
+	const Real area = pcoord->GetFace1Area(k,j,is);
+	
+	const Real F_Dinj = pscalars->s_flux[X1DIR](IXINJ,k,j,is);
+	if(F_Dinj>0.0){
+	  mdot_inj_in += area * F_Dinj;
+	}else{
+	  mdot_inj_in += area * F_Dinj;
+	}
+      }
+    }
+  }
+  
+  AthenaArray<Real> &cache = ruser_meshblock_data[3];
+  cache(MDOT_INJ_OUT) = mdot_inj_out;
+  cache(MDOT_INJ_OUT) = mdot_inj_in;
 }
 
 
