@@ -318,6 +318,8 @@ class Mesh {
   void UserWorkAfterLoop(ParameterInput *pin);   // called in main loop
   void UserWorkInLoop(); // called in main after each cycle
 
+  Real GetFullSphereFactor() const;
+  
  private:
   // data
   int next_phys_id_; // next unused value for encoding final component of MPI tag bitfield

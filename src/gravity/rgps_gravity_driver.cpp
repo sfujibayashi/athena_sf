@@ -207,9 +207,10 @@ void RGPSGravityDriver::ConstructMgravFromPrimitive(){
     const Real rp = r_face_global_(i+1);
 
     const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
-    Em_shell_global(i) /= dV;
-    Er_shell_global(i) /= dV;
-    Ea_shell_global(i) /= dV;
+    const Real dV_sample = dV / pmy_mesh_->GetFullSphereFactor();
+    Em_shell_global(i) /= dV_sample;
+    Er_shell_global(i) /= dV_sample;
+    Ea_shell_global(i) /= dV_sample;
   }
 
   const Real f_in = 1.0 - 2.0*bh_mass/r_face_global_(0);
@@ -360,8 +361,9 @@ void RGPSGravityDriver::ConstructPhiFromPrimitive(){
     const Real rp = r_face_global_(i+1);
     
     const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
-    Sr_r_shell_global(i) /= dV;
-    Sr_shell_global(i) /= dV;
+    const Real dV_sample = dV / pmy_mesh_->GetFullSphereFactor();
+    Sr_r_shell_global(i) /= dV_sample;
+    Sr_shell_global(i) /= dV_sample;
   }
   
 
@@ -469,7 +471,8 @@ void RGPSGravityDriver::ConstructMgravFromConserved(){
     const Real rp = r_face_global_(i+1);
 
     const Real dV = 4.0*M_PI/3.0 * (rp*rp*rp - rm*rm*rm);
-    calE_shell_global_(i) /= dV;
+    const Real dV_sample = dV / pmy_mesh_->GetFullSphereFactor();
+    calE_shell_global_(i) /= dV_sample;
   }
 
   const Real f_in = 1.0 - 2.0*bh_mass/r_face_global_(0);
@@ -638,8 +641,8 @@ Real RGPSGravityDriver::BlackHoleMassAccretionRate() const {
   const Real mass_to_length =
     pmy_mesh_->punit->grav_const_code
     / SQR(pmy_mesh_->punit->speed_of_light_code);
-  
-  return mass_to_length * mdot;
+
+  return mass_to_length * mdot * pmy_mesh_->GetFullSphereFactor();
   
 }
 

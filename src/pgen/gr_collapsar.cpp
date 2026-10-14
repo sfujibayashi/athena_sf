@@ -288,7 +288,8 @@ namespace {
       }
     }
     
-    return mass / pmb->pmy_mesh->punit->solar_mass_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryEInnerBlocks(MeshBlock *pmb, int iout) {
@@ -322,7 +323,8 @@ namespace {
       }
     }
     
-    return E * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+    return E * pmb->pmy_mesh->GetFullSphereFactor()
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       / pmb->pmy_mesh->punit->erg_code;
   }
 
@@ -353,7 +355,8 @@ namespace {
       }
     }
     
-    return J * pmb->pmy_mesh->punit->code_velocity_cgs * pmb->pmy_mesh->punit->code_length_cgs;
+    return J * pmb->pmy_mesh->GetFullSphereFactor()
+      * pmb->pmy_mesh->punit->code_velocity_cgs * pmb->pmy_mesh->punit->code_length_cgs;
   }
 
 
@@ -439,7 +442,7 @@ namespace {
       }
     }
     
-    return sum_2mom;
+    return sum_2mom * pmb->pmy_mesh->GetFullSphereFactor();
   }
 
   void UpdateEjectaHistoryCache(MeshBlock *pmb) {
@@ -576,57 +579,57 @@ namespace {
   Real HistoryEjectaMassGeom(MeshBlock *pmb, int iout) {
     UpdateEjectaHistoryCache(pmb);
 
-    const Real M =
-      pmb->ruser_meshblock_data[2](MGEOM);
+    const Real M = pmb->ruser_meshblock_data[2](MGEOM);
     
-    return M / pmb->pmy_mesh->punit->solar_mass_code;
+    return M * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryEjectaEnergyGeom(MeshBlock *pmb, int iout) {
     UpdateEjectaHistoryCache(pmb);
     
-    const Real E =
-      pmb->ruser_meshblock_data[2](EGEOM);
+    const Real E = pmb->ruser_meshblock_data[2](EGEOM);
     
-    return E * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+    return E * pmb->pmy_mesh->GetFullSphereFactor()
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       / pmb->pmy_mesh->punit->erg_code;
   }
 
   Real HistoryEjectaMassBern(MeshBlock *pmb, int iout) {
     UpdateEjectaHistoryCache(pmb);
 
-    const Real M =
-      pmb->ruser_meshblock_data[2](MBERN);
+    const Real M = pmb->ruser_meshblock_data[2](MBERN);
     
-    return M / pmb->pmy_mesh->punit->solar_mass_code;
+    return M * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryEjectaEnergyBern(MeshBlock *pmb, int iout) {
     UpdateEjectaHistoryCache(pmb);
     
-    const Real E =
-      pmb->ruser_meshblock_data[2](EBERN);
+    const Real E = pmb->ruser_meshblock_data[2](EBERN);
     
-    return E * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+    return E * pmb->pmy_mesh->GetFullSphereFactor()
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       / pmb->pmy_mesh->punit->erg_code;
   }
 
   Real HistoryEjectaMassBind(MeshBlock *pmb, int iout) {
     UpdateEjectaHistoryCache(pmb);
 
-    const Real M =
-      pmb->ruser_meshblock_data[2](MBIND);
+    const Real M = pmb->ruser_meshblock_data[2](MBIND);
     
-    return M / pmb->pmy_mesh->punit->solar_mass_code;
+    return M * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryEjectaEnergyBind(MeshBlock *pmb, int iout) {
     UpdateEjectaHistoryCache(pmb);
     
-    const Real E =
-      pmb->ruser_meshblock_data[2](EBIND);
+    const Real E = pmb->ruser_meshblock_data[2](EBIND);
     
-    return E * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
+    return E * pmb->pmy_mesh->GetFullSphereFactor()
+      * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       / pmb->pmy_mesh->punit->erg_code;
 
   }
@@ -643,7 +646,8 @@ namespace {
     UpdateEjectaHistoryCache(pmb);
     
     Real mass = pmb->ruser_meshblock_data[2](MBAL);
-    return mass / pmb->pmy_mesh->punit->solar_mass_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code;
     
   }
 
@@ -651,28 +655,32 @@ namespace {
     UpdateEjectaHistoryCache(pmb);
     
     Real mass = pmb->ruser_meshblock_data[2](MTEXP);
-    return mass / pmb->pmy_mesh->punit->solar_mass_code * pmb->pmy_mesh->punit->code_time_cgs;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code * pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryEjectaMassExpTimeSq(MeshBlock *pmb, int iout) {
     UpdateEjectaHistoryCache(pmb);
     
     Real mass = pmb->ruser_meshblock_data[2](MTEXP2);
-    return mass / pmb->pmy_mesh->punit->solar_mass_code * SQR(pmb->pmy_mesh->punit->code_time_cgs);
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code * SQR(pmb->pmy_mesh->punit->code_time_cgs);
   }
 
   Real HistoryEjectaMassRadiusSq(MeshBlock *pmb, int iout) {
     UpdateEjectaHistoryCache(pmb);
     
     Real mass = pmb->ruser_meshblock_data[2](MR2);
-    return mass / pmb->pmy_mesh->punit->solar_mass_code * SQR(pmb->pmy_mesh->punit->code_length_cgs);
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code * SQR(pmb->pmy_mesh->punit->code_length_cgs);
   }
 
   Real HistoryEjectaMassRadiusVelocity(MeshBlock *pmb, int iout) {
     UpdateEjectaHistoryCache(pmb);
     
     Real mass = pmb->ruser_meshblock_data[2](MRVR);
-    return mass / pmb->pmy_mesh->punit->solar_mass_code * pmb->pmy_mesh->punit->code_length_cgs / pmb->pmy_mesh->punit->speed_of_light_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code * pmb->pmy_mesh->punit->code_length_cgs / pmb->pmy_mesh->punit->speed_of_light_code;
     // Units of Msun cm c
   }
 
@@ -680,7 +688,8 @@ namespace {
     UpdateEjectaHistoryCache(pmb);
     
     Real mass = pmb->ruser_meshblock_data[2](MGEOM_OUT);
-    return mass / pmb->pmy_mesh->punit->solar_mass_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code;
     // Units of Msun cm c
   }
 
@@ -688,7 +697,8 @@ namespace {
     UpdateEjectaHistoryCache(pmb);
     
     Real mass = pmb->ruser_meshblock_data[2](MVR2);
-    return mass / pmb->pmy_mesh->punit->solar_mass_code / SQR(pmb->pmy_mesh->punit->speed_of_light_code);
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code / SQR(pmb->pmy_mesh->punit->speed_of_light_code);
     // Units of Msun c^2
   }
 
@@ -756,7 +766,7 @@ namespace {
   Real HistoryOuterMassFlux(MeshBlock *pmb, int iout) {
     Real mdot = pmb->ruser_meshblock_data[3](MDOT_OUT);
     // make it units of Msun s^-1
-    return mdot
+    return mdot * pmb->pmy_mesh->GetFullSphereFactor()
       /pmb->pmy_mesh->punit->solar_mass_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
@@ -764,21 +774,23 @@ namespace {
   Real HistoryMdotInBC(MeshBlock *pmb, int iout) {
     
     Real mdot = pmb->ruser_meshblock_data[3](MDOT_IN_BC);
-    return mdot/pmb->pmy_mesh->punit->solar_mass_code
+    return mdot * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryMdotOutBC(MeshBlock *pmb, int iout) {
 
     Real mdot = pmb->ruser_meshblock_data[3](MDOT_OUT_BC);
-    return mdot/pmb->pmy_mesh->punit->solar_mass_code
+    return mdot * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryEdotInBC(MeshBlock *pmb, int iout) {
     
     Real edot = pmb->ruser_meshblock_data[3](EDOT_IN_BC);
-    return edot
+    return edot * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
@@ -787,7 +799,7 @@ namespace {
   Real HistoryEdotOutBC(MeshBlock *pmb, int iout) {
 
     Real edot = pmb->ruser_meshblock_data[3](EDOT_OUT_BC);
-    return edot
+    return edot * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
@@ -796,21 +808,23 @@ namespace {
   Real HistoryMdotInNum(MeshBlock *pmb, int iout) {
     
     Real mdot = pmb->ruser_meshblock_data[3](MDOT_IN_NUM);
-    return mdot/pmb->pmy_mesh->punit->solar_mass_code
+    return mdot * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryMdotOutNum(MeshBlock *pmb, int iout) {
 
     Real mdot = pmb->ruser_meshblock_data[3](MDOT_OUT_NUM);
-    return mdot/pmb->pmy_mesh->punit->solar_mass_code
+    return mdot * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code
       /pmb->pmy_mesh->punit->code_time_cgs;
   }
 
   Real HistoryEdotInNum(MeshBlock *pmb, int iout) {
     
     Real edot = pmb->ruser_meshblock_data[3](EDOT_IN_NUM);
-    return edot
+    return edot * pmb->pmy_mesh->GetFullSphereFactor()
       *SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
@@ -819,7 +833,7 @@ namespace {
   Real HistoryEdotOutNum(MeshBlock *pmb, int iout) {
 
     Real edot = pmb->ruser_meshblock_data[3](EDOT_OUT_NUM);
-    return edot
+    return edot * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
@@ -828,25 +842,28 @@ namespace {
   Real HistoryMassOut(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real mass = pm->ruser_mesh_data[2](MASS_OUT);
-    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryMassInBC(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real mass = pm->ruser_mesh_data[2](MASS_IN_BC);
-    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryMassOutBC(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real mass = pm->ruser_mesh_data[2](MASS_OUT_BC);
-    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryEnergyInBC(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real energy = pm->ruser_mesh_data[2](ENERGY_IN_BC);
-    return energy
+    return energy * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
   }
@@ -854,7 +871,7 @@ namespace {
   Real HistoryEnergyOutBC(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real energy = pm->ruser_mesh_data[2](ENERGY_OUT_BC);
-    return energy
+    return energy * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
   }
@@ -862,19 +879,21 @@ namespace {
   Real HistoryMassInNum(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real mass = pm->ruser_mesh_data[2](MASS_IN_NUM);
-    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryMassOutNum(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real mass = pm->ruser_mesh_data[2](MASS_OUT_NUM);
-    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryEnergyInNum(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real energy = pm->ruser_mesh_data[2](ENERGY_IN_NUM);
-    return energy
+    return energy * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
   }
@@ -882,7 +901,7 @@ namespace {
   Real HistoryEnergyOutNum(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real energy = pm->ruser_mesh_data[2](ENERGY_OUT_NUM);
-    return energy
+    return energy * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
   }
@@ -890,7 +909,7 @@ namespace {
   Real HistoryBdotInBC(MeshBlock *pmb, int iout) {
 
     Real edot = pmb->ruser_meshblock_data[3](BDOT_IN_BC);
-    return edot
+    return edot * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
@@ -899,7 +918,7 @@ namespace {
   Real HistoryBdotInNum(MeshBlock *pmb, int iout) {
 
     Real edot = pmb->ruser_meshblock_data[3](BDOT_IN_NUM);
-    return edot
+    return edot * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
@@ -908,7 +927,7 @@ namespace {
   Real HistoryBdotOutBC(MeshBlock *pmb, int iout) {
 
     Real edot = pmb->ruser_meshblock_data[3](BDOT_OUT_BC);
-    return edot
+    return edot * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
@@ -917,7 +936,7 @@ namespace {
   Real HistoryBdotOutNum(MeshBlock *pmb, int iout) {
 
     Real edot = pmb->ruser_meshblock_data[3](BDOT_OUT_NUM);
-    return edot
+    return edot * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code
       /pmb->pmy_mesh->punit->code_time_cgs;
@@ -926,7 +945,7 @@ namespace {
   Real HistoryBindInBC(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real energy = pm->ruser_mesh_data[2](BIND_IN_BC);
-    return energy
+    return energy * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
   }
@@ -934,7 +953,7 @@ namespace {
   Real HistoryBindOutBC(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real energy = pm->ruser_mesh_data[2](BIND_OUT_BC);
-    return energy
+    return energy * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
   }
@@ -942,7 +961,7 @@ namespace {
   Real HistoryBindInNum(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real energy = pm->ruser_mesh_data[2](BIND_IN_NUM);
-    return energy
+    return energy * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
   }
@@ -950,7 +969,7 @@ namespace {
   Real HistoryBindOutNum(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real energy = pm->ruser_mesh_data[2](BIND_OUT_NUM);
-    return energy
+    return energy * pmb->pmy_mesh->GetFullSphereFactor()
       * SQR(pmb->pmy_mesh->punit->speed_of_light_code)
       /pmb->pmy_mesh->punit->erg_code;
   }
@@ -958,19 +977,22 @@ namespace {
   Real HistoryMassInjOut(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real mass = pm->ruser_mesh_data[2](MASS_INJ_OUT);
-    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryMassInjIn(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real mass = pm->ruser_mesh_data[2](MASS_INJ_IN);
-    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code;
   }
 
   Real HistoryRemovedMass(MeshBlock *pmb, int iout) {
     Mesh *pm = pmb->pmy_mesh;
     Real mass = pm->ruser_mesh_data[2](MASS_REMOVED);
-    return mass/pmb->pmy_mesh->punit->solar_mass_code;
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      /pmb->pmy_mesh->punit->solar_mass_code;
   }
   
 } // namespace

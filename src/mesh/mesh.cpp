@@ -3168,3 +3168,12 @@ void Mesh::LoadRestartWithModifiedMesh(ParameterInput *pin, IOWrapper& resfile, 
 #endif
 
 }
+
+
+Real Mesh::GetFullSphereFactor() const {
+  const Real dphi = mesh_size.x3max - mesh_size.x3min;
+  const Real domega =
+    dphi * (std::cos(mesh_size.x2min) - std::cos(mesh_size.x2max));
+
+  return 4.0 * std::acos(-1.0) / domega;
+}

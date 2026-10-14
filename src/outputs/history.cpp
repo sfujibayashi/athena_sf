@@ -356,6 +356,13 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
   // only the master rank writes the file
   // create filename: "file_basename" + ".hst".  There is no file number.
   if (Globals::my_rank == 0) {
+
+    // correct volume if the computational domain is limited.
+    const Real fac_corr = pm->GetFullSphereFactor();
+    
+    for (int n=0; n<nhistory_vars; ++n) {
+      hst_data[n] *= fac_corr;
+    }
     
     const std::string mass_unit = pin->GetOrAddString(output_params.block_name,
 						      "mass_unit", "code");
