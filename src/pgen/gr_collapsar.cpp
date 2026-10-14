@@ -1732,8 +1732,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ATHENA_ERROR(msg);
   }
   
-  Real rho_atmos = pin->GetReal("problem", "rho_atmos");
-  Real press_atmos = pin->GetReal("problem", "press_atmos");
   int ind_first = collapsed.FirstCellIndex();
   
   for (int k=ks; k<=ke; k++) {
@@ -1752,8 +1750,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 	xphys = 0.0;
         if( ind>=collapsed.ncell ){
           // outside the star atmosphere
-          rho_cgs = rho_atmos;
-          press_cgs = press_atmos;
+	  rho_cgs = peos->GetDensityFloor(r)
+	    * pmy_mesh->punit->code_density_cgs;
+	  
+	  press_cgs = peos->GetPressureFloor(r)
+	    * pmy_mesh->punit->code_pressure_cgs;
+	  
           uu1 = 0.0;
 	  jrot_cgs = 0.0;
 	  ye = collapsed.ye[collapsed.ncell-1];
@@ -1876,15 +1878,14 @@ void MeshBlock::InitializeAtmosphere(ParameterInput *pin) {
   const int kl = (block_size.nx3 > 1) ? ks-NGHOST : ks;
   const int ku = (block_size.nx3 > 1) ? ke+NGHOST : ke;
 
-  const Real rho_cgs = pin->GetReal("problem", "rho_atmos");
-  const Real press_cgs = pin->GetReal("problem", "press_atmos");
-
-  const Real rho = rho_cgs / pmy_mesh->punit->code_density_cgs;
-  const Real press = press_cgs / pmy_mesh->punit->code_pressure_cgs;
   
   for (int k=kl; k<=ku; ++k) {
     for (int j=jl; j<=ju; ++j) {
       for (int i=il; i<=iu; ++i) {
+        const Real r = pcoord->x1v(i);
+	const Real rho   = peos->GetDensityFloor(r);
+        const Real press = peos->GetPressureFloor(r);
+
         phydro->w(IDN,k,j,i) = rho;
         phydro->w(IPR,k,j,i) = press;
         phydro->w(IVX,k,j,i) = 0.0;
