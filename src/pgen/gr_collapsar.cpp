@@ -519,13 +519,11 @@ namespace {
 	    if (vr > 0.0) {
 	      cache(MGEOM_OUT) += dm;
 
-	      const Real v2 =
-                1.0 - 1.0/(W*W);
+	      const Real v2 = 1.0 - 1.0/(W*W);
 
 	      if (v2 > 0.0) {
-		const Real chiP =
-                  press/(rho*v2);
-
+		const Real chiP = press/(rho*v2);
+		
 		if (chiP < chiP_cut) {
 		  cache(MBAL) += dm;
 		}
@@ -611,7 +609,6 @@ namespace {
       / pmb->pmy_mesh->punit->erg_code;
 
   }
-
   
   Real HistoryEjectaMaxRadius(MeshBlock *pmb, int iout) {
     UpdateEjectaHistoryCache(pmb);
@@ -620,6 +617,52 @@ namespace {
     return r_max*pmb->pmy_mesh->punit->code_length_cgs;
     
   }
+
+  Real HistoryEjectaBallisticMass(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
+    
+    Real mass = pmb->ruser_meshblock_data[2](MBAL);
+    return mass / pmb->pmy_mesh->punit->solar_mass_code;
+    
+  }
+
+  Real HistoryEjectaMassExpTime(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
+    
+    Real mass = pmb->ruser_meshblock_data[2](MTEXP);
+    return mass / pmb->pmy_mesh->punit->solar_mass_code * pmb->pmy_mesh->punit->code_time_cgs;
+  }
+
+  Real HistoryEjectaMassExpTimeSq(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
+    
+    Real mass = pmb->ruser_meshblock_data[2](MTEXP2);
+    return mass / pmb->pmy_mesh->punit->solar_mass_code * SQR(pmb->pmy_mesh->punit->code_time_cgs);
+  }
+
+  Real HistoryEjectaMassRadiusSq(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
+    
+    Real mass = pmb->ruser_meshblock_data[2](MR2);
+    return mass / pmb->pmy_mesh->punit->solar_mass_code * SQR(pmb->pmy_mesh->punit->code_length_cgs);
+  }
+
+  Real HistoryEjectaMassRadiusVelocity(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
+    
+    Real mass = pmb->ruser_meshblock_data[2](MRVR);
+    return mass / pmb->pmy_mesh->punit->solar_mass_code * pmb->pmy_mesh->punit->code_length_cgs / pmb->pmy_mesh->punit->speed_of_light_code;
+    // Units of Msun cm c
+  }
+
+  Real HistoryEjectaMassVelocitySq(MeshBlock *pmb, int iout) {
+    UpdateEjectaHistoryCache(pmb);
+    
+    Real mass = pmb->ruser_meshblock_data[2](MVR2);
+    return mass / pmb->pmy_mesh->punit->solar_mass_code / SQR(pmb->pmy_mesh->punit->speed_of_light_code);
+    // Units of Msun c^2
+  }
+
 
   bool EjectaReachedRadius(MeshBlock *pmb, Real rstop) {
 
@@ -1124,6 +1167,24 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(iout, HistoryBindOutNum, "bind_out_num",
                           UserHistoryOperation::max);
   ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaBallisticMass, "mejecta_ballistic",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaMassExpTime, "mej_texp",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaMassExpTimeSq, "mej_texp^2",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaMassRadiusSq, "mej_r^2",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaMassRadiusVelocity, "mej_r_vr",
+                          UserHistoryOperation::sum);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryEjectaMassVelocitySq, "mej_vr^2",
+                          UserHistoryOperation::sum);
+  ++iout;
   EnrollUserHistoryOutput(iout, HistoryRemovedMass, "removed_mass",
                           UserHistoryOperation::max);
 
@@ -1215,6 +1276,63 @@ void Mesh::UserWorkInLoop(void) {
     }
   }
   
+}
+
+void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
+
+  const Real mass_threshold =
+      pin->GetOrAddReal("problem",
+                        "inner_block_mass_threshold", 0.01);
+
+  Real M_inner = 0.0;
+  Real E_inner = 0.0;
+  Real r_ej_max = 0.0;
+  int ejecta_reached = 0;
+
+  const Real rstop = 0.95 * mesh_size.x1max;
+
+  for (int b=0; b<nblocal; ++b) {
+    MeshBlock *pmb = my_blocks(b);
+
+    M_inner += HistoryMInnerBlocks(pmb, 0);
+    E_inner += HistoryEInnerBlocks(pmb, 0);
+
+    r_ej_max = std::max(
+        r_ej_max, HistoryEjectaMaxRadius(pmb, 0));
+
+    if (EjectaReachedRadius(pmb, rstop)) {
+      ejecta_reached = 1;
+    }
+  }
+
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, &M_inner, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &E_inner, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &r_ej_max, 1, MPI_ATHENA_REAL, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &ejecta_reached, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+#endif
+
+  const int add_outer = ejecta_reached ? 1 : 0;
+  
+  // A first-pass mass-based recommendation.
+  const int remove_inner = (nrbx1 > 1 && M_inner < mass_threshold) ? 1 : 0;
+
+  if (Globals::my_rank == 0) {
+    std::cout << "\n=== Restart recommendation ===\n"
+              << "time             = " << time * punit->code_time_cgs << " s\n"
+              << "cycle            = " << ncycle << "\n"
+              << "M_inner_block    = " << M_inner << " Msun\n"
+              << "E_inner_block    = " << E_inner << " erg\n"
+              << "r_ej_max         = " << r_ej_max * punit->code_length_cgs
+              << " cm\n"
+              << "r_outer          = " << mesh_size.x1max * punit->code_length_cgs
+              << " cm\n"
+              << "ejecta_reached   = " << ejecta_reached << "\n\n"
+              << "<restart_mesh>\n"
+              << "remove_inner_blocks = " << remove_inner << "\n"
+              << "add_outer_blocks    = " << add_outer << "\n"
+              << "==============================\n";
+  }
 }
 
 
