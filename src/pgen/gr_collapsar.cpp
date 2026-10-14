@@ -735,7 +735,7 @@ namespace {
 
 	  const Real Xphys = pmb->pscalars->r(IXPHYS,k,j,i);
 	  if (Xphys<0.1 ){
-	    break;
+	    continue;
 	  }
 
 	  const Real uu1 = pmb->phydro->w(IVX,k,j,i);
@@ -1070,6 +1070,36 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     if (Globals::my_rank == 0) {
       printf("Black hole mass (cgs,code unit)=%15.7e, %15.7e\n",M_inner_cgs, m_bh_code);
     }
+
+    const Real r_surface_cgs = collapsed.radius_face.back();
+    const Real rho_surface_cgs = collapsed.rho.back();
+    const Real pgas_surface_cgs = collapsed.press.back();
+
+    if (Globals::my_rank == 0) {
+      printf("Surface radius, density, and pressure = %15.7e %15.7e, %15.7e\n",r_surface_cgs, rho_surface_cgs, pgas_surface_cgs);
+    }
+
+
+    // Density of the artificial atmosphere relative to
+    // the surface density of the progenitor
+    const Real rho_atmos_factor = pin->GetOrAddReal("problem", "rho_atmos_factor", 1.0);
+    const Real pgas_atmos_factor = pin->GetOrAddReal("problem", "pgas_atmos_factor", 1.0);
+    
+
+    // Convert to code units
+    const Real r0_pow = r_surface_cgs / punit->code_length_cgs;
+
+    const Real rho_min = rho_atmos_factor * rho_surface_cgs
+      / punit->code_density_cgs;
+
+    const Real pgas_min = pgas_atmos_factor * pgas_surface_cgs
+      / punit->code_energydensity_cgs;
+
+    // Set EOS parameters before MeshBlock construction
+    pin->SetReal("hydro", "r0_pow", r0_pow);
+    pin->SetReal("hydro", "rho_min", rho_min);
+    pin->SetReal("hydro", "pgas_min", pgas_min);
+    
   }
   
   // pin->SetReal("coord", "m", m_bh_code);
