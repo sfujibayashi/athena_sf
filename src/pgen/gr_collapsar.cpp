@@ -1589,15 +1589,15 @@ void MeshBlock::UserWorkAfterScalarFlux(int stage, Real t_stage) {
 	if(F_Dinj>0.0){
 	  mdot_inj_in += area * F_Dinj;
 	}else{
-	  mdot_inj_in += area * F_Dinj;
+	  mdot_inj_out += area * F_Dinj;
 	}
       }
     }
   }
   
   AthenaArray<Real> &cache = ruser_meshblock_data[3];
+  cache(MDOT_INJ_IN) = mdot_inj_in;
   cache(MDOT_INJ_OUT) = mdot_inj_out;
-  cache(MDOT_INJ_OUT) = mdot_inj_in;
 }
 
 
