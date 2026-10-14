@@ -165,7 +165,7 @@ void OutflowBoundaryData::Analyze(Real gamma_ad) const {
 
   std::ofstream ofs("outflow_analysis.dat");
   ofs << "#";
-  for (int i=0; i<19; ++i){
+  for (int i=1; i<=25; ++i){
     ofs << std::setw(16) << i;
   }
   ofs << "\n";
@@ -192,8 +192,15 @@ void OutflowBoundaryData::Analyze(Real gamma_ad) const {
       << std::setw(16) << "psi_max"
       << std::setw(16) << "<h(NR)-h_min>"
       << std::setw(16) << "<h-1>"
+      << std::setw(16) << "Mdot_in"
+      << std::setw(16) << "Mdot_out"
+      << std::setw(16) << "Mass_in"
+      << std::setw(16) << "Mass_out"
       << "\n";
   
+  Real Mass_in = 0.0;
+  Real Mass_out= 0.0;
+
   Real Mej_geom = 0.0;
   Real Mej_bern = 0.0;
   Real Mej_bind = 0.0;
@@ -209,7 +216,9 @@ void OutflowBoundaryData::Analyze(Real gamma_ad) const {
     Real psi_av = 0.0;
     Real psi_min= 1.0e99;
     Real psi_max= 0.0;
-    
+
+    Real Mdot_in = 0.0;
+    Real Mdot_out = 0.0;
     Real Mdot_geom = 0.0;
     Real Mdot_bern = 0.0;
     Real Mdot_bind = 0.0;
@@ -235,6 +244,12 @@ void OutflowBoundaryData::Analyze(Real gamma_ad) const {
       Real ebern = (-state.hut-h_min_global_)*c2;
       Real ebind = (state.alpha*state.qe - h_min_global_)*c2;
 
+      if( vr>0.0){
+	Mdot_in += dM_dt_face;
+      }else{
+	Mdot_out-= dM_dt_face;
+      }
+      
       if( egeom > 0.0 and vr>0.0){
 	Mdot_geom += dM_dt_face;
 	Edot_geom += dM_dt_face*egeom;
@@ -269,6 +284,9 @@ void OutflowBoundaryData::Analyze(Real gamma_ad) const {
     }
     alpha_av /= (4.0*M_PI);
     psi_av /= (4.0*M_PI);
+
+    Mass_in += Mdot_in * dt_cgs;
+    Mass_out+= Mdot_out* dt_cgs;
 
     Mej_geom += Mdot_geom * dt_cgs;
     Mej_bern += Mdot_bern * dt_cgs;
@@ -305,6 +323,10 @@ void OutflowBoundaryData::Analyze(Real gamma_ad) const {
 	<< std::setw(16) << psi_max
 	<< std::setw(16) << dhNR_av
 	<< std::setw(16) << dhAth_av
+	<< std::setw(16) << Mdot_in /Msun_table_
+	<< std::setw(16) << Mdot_out /Msun_table_
+	<< std::setw(16) << Mass_in /Msun_table_
+	<< std::setw(16) << Mass_out /Msun_table_
 	<< "\n";
   }
   std::cout << std::setprecision(5)
