@@ -243,14 +243,21 @@ namespace {
       pmb->pmy_mesh->punit->grav_const_code
       / SQR(pmb->pmy_mesh->punit->speed_of_light_code);
     
-    // return pmb->pmetric->GetBlackHoleMass()/mass_to_length;
-    // return pmb->pmy_mesh->pmetric_driver->GetBlackHoleMass()/mass_to_length;
     return pmb->pmy_mesh->pmetric_driver->GetBlackHoleMass()
-      / mass_to_length;
+      / mass_to_length / pmb->pmy_mesh->punit->solar_mass_code;
   }
   
   Real HistoryBlackHoleMassAccretionRate(MeshBlock *pmb, int iout) {
-    return pmb->pmy_mesh->pmetric_driver->GetBlackHoleMassAccretionRate();
+    const Real mdot_geom =
+      pmb->pmy_mesh->pmetric_driver->GetBlackHoleMassAccretionRate();
+    const Real mass_to_length =
+      pmb->pmy_mesh->punit->grav_const_code
+      / SQR(pmb->pmy_mesh->punit->speed_of_light_code);
+
+    return mdot_geom / mass_to_length
+      / pmb->pmy_mesh->punit->solar_mass_code
+      / pmb->pmy_mesh->punit->code_time_cgs;
+
   }
 
   Real HistoryMInnerBlocks(MeshBlock *pmb, int iout) {
