@@ -112,7 +112,6 @@ void CheckBoundaryFlag(BoundaryFlag block_flag, CoordinateDirection dir) {
       switch(block_flag) {
         case BoundaryFlag::polar:
         case BoundaryFlag::polar_wedge:
-        case BoundaryFlag::diode:
         case BoundaryFlag::undef:
           ATHENA_ERROR(msg);
           break;
@@ -123,6 +122,7 @@ void CheckBoundaryFlag(BoundaryFlag block_flag, CoordinateDirection dir) {
     case CoordinateDirection::X2DIR:
       switch(block_flag) {
         case BoundaryFlag::shear_periodic:
+        case BoundaryFlag::diode:
         case BoundaryFlag::undef:
           ATHENA_ERROR(msg);
           break;
@@ -134,6 +134,7 @@ void CheckBoundaryFlag(BoundaryFlag block_flag, CoordinateDirection dir) {
       switch(block_flag) {
         case BoundaryFlag::polar:
         case BoundaryFlag::polar_wedge:
+        case BoundaryFlag::diode:
         case BoundaryFlag::shear_periodic:
         case BoundaryFlag::undef:
           ATHENA_ERROR(msg);
