@@ -2222,13 +2222,13 @@ void DiodeOuterX1(MeshBlock *pmb, Coordinates *pco,
   for (int k=kl; k<=ku; ++k) {
     for (int j=jl; j<=ju; ++j) {
 
-      const Real ur = std::min(prim(IVX,k,j,il), 0.0);
+      const Real ur = std::max(prim(IVX,k,j,iu), 0.0);
       
-      for (int i=il-ngh; i<il; ++i) {
+      for (int i=iu+1; i<=iu+ngh; ++i) {
 
         // Copy all primitive hydro variables
         for (int n=0; n<NHYDRO; ++n) {
-          prim(n,k,j,i) = prim(n,k,j,il);
+          prim(n,k,j,i) = prim(n,k,j,iu);
         }
 
         // Do not allow outward radial velocity
@@ -2237,7 +2237,7 @@ void DiodeOuterX1(MeshBlock *pmb, Coordinates *pco,
 #if NSCALARS > 0
         // Copy passive scalar mass fractions
         for (int n=0; n<NSCALARS; ++n) {
-          pmb->pscalars->r(n,k,j,i) = pmb->pscalars->r(n,k,j,il);
+          pmb->pscalars->r(n,k,j,i) = pmb->pscalars->r(n,k,j,iu);
         }
 #endif
       }
