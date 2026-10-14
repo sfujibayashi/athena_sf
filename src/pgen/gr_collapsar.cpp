@@ -136,6 +136,9 @@ CollapsedProfile CollapseProgenitor(const ProgenitorProfile &progenitor, Real t0
 void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
                       Real time, Real dt,
                       int il, int iu, int jl, int ju, int kl, int ku, int ngh);
+void DiodeOuterX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
+                      Real time, Real dt,
+                      int il, int iu, int jl, int ju, int kl, int ku, int ngh);
 
 Real LogarithmicX1(Real x, RegionSize rs);
 
@@ -1069,6 +1072,11 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 		<< GetBoundaryString(mesh_bcs[BoundaryFace::inner_x1])
 		<< std::endl;
     }
+  }
+
+  if (mesh_bcs[BoundaryFace::outer_x1] == BoundaryFlag::user) {
+    EnrollUserBoundaryFunction(BoundaryFace::outer_x1,
+			       DiodeOuterX1);
   }
   // output
   AllocateUserHistoryOutput(48);
@@ -2062,21 +2070,29 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
   const Real code_rho_cgs = pmb->pmy_mesh->punit->code_density_cgs;
   const Real code_press_cgs = pmb->pmy_mesh->punit->code_pressure_cgs;
 
+  const Real tmax = pmb->pmy_mesh->poutflow->GetTimeMax();
+  const Real tmin = pmb->pmy_mesh->poutflow->GetTimeMin();
+  
   const Real vv_max = 1.0 - 1.0/(W_max*W_max);
-  Real time_cgs = time * code_time_cgs;
+  const Real time_cgs = time * code_time_cgs;
 
-  Real fac = 1.0;
-  Real time_interp = time_cgs;
+  const Real time_interp = std::max(tmin, std::min(time_cgs, tmax));
+  const Real s = std::max(0.0, std::min((time_cgs - tmax)/timescale_cut, 1.0));
 
-  // Avoid extrapolation
-  // should determine how we will deal with after running out of data.
-  if      ( time_cgs > pmb->pmy_mesh->poutflow->GetTimeMax() ){
-    time_interp = pmb->pmy_mesh->poutflow->GetTimeMax();
-    fac = std::exp(- (time_cgs-pmb->pmy_mesh->poutflow->GetTimeMax())/timescale_cut );
-  }else if( time_cgs < pmb->pmy_mesh->poutflow->GetTimeMin() ){
-    time_interp = pmb->pmy_mesh->poutflow->GetTimeMin();
-    fac = 1.0;
-  }
+  const Real w_inj = 1.0 - s*s*(3.0 - 2.0*s);
+  
+  // Real fac = 1.0;
+  // Real time_interp = time_cgs;
+
+  // // Avoid extrapolation
+  // // should determine how we will deal with after running out of data.
+  // if      ( time_cgs > pmb->pmy_mesh->poutflow->GetTimeMax() ){
+  //   time_interp = pmb->pmy_mesh->poutflow->GetTimeMax();
+  //   fac = std::exp(- (time_cgs-pmb->pmy_mesh->poutflow->GetTimeMax())/timescale_cut );
+  // }else if( time_cgs < pmb->pmy_mesh->poutflow->GetTimeMin() ){
+  //   time_interp = pmb->pmy_mesh->poutflow->GetTimeMin();
+  //   fac = 1.0;
+  // }
   
   // set primitive variables in inlet ghost zones
   for (int k=kl; k<=ku; ++k) {
@@ -2130,8 +2146,9 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
       Real m3_y = 1.0/sintheta;
 
 #pragma omp simd
-      for (int n=1; n<=ngh; ++n) {
-        int i = il - n;
+      for (int ng=1; ng<=ngh; ++ng) {
+	
+        const int i = il - ng;
         Real r = pmb->pcoord->x1v(i);
         // Real r2=r*r;
         
@@ -2168,12 +2185,20 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
         Real uu2 = W * v2;
         Real uu3 = W * v3;
         
-        prim(IDN,k,j,i) = state.rho/code_rho_cgs * fac;
-        prim(IPR,k,j,i) = state.press/code_press_cgs * fac;
+        prim(IDN,k,j,i) = state.rho/code_rho_cgs;
+        prim(IPR,k,j,i) = state.press/code_press_cgs;
         prim(IVX,k,j,i) = uu1;
         prim(IVY,k,j,i) = uu2;
         prim(IVZ,k,j,i) = uu3;
 
+	for (int n=0; n<NHYDRO; ++n) {
+	  Real diode = prim(n,k,j,il);
+	  if (n == IVX) {
+	    diode = std::min(diode, 0.0);
+	  }
+	  prim(n,k,j,i) = w_inj*prim(n,k,j,i) + (1.0-w_inj)*diode;
+	}
+	
 	
 #if NSCALARS > 0
 	pmb->pscalars->r(IYE,k,j,i)   = state.ye;
@@ -2187,6 +2212,39 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
     }
   }
 }
+
+void DiodeOuterX1(MeshBlock *pmb, Coordinates *pco,
+                  AthenaArray<Real> &prim, FaceField &b,
+                  Real time, Real dt,
+                  int il, int iu, int jl, int ju,
+                  int kl, int ku, int ngh) {
+
+  for (int k=kl; k<=ku; ++k) {
+    for (int j=jl; j<=ju; ++j) {
+
+      const Real ur = std::min(prim(IVX,k,j,il), 0.0);
+      
+      for (int i=il-ngh; i<il; ++i) {
+
+        // Copy all primitive hydro variables
+        for (int n=0; n<NHYDRO; ++n) {
+          prim(n,k,j,i) = prim(n,k,j,il);
+        }
+
+        // Do not allow outward radial velocity
+        prim(IVX,k,j,i) = ur;
+
+#if NSCALARS > 0
+        // Copy passive scalar mass fractions
+        for (int n=0; n<NSCALARS; ++n) {
+          pmb->pscalars->r(n,k,j,i) = pmb->pscalars->r(n,k,j,il);
+        }
+#endif
+      }
+    }
+  }
+}
+
 
 
 Real LogarithmicX1(Real x, RegionSize rs) {
