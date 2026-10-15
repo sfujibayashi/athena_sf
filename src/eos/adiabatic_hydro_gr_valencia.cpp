@@ -12,6 +12,9 @@
 // C++ headers
 #include <algorithm>  // max, min
 #include <cmath>      // abs, isfinite, pow, sqrt
+#include <iomanip>    // setprecision
+#include <limits>     // numeric_limits
+#include <sstream>    // stringstream
 
 // Athena++ headers
 #include "../athena.hpp"                   // enums, macros
@@ -355,24 +358,70 @@ void EquationOfState::SoundSpeedsSR(Real rho_h, Real pgas, Real vx, Real gamma_l
 void EquationOfState::SoundSpeedsGR(Real rho_h, Real pgas, Real u0, Real u1, Real g00,
                                     Real g01, Real g11,
                                     Real *plambda_plus, Real *plambda_minus) {
-  // Parameters and constants
-  const Real discriminant_tol = -1.0e-10;  // values between this and 0 are considered 0
   const Real gamma_adi = gamma_;
+  const Real nan = std::numeric_limits<Real>::quiet_NaN();
+  Real cs_sq = nan, a = nan, b = nan, c = nan, d = nan, discriminant_tol = nan;
+  auto fail = [&](const char *reason) {
+    std::stringstream msg;
+    msg << std::scientific << std::setprecision(std::numeric_limits<Real>::max_digits10)
+        << "### FATAL ERROR in EquationOfState::SoundSpeedsGR\n"
+        << reason << "\n"
+        << "gid=" << pmy_block_->gid
+        << " cycle=" << pmy_block_->pmy_mesh->ncycle
+        << " time=" << pmy_block_->pmy_mesh->time << "\n"
+        << "rho_h=" << rho_h << " pgas=" << pgas << " gamma=" << gamma_adi
+        << " cs_sq=" << cs_sq << "\n"
+        << "u0=" << u0 << " u1=" << u1 << "\n"
+        << "g00=" << g00 << " g01=" << g01 << " g11=" << g11 << "\n"
+        << "a=" << a << " b=" << b << " c=" << c
+        << " discriminant=" << d << " tolerance=" << discriminant_tol << "\n";
+    ATHENA_ERROR(msg);
+  };
+
+  if (!std::isfinite(rho_h) || rho_h <= 0.0 || !std::isfinite(pgas) || pgas < 0.0
+      || !std::isfinite(gamma_adi) || !std::isfinite(u0) || u0 <= 0.0
+      || !std::isfinite(u1) || !std::isfinite(g00) || g00 >= 0.0
+      || !std::isfinite(g01) || !std::isfinite(g11)) {
+    fail("Invalid thermodynamic state, four-velocity, or inverse metric.");
+  }
 
   // Calculate comoving sound speed
-  Real cs_sq = gamma_adi * pgas / rho_h;
+  cs_sq = gamma_adi * (pgas / rho_h);
+  if (!std::isfinite(cs_sq) || cs_sq < 0.0 || cs_sq >= 1.0) {
+    fail("Comoving sound speed squared must be finite and in [0,1).");
+  }
 
   // Set sound speeds in appropriate coordinates
-  Real a = SQR(u0) - (g00 + SQR(u0)) * cs_sq;
-  Real b = -2.0 * (u0*u1 - (g01 + u0*u1) * cs_sq);
-  Real c = SQR(u1) - (g11 + SQR(u1)) * cs_sq;
-  Real d = SQR(b) - 4.0*a*c;
-  if (d < 0.0 && d > discriminant_tol) {
-    d = 0.0;
+  a = SQR(u0) - (g00 + SQR(u0)) * cs_sq;
+  b = -2.0 * (u0*u1 - (g01 + u0*u1) * cs_sq);
+  c = SQR(u1) - (g11 + SQR(u1)) * cs_sq;
+  const Real bb = SQR(b);
+  const Real four_ac = 4.0*a*c;
+  d = bb - four_ac;
+  // Both terms have the same coordinate-dependent units as the discriminant.
+  discriminant_tol = 64.0*std::numeric_limits<Real>::epsilon()
+                     * (bb + std::abs(four_ac));
+  if (!std::isfinite(a) || a <= 0.0 || !std::isfinite(b) || !std::isfinite(c)
+      || !std::isfinite(d) || !std::isfinite(discriminant_tol)) {
+    fail("Non-finite or degenerate sound-speed quadratic.");
   }
-  Real d_sqrt = std::sqrt(d);
-  Real root_1 = (-b + d_sqrt) / (2.0*a);
-  Real root_2 = (-b - d_sqrt) / (2.0*a);
+  if (d < -discriminant_tol) {
+    fail("Negative sound-speed discriminant exceeds relative roundoff tolerance.");
+  }
+  d = std::max(d, static_cast<Real>(0.0));
+
+  Real root_1, root_2;
+  if (d == 0.0) {
+    root_1 = root_2 = -0.5*(b/a);
+  } else {
+    // Avoid cancellation in one root; recover the other from their product c/a.
+    const Real q = -0.5*(b + std::copysign(std::sqrt(d), b));
+    root_1 = q/a;
+    root_2 = c/q;
+  }
+  if (!std::isfinite(root_1) || !std::isfinite(root_2)) {
+    fail("Non-finite sound-speed roots.");
+  }
   if (root_1 > root_2) {
     *plambda_plus = root_1;
     *plambda_minus = root_2;
