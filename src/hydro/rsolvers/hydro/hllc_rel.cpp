@@ -11,6 +11,7 @@
 // C++ headers
 #include <algorithm>  // max(), min()
 #include <cmath>      // abs(), sqrt()
+#include <limits>     // numeric_limits
 
 // Athena++ headers
 #include "../../../athena.hpp"                   // enums, macros
@@ -249,14 +250,54 @@ void HLLCTransforming(MeshBlock *pmb, const int k, const int j, const int il,
     }
 
     // Calculate contact wavespeed (MB2005 18)
-    Real lambda_star;
-    Real b = -(cons_hll[IEN] + flux_hll[ivx]);
-    if (std::abs(flux_hll[IEN]) > TINY_NUMBER) {  // use quadratic formula
-      // Follows algorithm in Numerical Recipes (section 5.6) for avoiding cancellations
-      lambda_star = - 2.0 * cons_hll[ivx]
-                    / (b - std::sqrt(SQR(b) - 4.0*flux_hll[IEN]*cons_hll[ivx]));
-    } else { // no quadratic term
-      lambda_star = - cons_hll[ivx] / b;
+    // Normalize before forming the coefficients: a change of density/pressure
+    // units must not change the root or select a different approximation.
+    const Real scale = std::max(std::max(std::abs(flux_hll[IEN]),
+                                        std::abs(cons_hll[ivx])),
+                                std::max(std::abs(cons_hll[IEN]),
+                                         std::abs(flux_hll[ivx])));
+    Real lambda_star = 0.0;
+    bool use_hlle = !(scale > 0.0) || !std::isfinite(scale);
+    if (!use_hlle) {
+      const Real a = flux_hll[IEN]/scale;
+      const Real b = -(cons_hll[IEN]/scale + flux_hll[ivx]/scale);
+      const Real c = cons_hll[ivx]/scale;
+      const Real four_ac = 4.0*a*c;
+      Real discriminant = SQR(b) - four_ac;
+      const Real discriminant_tol = 64.0*std::numeric_limits<Real>::epsilon()
+                                    * (SQR(b) + std::abs(four_ac));
+      use_hlle = !std::isfinite(discriminant) || b >= 0.0
+                 || discriminant < -discriminant_tol;
+      if (!use_hlle) {
+        discriminant = std::max(discriminant, static_cast<Real>(0.0));
+        // Same physical root as before, without dividing by a.  For a=0,
+        // b<0 this also gives the exact linear solution -c/b.
+        const Real denominator = -b + std::sqrt(discriminant);
+        lambda_star = 2.0*c/denominator;
+        use_hlle = !std::isfinite(lambda_star) || std::abs(lambda_star) >= 1.0
+                   || lambda_star <= lambda_l || lambda_star >= lambda_r;
+      }
+    }
+    if (use_hlle) {
+      // Preserve both HLL conserved variables and fluxes for the GR transform.
+      Real v_interface = 0.0;
+      if (GENERAL_RELATIVITY) {
+        v_interface = gi(i01,i) / std::sqrt(SQR(gi(i01,i)) - gi(I00,i)*gi(i11,i));
+      }
+      const Real *cons_interface = cons_hll;
+      const Real *flux_interface = flux_hll;
+      if (lambda_l >= v_interface) {
+        cons_interface = cons_l;
+        flux_interface = flux_l;
+      } else if (lambda_r <= v_interface) {
+        cons_interface = cons_r;
+        flux_interface = flux_r;
+      }
+      for (int n = 0; n < NWAVE; ++n) {
+        if (GENERAL_RELATIVITY) cons(n,i) = cons_interface[n];
+        flux(n,k,j,i) = flux_interface[n];
+      }
+      continue;
     }
 
     // Calculate contact pressure (MB2006 48)
