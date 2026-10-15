@@ -539,29 +539,50 @@ bool ConservedToPrimitiveNormal(
   // Parameters
   const int max_iterations = 15;
   const Real tol = 1.0e-12;
-  //const Real pgas_uniform_min = 1.0e-12;
-  const Real a_min = 1.0e-30;
+  const Real eps = std::numeric_limits<Real>::epsilon();
+  const Real a_min = 32.0*eps;  // dimensionless, after local normalization
   const Real v_sq_max = 1.0 - 1.0e-12;
   const Real rr_max = 1.0 - 1.0e-12;
 
   // Extract conserved values
-  const Real &dd = dd_vals(i);
-  const Real &ee = ee_vals(i);
-  const Real &mm_sq = mm_vals(0,i);
-  const Real &mm1 = mm_vals(1,i);
-  const Real &mm2 = mm_vals(2,i);
-  const Real &mm3 = mm_vals(3,i);
+  const Real dd_raw = dd_vals(i);
+  const Real ee_raw = ee_vals(i);
+  const Real mm_sq_raw = mm_vals(0,i);
+  if (!std::isfinite(dd_raw) || dd_raw <= 0.0
+      || !std::isfinite(ee_raw) || ee_raw <= 0.0
+      || !std::isfinite(mm_sq_raw) || mm_sq_raw < 0.0
+      || !std::isfinite(mm_vals(1,i)) || !std::isfinite(mm_vals(2,i))
+      || !std::isfinite(mm_vals(3,i)) || !std::isfinite(pgas_old)
+      || !std::isfinite(gamma_adi) || gamma_adi <= 1.0) {
+    return false;
+  }
 
-  const Real eps = std::numeric_limits<Real>::epsilon();
-  Real escale = std::max(std::abs(ee), std::abs(dd));
+  // Normalize locally; never form the square of a dimensional energy scale.
+  const Real momentum = std::sqrt(mm_sq_raw);
+  const Real scale = std::max(std::max(std::abs(ee_raw), std::abs(dd_raw)), momentum);
+  const Real dd = dd_raw/scale;
+  const Real ee = ee_raw/scale;
+  const Real mm_sq = (mm_sq_raw/scale)/scale;
+  const Real mm1 = mm_vals(1,i)/scale;
+  const Real mm2 = mm_vals(2,i)/scale;
+  const Real mm3 = mm_vals(3,i)/scale;
+  const Real escale = std::max(std::abs(ee), std::abs(dd));
+  // Reject inadmissible states independently of the caller's conserved-value repair.
+  // Allow roundoff at the cold-state boundary E = sqrt(D^2 + M^2).
+  if (ee + a_min < std::hypot(dd, momentum/scale)
+      || !std::isfinite(mm1) || !std::isfinite(mm2) || !std::isfinite(mm3)) {
+    return false;
+  }
 
   // Calculate functions of conserved quantities
-  //Real pgas_min = -ee;
-  //pgas_min = std::max(pgas_min, pgas_floor);
+  // The physical pressure floor remains the caller's responsibility.
   const Real pgas_min = std::max(-ee + a_min, 0.0);
   // Iterate until convergence
   Real pgas[3];
-  pgas[0] = std::max(pgas_old, pgas_min);
+  pgas[0] = std::max(pgas_old/scale, pgas_min);
+  if (!std::isfinite(pgas[0])) {
+    return false;
+  }
   int n;
   for (n = 0; n < max_iterations; ++n) {
     // Step 1: Calculate cubic coefficients
@@ -619,17 +640,17 @@ bool ConservedToPrimitiveNormal(
   if (n == max_iterations) {
     return false;
   }
-  prim(IPR,k,j,i) = pgas[(n+1)%3];
+  prim(IPR,k,j,i) = pgas[(n+1)%3]*scale;
   if (!std::isfinite(prim(IPR,k,j,i))) {
     return false;
   }
-  Real a = ee + prim(IPR,k,j,i);                   // (NH 5.7)
+  Real a = ee + pgas[(n+1)%3];                    // (NH 5.7), normalized
   a = std::max(a, a_min);
   Real v_sq = mm_sq / SQR(a);                      // (NH 5.2)
   v_sq = std::min(std::max(v_sq, static_cast<Real>(0.0)), v_sq_max);
   Real gamma_sq = 1.0/(1.0-v_sq);                  // (NH 3.1)
   Real gamma = std::sqrt(gamma_sq);                // (NH 3.1)
-  prim(IDN,k,j,i) = dd/gamma;                      // (NH 4.5)
+  prim(IDN,k,j,i) = dd_raw/gamma;                  // (NH 4.5), original units
   if (!std::isfinite(prim(IDN,k,j,i))) {
     return false;
   }
