@@ -491,7 +491,7 @@ bool ConservedToPrimitiveNormal(
   const int max_iterations = 15;
   const Real tol = 1.0e-12;
   //const Real pgas_uniform_min = 1.0e-12;
-  const Real a_min = 1.0e-12;
+  const Real a_min = 1.0e-30;
   const Real v_sq_max = 1.0 - 1.0e-12;
   const Real rr_max = 1.0 - 1.0e-12;
 
