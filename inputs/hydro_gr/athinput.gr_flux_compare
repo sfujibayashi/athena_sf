@@ -1,0 +1,76 @@
+<comment>
+problem = direct GR Valencia face-flux comparison
+
+<job>
+problem_id = gr_flux_compare
+
+<units>
+unit_system = custom
+length_cgs = 1.0
+time_cgs   = 3.3356409519815204e-11
+mass_cgs   = 1.3465909215001090e28
+
+<time>
+cfl_number = 0.4
+nlim       = 0
+tlim       = 0.0
+integrator = vl2
+xorder     = 1
+
+<mesh>
+nx1   = 8
+x1min = 6.0
+x1max = 20.0
+x1rat = 1.0
+ix1_bc = outflow
+ox1_bc = outflow
+
+nx2   = 4
+x2min = 0.4
+x2max = 2.7
+x2rat = 1.0
+ix2_bc = outflow
+ox2_bc = outflow
+
+nx3   = 4
+x3min = 0.0
+x3max = 6.2831853071795862
+x3rat = 1.0
+ix3_bc = periodic
+ox3_bc = periodic
+
+<meshblock>
+nx1 = 8
+nx2 = 4
+nx3 = 4
+
+<coord>
+m = 1.0
+j = 0.0
+initial_metric_update = true
+
+<hydro>
+gamma  = 1.3333333333333333
+dfloor = 1.0e-20
+pfloor = 1.0e-22
+
+<problem>
+# orthonormal spatial components of tilde{u}^i = W v^i
+rho_l = 1.0
+p_l   = 0.3
+uh1_l = 0.4
+uh2_l = 0.2
+uh3_l = -0.1
+
+rho_r = 0.7
+p_r   = 0.15
+uh1_r = -0.2
+uh2_r = 0.1
+uh3_r = 0.25
+
+# A non-history output is needed so UserWorkBeforeOutput() is called initially.
+<output1>
+file_type = tab
+variable  = prim
+id        = prim
+dt        = 1.0
