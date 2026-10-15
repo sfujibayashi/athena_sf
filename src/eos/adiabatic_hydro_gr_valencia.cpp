@@ -113,6 +113,8 @@ void EquationOfState::ConservedToPrimitive(
         // Set flag indicating conserved values need adjusting at end
         bool fixed = false;
 
+	const Real tau_before = cons(IEN,k,j,i);
+
         // Calculate floors for density and pressure
         const Real density_floor_local = GetDensityFloor(pco->x1v(i));                    
         const Real pressure_floor_local = GetPressureFloor(pco->x1v(i));
@@ -124,23 +126,50 @@ void EquationOfState::ConservedToPrimitive(
           fixed = true;
         }
 
-        // Ensure conserved energy is large enough
-        Real ee_min = density_floor_local + pressure_floor_local/(gamma_adi-1.0);
-        if (normal_ee_(i) < ee_min) {
-          normal_ee_(i) = ee_min;
-          fixed = true;
-        }
+	// D > 0 and E >= D must hold
+	const Real dd = normal_dd_(i);
 
-        // Ensure conserved momentum is not too large given energy
-        Real mm_sq_max = mm_sq_ee_sq_max * SQR(normal_ee_(i));
-        if (normal_mm_(0,i) > mm_sq_max) {
-          Real factor = std::sqrt(mm_sq_max/normal_mm_(0,i));
-          normal_mm_(0,i) = mm_sq_max;
-          normal_mm_(1,i) *= factor;
-          normal_mm_(2,i) *= factor;
-          normal_mm_(3,i) *= factor;
-          fixed = true;
-        }
+	const Real ee_min = dd + pressure_floor_local/(gamma_adi-1.0);
+
+	if (normal_ee_(i) < ee_min) {
+	  normal_ee_(i) = ee_min;
+	  fixed = true;
+	}
+
+	// Physical admissibility condition:
+	// M^2 <= E^2 - D^2
+	const Real ee = normal_ee_(i);
+	
+	const Real mm_sq_max = (1.0 - 1.0e-12) * std::max(static_cast<Real>(0.0), (ee-dd)*(ee+dd));
+
+	if (normal_mm_(0,i) > mm_sq_max) {
+	  const Real factor = std::sqrt(mm_sq_max/normal_mm_(0,i));
+	  
+	  normal_mm_(0,i) = mm_sq_max;
+	  normal_mm_(1,i) *= factor;
+	  normal_mm_(2,i) *= factor;
+	  normal_mm_(3,i) *= factor;
+	  
+	  fixed = true;
+	}
+
+        // // Ensure conserved energy is large enough
+        // Real ee_min = density_floor_local + pressure_floor_local/(gamma_adi-1.0);
+        // if (normal_ee_(i) < ee_min) {
+        //   normal_ee_(i) = ee_min;
+        //   fixed = true;
+        // }
+
+        // // Ensure conserved momentum is not too large given energy
+        // Real mm_sq_max = mm_sq_ee_sq_max * SQR(normal_ee_(i));
+        // if (normal_mm_(0,i) > mm_sq_max) {
+        //   Real factor = std::sqrt(mm_sq_max/normal_mm_(0,i));
+        //   normal_mm_(0,i) = mm_sq_max;
+        //   normal_mm_(1,i) *= factor;
+        //   normal_mm_(2,i) *= factor;
+        //   normal_mm_(3,i) *= factor;
+        //   fixed = true;
+        // }
 
         // Set primitives
         Real gamma;
@@ -205,6 +234,7 @@ void EquationOfState::ConservedToPrimitive(
         if (rho < density_floor_local) {
           rho = density_floor_local;
           fixed = true;
+
         }
         if (pgas < pressure_floor_local) {
           pgas = pressure_floor_local;
@@ -218,7 +248,7 @@ void EquationOfState::ConservedToPrimitive(
 		    << " lx=("
 		    << pmb->loc.lx1 << ","
 		    << pmb->loc.lx2 << ","
-          << pmb->loc.lx3 << ")"
+		    << pmb->loc.lx3 << ")"
 		    << " i=" << i
 		    << " active=" << (i >= pmb->is && i <= pmb->ie)
 		    << " rho_old=" << prim_old(IDN,k,j,i)
