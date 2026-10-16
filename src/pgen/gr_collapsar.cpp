@@ -268,6 +268,31 @@ namespace {
 
   }
 
+  Real HistoryMassWithin2Rin(MeshBlock *pmb, int iout) {
+
+    const Real r_in = pmb->pmy_mesh->mesh_size.x1min;
+    
+    AthenaArray<Real> vol;
+    vol.NewAthenaArray(pmb->ncells1);
+
+    Real mass = 0.0;
+
+    for (int k=pmb->ks; k<=pmb->ke; ++k) {
+      for (int j=pmb->js; j<=pmb->je; ++j) {
+        pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+	for (int i=pmb->is; i<=pmb->ie; ++i) {
+	  if(pmb->pcoord->x1v(i) <= 2.0*r_in){
+	    const Real qD = pmb->phydro->u(IDN,k,j,i);
+	    mass += vol(i) * qD;
+	  }
+	}
+      }
+    }
+    
+    return mass * pmb->pmy_mesh->GetFullSphereFactor()
+      / pmb->pmy_mesh->punit->solar_mass_code;
+  }
+  
   Real HistoryMInnerBlocks(MeshBlock *pmb, int iout) {
     // This block does not touch the physical outer-x1 boundary.
     if (pmb->pbval->block_bcs[BoundaryFace::inner_x1] == BoundaryFlag::block) {
@@ -1155,7 +1180,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // 			       DiodeOuterX1);
   // }
   // output
-  AllocateUserHistoryOutput(48);
+  AllocateUserHistoryOutput(49);
 
   int iout=0;
   EnrollUserHistoryOutput(iout, HistoryBlackHoleMass, "m_bh",
@@ -1301,6 +1326,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   ++iout;
   EnrollUserHistoryOutput(iout, HistoryRemovedMass, "removed_mass",
                           UserHistoryOperation::max);
+  ++iout;
+  EnrollUserHistoryOutput(iout, HistoryMassWithin2Rin, "mass_in_2rin",
+                          UserHistoryOperation::sum);
 
 
   //
@@ -1402,6 +1430,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
                         "inner_block_mass_threshold", 0.01);
 
   Real M_inner = 0.0;
+  Real M_within_2Rin = 0.0;
   Real E_inner = 0.0;
   Real r_ej_max = 0.0;
   int ejecta_reached = 0;
@@ -1413,9 +1442,9 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 
     M_inner += HistoryMInnerBlocks(pmb, 0);
     E_inner += HistoryEInnerBlocks(pmb, 0);
-
-    r_ej_max = std::max(
-        r_ej_max, HistoryEjectaMaxRadius(pmb, 0));
+    M_within_2Rin += HistoryMassWithin2Rin(pmb, 0);
+    
+    r_ej_max = std::max(r_ej_max, HistoryEjectaMaxRadius(pmb, 0));
 
     if (EjectaReachedRadius(pmb, rstop)) {
       ejecta_reached = 1;
@@ -1425,6 +1454,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 #ifdef MPI_PARALLEL
   MPI_Allreduce(MPI_IN_PLACE, &M_inner, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &E_inner, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &M_within_2Rin, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &r_ej_max, 1, MPI_ATHENA_REAL, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(MPI_IN_PLACE, &ejecta_reached, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 #endif
@@ -1432,13 +1462,16 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
   const int add_outer = ejecta_reached ? 1 : 0;
   
   // A first-pass mass-based recommendation.
-  const int remove_inner = (nrbx1 > 1 && M_inner < mass_threshold) ? 1 : 0;
+  const int remove_inner =
+      (nrbx1 > 1 && M_inner < mass_threshold
+                 && M_within_2Rin < mass_threshold) ? 1 : 0;
 
   if (Globals::my_rank == 0) {
     std::cout << "\n=== Restart recommendation ===\n"
               << "time             = " << time * punit->code_time_cgs << " s\n"
               << "cycle            = " << ncycle << "\n"
               << "M_inner_block    = " << M_inner << " Msun\n"
+              << "M (r<2r_in)      = " << M_within_2Rin << " Msun\n"
               << "E_inner_block    = " << E_inner << " erg\n"
               << "r_ej_max         = " << r_ej_max * punit->code_length_cgs
               << " cm\n"
