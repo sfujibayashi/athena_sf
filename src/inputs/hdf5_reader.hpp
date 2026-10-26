@@ -35,6 +35,11 @@ void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const int nvar
                      const char *x2lim_name=NULL,
                      const char *x1lim_name=NULL);
 
+void HDF5NonUniformTableLoader(const char *filename, InterpTableNonUniform2D* ptable, const int nvar,
+                     const char **var_names,
+                     const char *x2_name,
+                     const char *x1_name);
+
 void HDF5Table3DLoader(const char *filename, InterpTable3D* ptable, const int nvar,
                      const char **var_names,
                      const char *x3lim_name=NULL,

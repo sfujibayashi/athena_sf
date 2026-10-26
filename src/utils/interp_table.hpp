@@ -56,8 +56,8 @@ class InterpTableNonUniform2D {
   int nvar();
   AthenaArray<Real> data;
   AthenaArray<Real> x1_coords, x2_coords;
-  void SetX1lim(Real x1min, Real x1max);
-  void SetX2lim(Real x2min, Real x2max);
+  void SetX1lim();
+  void SetX2lim();
   void GetX1lim(Real &x1min, Real &x1max);
   void GetX2lim(Real &x2min, Real &x2max);
   void GetSize(int &nvar, int &nx2, int &nx1);

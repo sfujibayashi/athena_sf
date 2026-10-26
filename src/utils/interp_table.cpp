@@ -148,6 +148,18 @@ void InterpTableNonUniform2D::SetSize(const int nvar, const int nx2, const int n
   x2_coords.NewAthenaArray(nx2);
 }
 
+//! Set the corrdinate limits for x1
+void InterpTableNonUniform2D::SetX1lim() {
+  x1min_ = x1_coords(0);
+  x1max_ = x1_coords(nx1_-1);
+}
+
+//! Set the corrdinate limits for x2
+void InterpTableNonUniform2D::SetX2lim() {
+  x2min_ = x2_coords(0);
+  x2max_ = x2_coords(nx2_-1);
+}
+
 void InterpTableNonUniform2D::GetX1lim(Real &x1min, Real &x1max) {
   x1min = x1min_;
   x1max = x1max_;
