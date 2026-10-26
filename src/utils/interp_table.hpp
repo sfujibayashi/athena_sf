@@ -45,6 +45,34 @@ class InterpTable2D {
   Real x2norm_;
 };
 
+class InterpTableNonUniform2D {
+ public:
+  InterpTableNonUniform2D() = default;
+  InterpTableNonUniform2D(const int nvar, const int nx2, const int nx1);
+
+  void SetSize(const int nvar, const int nx2, const int nx1);
+  Real interpolate(int nvar, Real x2, Real x1);
+  void interpolate_all(Real x2, Real x1, Real *out) const;
+  int nvar();
+  AthenaArray<Real> data;
+  AthenaArray<Real> x1_coords, x2_coords;
+  void SetX1lim(Real x1min, Real x1max);
+  void SetX2lim(Real x2min, Real x2max);
+  void GetX1lim(Real &x1min, Real &x1max);
+  void GetX2lim(Real &x2min, Real &x2max);
+  void GetSize(int &nvar, int &nx2, int &nx1);
+
+ private:
+  int nvar_;
+  int nx1_;
+  int nx2_;
+  Real x1min_;
+  Real x1max_;
+  Real x2min_;
+  Real x2max_;
+};
+
+
 class InterpTable3D {
  public:
   InterpTable3D() = default;

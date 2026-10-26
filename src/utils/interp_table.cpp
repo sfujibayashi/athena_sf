@@ -130,6 +130,154 @@ void InterpTable2D::interpolate_all(Real x2, Real x1, Real *out) const {
   }
 }
 
+
+
+//! A contructor that setts the size of the table with number of variables nvar
+//! and dimensions nx2 x nx1 (interpolated dimensions)
+InterpTableNonUniform2D::InterpTableNonUniform2D(const int nvar, const int nx2, const int nx1) {
+  SetSize(nvar, nx2, nx1);
+}
+
+//! Set size of table
+void InterpTableNonUniform2D::SetSize(const int nvar, const int nx2, const int nx1) {
+  nvar_ = nvar; // number of variables/tables
+  nx2_ = nx2; // slower indexing dimension
+  nx1_ = nx1; // faster indexing dimension
+  data.NewAthenaArray(nvar, nx2, nx1);
+  x1_coords.NewAthenaArray(nx1);
+  x2_coords.NewAthenaArray(nx2);
+}
+
+void InterpTableNonUniform2D::GetX1lim(Real &x1min, Real &x1max) {
+  x1min = x1min_;
+  x1max = x1max_;
+}
+
+void InterpTableNonUniform2D::GetX2lim(Real &x2min, Real &x2max) {
+  x2min = x2min_;
+  x2max = x2max_;
+}
+
+void InterpTableNonUniform2D::GetSize(int &nvar, int &nx2, int &nx1) {
+  nvar = nvar_;
+  nx2 = nx2_;
+  nx1 = nx1_;
+}
+
+//! Bilinear interpolation
+Real InterpTableNonUniform2D::interpolate(int var, Real x2, Real x1) {
+  Real out;
+
+  int x2il;
+  if      (x2 <= x2_coords(0)){
+    x2il = 0;
+  }else if(x2 >= x2_coords(nx2_-1)){
+    x2il = nx2_-2;
+  }else{
+    int x2ilo=0;
+    int x2ihi=nx2_-1;
+    while(x2ihi-x2ilo>1){
+      int x2i=(x2ihi+x2ilo)/2;
+      if(x2_coords(x2i)<x2){
+	x2ilo=x2i;
+      }else{
+	x2ihi=x2i;
+      }
+    }
+    x2il = x2ilo;
+  }
+
+  int x1il;
+  if      (x1 <= x1_coords(0)){
+    x1il = 0;
+  }else if(x1 >= x1_coords(nx1_-1)){
+    x1il = nx1_-2;
+  }else{
+  
+    int x1ilo=0;
+    int x1ihi=nx1_-1;
+    while(x1ihi-x1ilo>1){
+      int x1i=(x1ihi+x1ilo)/2;
+      if(x1_coords(x1i)<x1){
+	x1ilo=x1i;
+      }else{
+	x1ihi=x1i;
+      }
+    }
+    x1il = x1ilo;
+  }
+
+  Real x2rl = (x2_coords(x2il+1)-x2)/(x2_coords(x2il+1)-x2_coords(x2il));
+  Real x1rl = (x1_coords(x1il+1)-x1)/(x1_coords(x1il+1)-x1_coords(x1il));
+  
+  // Sample from the 4 nearest data points and weight appropriately
+  // data is an attribute of the eos class
+  out =      x2rl   *   x1rl *data(var, x2il , x1il )
+          +  x2rl   *(1-x1rl)*data(var, x2il ,x1il+1)
+          + (1-x2rl)*   x1rl *data(var,x2il+1, x1il )
+          + (1-x2rl)*(1-x1rl)*data(var,x2il+1,x1il+1);
+  return out;
+}
+
+
+//! Bilinear interpolation for all variables
+void InterpTableNonUniform2D::interpolate_all(Real x2, Real x1, Real *out) const {
+
+  int x2il;
+  if      (x2 <= x2_coords(0)){
+    x2il = 0;
+  }else if(x2 >= x2_coords(nx2_-1)){
+    x2il = nx2_-2;
+  }else{
+    int x2ilo=0;
+    int x2ihi=nx2_-1;
+    while(x2ihi-x2ilo>1){
+      int x2i=(x2ihi+x2ilo)/2;
+      if(x2_coords(x2i)<x2){
+	x2ilo=x2i;
+      }else{
+	x2ihi=x2i;
+      }
+    }
+    x2il = x2ilo;
+  }
+
+  int x1il;
+  if      (x1 <= x1_coords(0)){
+    x1il = 0;
+  }else if(x1 >= x1_coords(nx1_-1)){
+    x1il = nx1_-2;
+  }else{
+  
+    int x1ilo=0;
+    int x1ihi=nx1_-1;
+    while(x1ihi-x1ilo>1){
+      int x1i=(x1ihi+x1ilo)/2;
+      if(x1_coords(x1i)<x1){
+	x1ilo=x1i;
+      }else{
+	x1ihi=x1i;
+      }
+    }
+    x1il = x1ilo;
+  }
+
+  Real x2rl = (x2_coords(x2il+1)-x2)/(x2_coords(x2il+1)-x2_coords(x2il));
+  Real x1rl = (x1_coords(x1il+1)-x1)/(x1_coords(x1il+1)-x1_coords(x1il));
+  
+  // Sample from the 4 nearest data points and weight appropriately
+  // data is an attribute of the eos class
+  for (int n = 0; n < nvar_; ++n) {
+    out[n] =x2rl   *   x1rl *data(n, x2il , x1il )
+      +  x2rl   *(1-x1rl)*data(n, x2il ,x1il+1)
+      + (1-x2rl)*   x1rl *data(n,x2il+1, x1il )
+      + (1-x2rl)*(1-x1rl)*data(n,x2il+1,x1il+1);
+    
+  }
+}
+
+
+
 //! A contructor that sets the size of the table with number of variables nvar
 //! and dimensions nx3 x nx2 x nx1 (interpolated dimensions)
 InterpTable3D::InterpTable3D(const int nvar, const int nx3, const int nx2, const int nx1) {
