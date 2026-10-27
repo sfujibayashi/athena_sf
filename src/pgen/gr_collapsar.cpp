@@ -1555,7 +1555,8 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   pscalars->SetScalarName(IXFE56, "XFe56");
   pscalars->SetScalarName(IXNI56, "XNi56");
 #endif
-  }
+
+}
 
 
 void MeshBlock::UserWorkInLoop(void) {
