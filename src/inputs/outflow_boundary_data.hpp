@@ -27,6 +27,13 @@ struct OutflowState {
   Real w;
 };
 
+struct AveragedOutflowState {
+  Real rho, press;       // cgs
+  Real u1hat, u2hat, u3hat;  // local orthonormal frame u^(hat i)
+  Real ye;
+};
+
+
 enum {
   IRHO_OUT = 0,
   IPRESS_OUT,
@@ -67,6 +74,9 @@ public:
   int GetNTime() const;
   
   Real GetExtractionRadius() const;
+
+  AveragedOutflowState GetAveragedData(int it, Real theta1, Real theta2) const;
+  AveragedOutflowState GetPointData(int it, Real theta) const;
 
 private:
   int ntime, ntheta;

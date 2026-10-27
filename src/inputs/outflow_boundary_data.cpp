@@ -165,8 +165,7 @@ OutflowBoundaryData::OutflowBoundaryData(const std::string &filename){
     
     for (int j = 0; j < ntheta; ++j) {
       const Real expected = (static_cast<Real>(j) + 0.5) * dtheta;
-      if (!std::isfinite(theta_c_(j))
-	  || std::abs(theta_c_(j) - expected) > tolerance) {
+      if (!std::isfinite(theta_c_(j)) || std::abs(theta_c_(j) - expected) > tolerance) {
 	fail("Missing angular boundaries: theta is not a uniform "
 	     "midpoint grid covering [0, pi/2].");
       }
@@ -268,6 +267,174 @@ int OutflowBoundaryData::GetNTheta() const {
 
 Real OutflowBoundaryData::GetExtractionRadius() const {
   return r_ext_;
+}
+
+AveragedOutflowState OutflowBoundaryData::GetAveragedData(int it, Real theta1, Real theta2) const {
+
+  if(it < 0 || ntime <= it){
+    std::stringstream msg;
+    msg << "### FATAL ERROR in OutflowBoundaryData\n"
+	<< "time index out of bound.";
+    ATHENA_ERROR(msg);
+  }
+  
+  if( theta1 >= theta2 ){
+    std::stringstream msg;
+    msg << "### FATAL ERROR in OutflowBoundaryData\n"
+	<< "theta1 must be smaller than theta2.";
+    ATHENA_ERROR(msg);
+  }
+
+  int ilo, ihi;
+
+  ilo=0;
+  ihi=ntheta-1;
+  while(ihi-ilo>1){
+    int i=(ihi+ilo)/2;
+    if(theta_d_(i) < theta1){
+      ilo=i;
+    }else{
+      ihi=i;
+    }
+  }
+  // theta_d_(ilo) < theta1 < theta_d_(ihi)
+  const int i1 = ilo; 
+  
+  ilo=0;
+  ihi=ntheta-1;
+  while(ihi-ilo>1){
+    int i=(ihi+ilo)/2;
+    if(theta_u_(i) < theta2){
+      ilo=i;
+    }else{
+      ihi=i;
+    }
+  }
+  // theta_u_(ilo) < theta2 < theta_u_(ihi)
+  const int i2 = ihi; 
+
+  Real ave_uu1 = 0.0;
+  Real ave_uu2 = 0.0;
+  Real ave_uu3 = 0.0;
+  Real ave_rho = 0.0;
+  Real ave_rho_star = 0.0;
+  Real ave_ye = 0.0;
+  Real ave_entropy = 0.0;
+  Real ave_press= 0.0;
+  for(int i=i1; i<=i2; ++i){
+    Real lo = std::max(theta1, theta_d_(i));
+    Real hi = std::min(theta2, theta_u_(i));
+    if (hi <= lo) continue;
+    const Real dOmega = (std::cos(lo) - std::cos(hi));
+
+    Real costheta = std::cos(theta_c_(i));
+    Real sintheta = std::sin(theta_c_(i));
+
+    // Cylindrical (y=0) to orthonormal matrix.
+    Real m1_R = sintheta;
+    Real m1_z = costheta;
+
+    Real m2_R = costheta;
+    Real m2_z = -sintheta;
+    
+    Real m3_y = 1.0;
+    
+    const OutflowState state = GetState(it, i);
+    
+    const Real psi2 = SQR(state.psi);
+    // Velocity in orthonormal frame. Assume beta^i = 0.
+    Real uu1 = (m1_R*state.vx + m1_z*state.vz) *psi2*state.w/ state.alpha;
+    Real uu2 = (m2_R*state.vx + m2_z*state.vz) *psi2*state.w/ state.alpha;
+    Real uu3 =  m3_y*state.vy                  *psi2*state.w/ state.alpha;
+    Real rho = state.rho;
+    Real rho_star = state.rho_star;
+    
+    ave_rho_star += dOmega*state.rho_star;
+    ave_rho += dOmega*rho;
+    ave_uu1 += dOmega*rho*uu1;
+    ave_uu2 += dOmega*rho*uu2;
+    ave_uu3 += dOmega*rho*uu3;
+    ave_ye  += dOmega*rho_star*state.ye;
+    ave_entropy += dOmega*rho_star*state.entropy;
+    ave_press += dOmega*state.press;
+  }
+  
+  Real dOmega_cell = std::cos(theta1)-std::cos(theta2);
+  ave_rho_star /= dOmega_cell;
+  ave_rho /= dOmega_cell;
+  ave_uu1 /= ave_rho*dOmega_cell;
+  ave_uu2 /= ave_rho*dOmega_cell;
+  ave_uu3 /= ave_rho*dOmega_cell;
+  ave_ye  /= ave_rho_star*dOmega_cell;
+  ave_entropy /= ave_rho_star*dOmega_cell;
+  ave_press /= dOmega_cell;
+  
+  AveragedOutflowState ave_state;
+  ave_state.rho = ave_rho;
+  ave_state.press = ave_press;
+  ave_state.u1hat = ave_uu1;
+  ave_state.u2hat = ave_uu2;
+  ave_state.u3hat = ave_uu3;
+  ave_state.ye = ave_ye;
+  
+  return ave_state;
+}
+
+AveragedOutflowState OutflowBoundaryData::GetPointData(int it, Real theta) const {
+
+  if(it < 0 || ntime <= it){
+    std::stringstream msg;
+    msg << "### FATAL ERROR in OutflowBoundaryData\n"
+	<< "time index out of bound.";
+    ATHENA_ERROR(msg);
+  }
+
+  int ilo, ihi;
+
+  ilo=0;
+  ihi=ntheta;
+  while(ihi-ilo>1){
+    int i=(ihi+ilo)/2;
+    if(theta_d_(i) <= theta){
+      ilo=i;
+    }else{
+      ihi=i;
+    }
+  }
+  // theta_d_(ilo) < theta < theta_d_(ihi)
+  const int i = ilo; 
+
+  const OutflowState state = GetState(it, i);
+
+  Real costheta = std::cos(theta_c_(i));
+  Real sintheta = std::sin(theta_c_(i));
+  
+  // Cylindrical (y=0) to orthonormal matrix.
+  Real m1_R = sintheta;
+  Real m1_z = costheta;
+  
+  Real m2_R = costheta;
+  Real m2_z = -sintheta;
+  
+  Real m3_y = 1.0;
+    
+  const Real psi2 = SQR(state.psi);
+  // Velocity in orthonormal frame. Assume beta^i = 0.
+  Real uu1 = (m1_R*state.vx + m1_z*state.vz) *psi2*state.w/ state.alpha;
+  Real uu2 = (m2_R*state.vx + m2_z*state.vz) *psi2*state.w/ state.alpha;
+  Real uu3 =  m3_y*state.vy                  *psi2*state.w/ state.alpha;
+  Real rho = state.rho;
+  Real rho_star = state.rho_star;
+  
+  AveragedOutflowState ave_state;
+  ave_state.rho = state.rho;
+  ave_state.press = state.press;
+  ave_state.u1hat = uu1;
+  ave_state.u2hat = uu2;
+  ave_state.u3hat = uu3;
+  ave_state.ye = state.ye;
+  
+  return ave_state;
 }
 
 void OutflowBoundaryData::Analyze(Real gamma_ad) const {
