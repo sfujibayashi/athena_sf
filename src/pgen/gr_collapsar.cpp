@@ -1137,30 +1137,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   //           << std::endl;
 
   if (mesh_bcs[BoundaryFace::inner_x1] == BoundaryFlag::user) {
-    if(Globals::my_rank == 0) {
-      std::cout << "Injecting BC with outflow_file..." << std::endl;
-    }
-    // injecting BC
-    std::string fname = pin->GetString("problem", "outflow_file");
-    poutflow = new OutflowBoundaryData(fname);
-
-    const Real rin_cgs  = mesh_size.x1min * punit->code_length_cgs;
-    const Real rext_cgs = poutflow->GetExtractionRadius();
-
-    const Real relerr = std::abs(rin_cgs - rext_cgs) / rext_cgs;
-    
-    if (relerr > 1.0e-10) {
-      std::stringstream msg;
-      msg << "### FATAL ERROR in Mesh::InitUserMeshData" << std::endl
-	  << "Inner boundary radius is inconsistent with the "
-	  << "outflow extraction radius." << std::endl
-	  << "Rin   = " << rin_cgs << " cm" << std::endl
-	  << "r_ext = " << rext_cgs << " cm" << std::endl
-	  << "relative difference = " << relerr << std::endl;
-      ATHENA_ERROR(msg);
-    }
-    
-    if(Globals::my_rank==0)poutflow->Analyze(gamma_gas);
     
     timescale_cut = pin->GetReal("problem", "timescale_cut");
     W_max = pin->GetReal("problem", "W_max");
@@ -1489,19 +1465,52 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   
   // boundary data
-  if (pbval->block_bcs[BoundaryFace::inner_x1] == BoundaryFlag::user
-      && pmy_mesh->poutflow != nullptr){
+  if (pbval->block_bcs[BoundaryFace::inner_x1] == BoundaryFlag::user){
     
-    int jl = js;
-    int ju = je;
-
-    if(block_size.nx2>1){
-      if (pbval->block_bcs[BoundaryFace::inner_x2] == BoundaryFlag::block)
-	jl -= NGHOST;
-      if (pbval->block_bcs[BoundaryFace::outer_x2] == BoundaryFlag::block)
-	ju += NGHOST;
+    if(pmy_mesh->poutflow == nullptr){
+      
+      if(Globals::my_rank == 0) {
+	std::cout << "Injecting BC with outflow_file..." << std::endl;
+      }
+      // injecting BC
+      std::string fname = pin->GetString("problem", "outflow_file");
+      pmy_mesh->poutflow = new OutflowBoundaryData(fname);
+      
+      const Real rin_cgs  = pmy_mesh->mesh_size.x1min * pmy_mesh->punit->code_length_cgs;
+      const Real rext_cgs = pmy_mesh->poutflow->GetExtractionRadius();
+      
+      const Real relerr = std::abs(rin_cgs - rext_cgs) / rext_cgs;
+      
+      if (relerr > 1.0e-10) {
+	std::stringstream msg;
+	msg << "### FATAL ERROR in Mesh::InitUserMeshData" << std::endl
+	    << "Inner boundary radius is inconsistent with the "
+	    << "outflow extraction radius." << std::endl
+	    << "Rin   = " << rin_cgs << " cm" << std::endl
+	    << "r_ext = " << rext_cgs << " cm" << std::endl
+	    << "relative difference = " << relerr << std::endl;
+	ATHENA_ERROR(msg);
+      }
+      
+      if(loc.lx2==0) pmy_mesh->poutflow->Analyze(gamma_gas);
+    
     }
-    pbtable = new OutflowBoundaryTable(*pmy_mesh->poutflow, pcoord->x2f, jl, ju);
+    
+    if(pmy_mesh->poutflow != nullptr){
+      int jl = js;
+      int ju = je;
+      
+      if(block_size.nx2>1){
+	if (pbval->block_bcs[BoundaryFace::inner_x2] == BoundaryFlag::block)
+	  jl -= NGHOST;
+	if (pbval->block_bcs[BoundaryFace::outer_x2] == BoundaryFlag::block)
+	  ju += NGHOST;
+      }
+      pbtable = new OutflowBoundaryTable(*pmy_mesh->poutflow, pcoord->x2f, jl, ju);
+      
+      delete pmy_mesh->poutflow;
+      pmy_mesh->poutflow = nullptr;
+    }
   }
   // model-specific output fields
   auto *pdrv = pmy_mesh->pmetric_driver;
