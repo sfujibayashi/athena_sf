@@ -661,14 +661,15 @@ OutflowBoundaryTable::OutflowBoundaryTable(const OutflowBoundaryData &source,
   // allocate data
   const int ntheta = theta_faces.GetSize() - 1;
   const int ntime = source.GetNTime();
+  ntime_=ntime;
   data_.NewAthenaArray(ntime,ntheta,NVAR_AVE);
-  time_.NewAthenaArray(ntime);
+  time_.NewAthenaArray(ntime_);
   // input time
-  for(int it=0; it<ntime; ++it){
+  for(int it=0; it<ntime_; ++it){
     time_(it) = source.GetTimeCGS(it);
   }
   // average between theta faces
-  for(int it=0; it<ntime; ++it){
+  for(int it=0; it<ntime_; ++it){
     for(int j=js; j<=je; ++j){
       AveragedOutflowState ave_state = source.GetAveragedData(it, theta_faces(j), theta_faces(j+1));
       data_(it,j,IRHO_AVE) = ave_state.rho;
@@ -681,13 +682,106 @@ OutflowBoundaryTable::OutflowBoundaryTable(const OutflowBoundaryData &source,
   }
 }
 
-AveragedOutflowState OutflowBoundaryTable::Interpolate(Real time_cgs, int j) const {
-  // find time index
-  
-  // interpolate rho*u and rho
-  // u = interpolated (rho*u)/rho
+Real OutflowBoundaryTable::GetTimeMax() const {
+  return time_(ntime_-1);
+}
+
+AveragedOutflowState OutflowBoundaryTable::InterpolatePoint(Real time_cgs, int j) const {
   AveragedOutflowState ave_state;
+  
+  // find time index
+  if(time_cgs <= time_(0)){
+    ave_state.rho = data_(0,j,IRHO_AVE);
+    ave_state.press = data_(0,j,IPRESS_AVE);
+    ave_state.u1hat = data_(0,j,IU1HAT_AVE);
+    ave_state.u2hat = data_(0,j,IU2HAT_AVE);
+    ave_state.u3hat = data_(0,j,IU3HAT_AVE);
+    ave_state.ye = data_(0,j,IYE_AVE);
+    return ave_state;
+  }
+
+  if(time_cgs >= time_(ntime_-1)){
+    ave_state.rho = data_(ntime_-1,j,IRHO_AVE);
+    ave_state.press = data_(ntime_-1,j,IPRESS_AVE);
+    ave_state.u1hat = data_(ntime_-1,j,IU1HAT_AVE);
+    ave_state.u2hat = data_(ntime_-1,j,IU2HAT_AVE);
+    ave_state.u3hat = data_(ntime_-1,j,IU3HAT_AVE);
+    ave_state.ye = data_(ntime_-1,j,IYE_AVE);
+    return ave_state;
+  }
+
+  int ilo=0, ihi=ntime_-1;
+  while(ihi-ilo>1){
+    int i=(ihi+ilo)/2;
+    if(time_(i) <= time_cgs){
+      ilo=i;
+    }else{
+      ihi=i;
+    }
+  }
+  const Real w_time = (time_(ihi)-time_cgs)/(time_(ihi)-time_(ilo));
+  // interpolate rho*u and rho
+  ave_state.rho = w_time*data_(ilo,j,IRHO_AVE) + (1.0-w_time)*data_(ihi,j,IRHO_AVE);
+  ave_state.press = w_time*data_(ilo,j,IPRESS_AVE) + (1.0-w_time)*data_(ihi,j,IPRESS_AVE);
+  ave_state.u1hat = (w_time*data_(ilo,j,IRHO_AVE)*data_(ilo,j,IU1HAT_AVE) 
+		     + (1.0-w_time)*data_(ihi,j,IRHO_AVE)*data_(ihi,j,IU1HAT_AVE))/ave_state.rho;
+  ave_state.u2hat = (w_time*data_(ilo,j,IRHO_AVE)*data_(ilo,j,IU2HAT_AVE) 
+		     + (1.0-w_time)*data_(ihi,j,IRHO_AVE)*data_(ihi,j,IU2HAT_AVE))/ave_state.rho;
+  ave_state.u3hat = (w_time*data_(ilo,j,IRHO_AVE)*data_(ilo,j,IU3HAT_AVE) 
+		     + (1.0-w_time)*data_(ihi,j,IRHO_AVE)*data_(ihi,j,IU3HAT_AVE))/ave_state.rho;
+  ave_state.ye = (w_time*data_(ilo,j,IRHO_AVE)*data_(ilo,j,IYE_AVE) 
+		  + (1.0-w_time)*data_(ihi,j,IRHO_AVE)*data_(ihi,j,IYE_AVE))/ave_state.rho;
+  
   return ave_state;
+}
+
+void OutflowBoundaryTable::Interpolate(Real time_cgs, int js, int je, AthenaArray<Real> &out) const {
+  
+  // find time index
+  if(time_cgs <= time_(0)){
+    for(int j=js; j<=je; ++j){
+      for(int n=0; n<NVAR_AVE; ++n){
+	out(j,n) = data_(0,j,n);
+      }
+    }
+    return;
+  }
+
+  if(time_cgs >= time_(ntime_-1)){
+    for(int j=js; j<=je; ++j){
+      for(int n=0; n<NVAR_AVE; ++n){
+	out(j,n) = data_(ntime_-1,j,n);
+      }
+    }
+    return;
+  }
+
+  int ilo=0, ihi=ntime_-1;
+  while(ihi-ilo>1){
+    int i=(ihi+ilo)/2;
+    if(time_(i) <= time_cgs){
+      ilo=i;
+    }else{
+      ihi=i;
+    }
+  }
+
+  const Real w_time = (time_(ihi)-time_cgs)/(time_(ihi)-time_(ilo));
+  for(int j=js; j<=je; ++j){
+    Real rho = w_time*data_(ilo,j,IRHO_AVE) + (1.0-w_time)*data_(ihi,j,IRHO_AVE);
+    out(j,IRHO_AVE)   = rho;
+    out(j,IPRESS_AVE) = w_time*data_(ilo,j,IPRESS_AVE) + (1.0-w_time)*data_(ihi,j,IPRESS_AVE);
+    // interpolate rho*u and rho for velocity
+    out(j,IU1HAT_AVE) = (w_time*data_(ilo,j,IRHO_AVE)*data_(ilo,j,IU1HAT_AVE) 
+			 + (1.0-w_time)*data_(ihi,j,IRHO_AVE)*data_(ihi,j,IU1HAT_AVE))/rho;
+    out(j,IU2HAT_AVE) = (w_time*data_(ilo,j,IRHO_AVE)*data_(ilo,j,IU2HAT_AVE) 
+			 + (1.0-w_time)*data_(ihi,j,IRHO_AVE)*data_(ihi,j,IU2HAT_AVE))/rho;
+    out(j,IU3HAT_AVE) = (w_time*data_(ilo,j,IRHO_AVE)*data_(ilo,j,IU3HAT_AVE) 
+			 + (1.0-w_time)*data_(ihi,j,IRHO_AVE)*data_(ihi,j,IU3HAT_AVE))/rho;
+    out(j,IYE_AVE)    = (w_time*data_(ilo,j,IRHO_AVE)*data_(ilo,j,IYE_AVE) 
+			 + (1.0-w_time)*data_(ihi,j,IRHO_AVE)*data_(ihi,j,IYE_AVE))/rho;
+  }
+  return;
 }
 
 

@@ -1491,7 +1491,17 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   // boundary data
   if (pbval->block_bcs[BoundaryFace::inner_x1] == BoundaryFlag::user
       && pmy_mesh->poutflow != nullptr){
-    pbtable = new OutflowBoundaryTable(*pmy_mesh->poutflow, pcoord->x2f, js, je);
+    
+    int jl = js;
+    int ju = je;
+
+    if(block_size.nx2>1){
+      if (pbval->block_bcs[BoundaryFace::inner_x2] == BoundaryFlag::block)
+	jl -= NGHOST;
+      if (pbval->block_bcs[BoundaryFace::outer_x2] == BoundaryFlag::block)
+	ju += NGHOST;
+    }
+    pbtable = new OutflowBoundaryTable(*pmy_mesh->poutflow, pcoord->x2f, jl, ju);
   }
   // model-specific output fields
   auto *pdrv = pmy_mesh->pmetric_driver;
@@ -2194,84 +2204,22 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
   const Real code_rho_cgs = pmb->pmy_mesh->punit->code_density_cgs;
   const Real code_press_cgs = pmb->pmy_mesh->punit->code_pressure_cgs;
 
-  const Real tmax = pmb->pmy_mesh->poutflow->GetTimeMax();
-  const Real tmin = pmb->pmy_mesh->poutflow->GetTimeMin();
-  
   const Real vv_max = 1.0 - 1.0/(W_max*W_max);
   const Real time_cgs = time * code_time_cgs;
+  const Real tmax = pmb->pbtable->GetTimeMax();
 
-  const Real time_interp = std::max(tmin, std::min(time_cgs, tmax));
   const Real s = std::max(0.0, std::min((time_cgs - tmax)/timescale_cut, 1.0));
-
   const Real w_inj = 1.0 - s*s*(3.0 - 2.0*s);
-  
-  // Real fac = 1.0;
-  // Real time_interp = time_cgs;
 
-  // // Avoid extrapolation
-  // // should determine how we will deal with after running out of data.
-  // if      ( time_cgs > pmb->pmy_mesh->poutflow->GetTimeMax() ){
-  //   time_interp = pmb->pmy_mesh->poutflow->GetTimeMax();
-  //   fac = std::exp(- (time_cgs-pmb->pmy_mesh->poutflow->GetTimeMax())/timescale_cut );
-  // }else if( time_cgs < pmb->pmy_mesh->poutflow->GetTimeMin() ){
-  //   time_interp = pmb->pmy_mesh->poutflow->GetTimeMin();
-  //   fac = 1.0;
-  // }
+  AthenaArray<Real> out;
+  out.NewAthenaArray(pmb->ncells2, NVAR_AVE);
+  pmb->pbtable->Interpolate(time_cgs, jl, ju, out);
   
   // set primitive variables in inlet ghost zones
   for (int k=kl; k<=ku; ++k) {
-    // Real phi = pmb->pcoord->x3v(k);
-    // Real cosphi = std::cos(phi);
-    // Real sinphi = std::sin(phi);
     for (int j=jl; j<=ju; ++j) {
-      Real theta = pmb->pcoord->x2v(j);
-
-      // Avoid extrapolation.
-      // We rotate the data with theta_max/min assuming v^r,theta,phi do not depend on theta
-      // in angle range theta_max < theta < pi/2.
-      Real theta_interp = theta;
-      if      (theta < pmb->pmy_mesh->poutflow->GetThetaMin()){
-        theta_interp = pmb->pmy_mesh->poutflow->GetThetaMin();
-      }else if(theta > pmb->pmy_mesh->poutflow->GetThetaMax()){
-        theta_interp = pmb->pmy_mesh->poutflow->GetThetaMax();
-      }
-
-      Real costheta = std::cos(theta_interp);
-      Real sintheta = std::sin(theta_interp);
-      // Real sin2theta = sintheta*sintheta;
-      
-      OutflowState state = pmb->pmy_mesh->poutflow->Interpolate(time_interp, theta_interp);
-
-      // // Cartesian to spherical-polar matrix.
-      // Real m1_x = sintheta*cosphi;
-      // Real m1_y = sintheta*sinphi;
-      // Real m1_z = costheta;
-      
-      // // should be divided by r additionally.
-      // Real m2_x = costheta*cosphi;
-      // Real m2_y = costheta*sinphi;
-      // Real m2_z = -sintheta;
-
-      // // should be divided by r additionally.
-      // Real m3_x = -sinphi/sintheta;
-      // Real m3_y = cosphi/sintheta;
-      // Real m3_z = 0.0;
-
-      
-      // Cylindrical (y=0) to spherical-polar matrix.
-      Real m1_R = sintheta;
-      Real m1_z = costheta;
-      
-      // should be divided by r additionally.
-      Real m2_R = costheta;
-      Real m2_z = -sintheta;
-
-      // should be divided by r additionally.
-      Real m3_y = 1.0/sintheta;
-
 #pragma omp simd
       for (int ng=1; ng<=ngh; ++ng) {
-	
         const int i = il - ng;
         Real r = pmb->pcoord->x1v(i);
         // Real r2=r*r;
@@ -2282,35 +2230,20 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
         pmb->pmetric->ConstructCellCovariantMetric(k,j,i,
                                           g00, g01, g02, g03,
                                           g11, g12, g13, g22, g23, g33);
-        Real alpha = std::sqrt(-g00);
-
-        // assume beta^i = 0.
-        Real v1 = (m1_R*state.vx + m1_z*state.vz)   / alpha;
-        Real v2 = (m2_R*state.vx + m2_z*state.vz)/r / alpha;
-        Real v3 = (m3_y*state.vy)/r / alpha;
-        
-        Real vv = g11*v1*v1 + g22*v2*v2 + g33*v3*v3
-           + 2.0*(g12*v1*v2 + g13*v1*v3 + g23*v2*v3);
-
-        if (vv > vv_max){
-          std::cout << "Warning: v^2 > v2_max." << vv
-                    << " at t=" << time_interp << "theta=" << theta_interp << std::endl;
-          const Real factor = std::sqrt(vv_max/vv);
-          v1 *= factor;
-          v2 *= factor;
-          v3 *= factor;
-          vv = vv_max;
-        }
-        // lorentz factor
-        Real W = 1.0/std::sqrt(1.0-vv);
-
+	const Real rho   = out(j,IRHO_AVE);
+	const Real u1hat = out(j,IU1HAT_AVE);
+	const Real u2hat = out(j,IU2HAT_AVE);
+	const Real u3hat = out(j,IU3HAT_AVE);
+	const Real press = out(j,IPRESS_AVE);
+	
         // Athena's primitive.
-        Real uu1 = W * v1;
-        Real uu2 = W * v2;
-        Real uu3 = W * v3;
+	// Assume diagonal metric
+        const Real uu1 = u1hat/std::sqrt(g11);
+        const Real uu2 = u2hat/std::sqrt(g22);
+        const Real uu3 = u3hat/std::sqrt(g33);
         
-        prim(IDN,k,j,i) = state.rho/code_rho_cgs;
-        prim(IPR,k,j,i) = state.press/code_press_cgs;
+        prim(IDN,k,j,i) = rho/code_rho_cgs;
+        prim(IPR,k,j,i) = press/code_press_cgs;
         prim(IVX,k,j,i) = uu1;
         prim(IVY,k,j,i) = uu2;
         prim(IVZ,k,j,i) = uu3;
@@ -2325,11 +2258,11 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
 	
 	
 #if NSCALARS > 0
-	pmb->pscalars->r(IYE,k,j,i)   = state.ye;
+	pmb->pscalars->r(IYE,k,j,i)   = out(j,IYE_AVE);
 	pmb->pscalars->r(IXINJ,k,j,i) = 1.0;
 	pmb->pscalars->r(IXPHYS,k,j,i) = 1.0;
 	pmb->pscalars->r(ITINJ,k,j,i) = time_cgs;
-	pmb->pscalars->r(ITHETAINJ,k,j,i) = theta;
+	pmb->pscalars->r(ITHETAINJ,k,j,i) = pmb->pcoord->x2v(j);
 	for (int n=IXNEUT; n<NSCALAR_REQUIRED; ++n) {
 	  pmb->pscalars->r(n,k,j,i) = 0.0;
 	}
@@ -2338,6 +2271,160 @@ void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
     }
   }
 }
+
+
+// void InjectionInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,FaceField &b,
+//                       Real time, Real dt,
+//                       int il, int iu, int jl, int ju, int kl, int ku, int ngh){
+
+//   const Real code_time_cgs = pmb->pmy_mesh->punit->code_time_cgs;
+//   const Real code_rho_cgs = pmb->pmy_mesh->punit->code_density_cgs;
+//   const Real code_press_cgs = pmb->pmy_mesh->punit->code_pressure_cgs;
+
+//   const Real tmax = pmb->pmy_mesh->poutflow->GetTimeMax();
+//   const Real tmin = pmb->pmy_mesh->poutflow->GetTimeMin();
+  
+//   const Real vv_max = 1.0 - 1.0/(W_max*W_max);
+//   const Real time_cgs = time * code_time_cgs;
+
+//   const Real time_interp = std::max(tmin, std::min(time_cgs, tmax));
+//   const Real s = std::max(0.0, std::min((time_cgs - tmax)/timescale_cut, 1.0));
+
+//   const Real w_inj = 1.0 - s*s*(3.0 - 2.0*s);
+  
+//   // Real fac = 1.0;
+//   // Real time_interp = time_cgs;
+
+//   // // Avoid extrapolation
+//   // // should determine how we will deal with after running out of data.
+//   // if      ( time_cgs > pmb->pmy_mesh->poutflow->GetTimeMax() ){
+//   //   time_interp = pmb->pmy_mesh->poutflow->GetTimeMax();
+//   //   fac = std::exp(- (time_cgs-pmb->pmy_mesh->poutflow->GetTimeMax())/timescale_cut );
+//   // }else if( time_cgs < pmb->pmy_mesh->poutflow->GetTimeMin() ){
+//   //   time_interp = pmb->pmy_mesh->poutflow->GetTimeMin();
+//   //   fac = 1.0;
+//   // }
+  
+//   // set primitive variables in inlet ghost zones
+//   for (int k=kl; k<=ku; ++k) {
+//     // Real phi = pmb->pcoord->x3v(k);
+//     // Real cosphi = std::cos(phi);
+//     // Real sinphi = std::sin(phi);
+//     for (int j=jl; j<=ju; ++j) {
+//       Real theta = pmb->pcoord->x2v(j);
+
+//       // Avoid extrapolation.
+//       // We rotate the data with theta_max/min assuming v^r,theta,phi do not depend on theta
+//       // in angle range theta_max < theta < pi/2.
+//       Real theta_interp = theta;
+//       if      (theta < pmb->pmy_mesh->poutflow->GetThetaMin()){
+//         theta_interp = pmb->pmy_mesh->poutflow->GetThetaMin();
+//       }else if(theta > pmb->pmy_mesh->poutflow->GetThetaMax()){
+//         theta_interp = pmb->pmy_mesh->poutflow->GetThetaMax();
+//       }
+
+//       Real costheta = std::cos(theta_interp);
+//       Real sintheta = std::sin(theta_interp);
+//       // Real sin2theta = sintheta*sintheta;
+      
+//       OutflowState state = pmb->pmy_mesh->poutflow->Interpolate(time_interp, theta_interp);
+
+//       // // Cartesian to spherical-polar matrix.
+//       // Real m1_x = sintheta*cosphi;
+//       // Real m1_y = sintheta*sinphi;
+//       // Real m1_z = costheta;
+      
+//       // // should be divided by r additionally.
+//       // Real m2_x = costheta*cosphi;
+//       // Real m2_y = costheta*sinphi;
+//       // Real m2_z = -sintheta;
+
+//       // // should be divided by r additionally.
+//       // Real m3_x = -sinphi/sintheta;
+//       // Real m3_y = cosphi/sintheta;
+//       // Real m3_z = 0.0;
+
+      
+//       // Cylindrical (y=0) to spherical-polar matrix.
+//       Real m1_R = sintheta;
+//       Real m1_z = costheta;
+      
+//       // should be divided by r additionally.
+//       Real m2_R = costheta;
+//       Real m2_z = -sintheta;
+
+//       // should be divided by r additionally.
+//       Real m3_y = 1.0/sintheta;
+
+// #pragma omp simd
+//       for (int ng=1; ng<=ngh; ++ng) {
+	
+//         const int i = il - ng;
+//         Real r = pmb->pcoord->x1v(i);
+//         // Real r2=r*r;
+        
+//         // Construct metric
+//         Real g00, g01, g02, g03;
+//         Real g11, g12, g13, g22, g23, g33;
+//         pmb->pmetric->ConstructCellCovariantMetric(k,j,i,
+//                                           g00, g01, g02, g03,
+//                                           g11, g12, g13, g22, g23, g33);
+//         Real alpha = std::sqrt(-g00);
+
+//         // assume beta^i = 0.
+//         Real v1 = (m1_R*state.vx + m1_z*state.vz)   / alpha;
+//         Real v2 = (m2_R*state.vx + m2_z*state.vz)/r / alpha;
+//         Real v3 = (m3_y*state.vy)/r / alpha;
+        
+//         Real vv = g11*v1*v1 + g22*v2*v2 + g33*v3*v3
+//            + 2.0*(g12*v1*v2 + g13*v1*v3 + g23*v2*v3);
+
+//         if (vv > vv_max){
+//           std::cout << "Warning: v^2 > v2_max." << vv
+//                     << " at t=" << time_interp << "theta=" << theta_interp << std::endl;
+//           const Real factor = std::sqrt(vv_max/vv);
+//           v1 *= factor;
+//           v2 *= factor;
+//           v3 *= factor;
+//           vv = vv_max;
+//         }
+//         // lorentz factor
+//         Real W = 1.0/std::sqrt(1.0-vv);
+
+//         // Athena's primitive.
+//         Real uu1 = W * v1;
+//         Real uu2 = W * v2;
+//         Real uu3 = W * v3;
+        
+//         prim(IDN,k,j,i) = state.rho/code_rho_cgs;
+//         prim(IPR,k,j,i) = state.press/code_press_cgs;
+//         prim(IVX,k,j,i) = uu1;
+//         prim(IVY,k,j,i) = uu2;
+//         prim(IVZ,k,j,i) = uu3;
+
+// 	for (int n=0; n<NHYDRO; ++n) {
+// 	  Real diode = prim(n,k,j,il);
+// 	  if (n == IVX) {
+// 	    diode = std::min(diode, 0.0);
+// 	  }
+// 	  prim(n,k,j,i) = w_inj*prim(n,k,j,i) + (1.0-w_inj)*diode;
+// 	}
+	
+	
+// #if NSCALARS > 0
+// 	pmb->pscalars->r(IYE,k,j,i)   = state.ye;
+// 	pmb->pscalars->r(IXINJ,k,j,i) = 1.0;
+// 	pmb->pscalars->r(IXPHYS,k,j,i) = 1.0;
+// 	pmb->pscalars->r(ITINJ,k,j,i) = time_cgs;
+// 	pmb->pscalars->r(ITHETAINJ,k,j,i) = theta;
+// 	for (int n=IXNEUT; n<NSCALAR_REQUIRED; ++n) {
+// 	  pmb->pscalars->r(n,k,j,i) = 0.0;
+// 	}
+// #endif
+//       }
+//     }
+//   }
+// }
 
 
 // void DiodeInnerX1(MeshBlock *pmb, Coordinates *pco,

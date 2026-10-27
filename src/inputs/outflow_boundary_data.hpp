@@ -109,9 +109,12 @@ public:
                        const AthenaArray<Real> &theta_faces,
 		       const int js, const int je);
   
-  AveragedOutflowState Interpolate(Real time_cgs, int j) const;
+  void Interpolate(Real time_cgs, int js, int je, AthenaArray<Real> &out) const;
+  AveragedOutflowState InterpolatePoint(Real time_cgs, int j) const;
+  Real GetTimeMax() const;
   
 private:
+  int ntime_;
   AthenaArray<Real> time_;
   AthenaArray<Real> data_;
 };
