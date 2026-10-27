@@ -76,7 +76,8 @@ private:
   Real r_ext_;
   Real h_min_global_;
 
-  InterpTable2D table_;
+  InterpTableNonUniform2D table_;
+  AthenaArray<Real> time_, theta_c_, theta_d_, theta_u_;
 };
 
 #endif

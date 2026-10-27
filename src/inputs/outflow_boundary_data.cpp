@@ -48,7 +48,8 @@ OutflowBoundaryData::OutflowBoundaryData(const std::string &filename){
   
   const char *var_names[NVAR_OUT] = {"rho", "press", "vx", "vy", "vz", "ye", "entropy", "alpha", "h", "hut", "psi", "qe", "rho_star", "ut", "temp", "w"};
 
-  HDF5TableLoader(filename.c_str(), &table_, NVAR_OUT, var_names, "time_lim", "theta_lim");
+  //HDF5TableLoader(filename.c_str(), &table_, NVAR_OUT, var_names, "time_lim", "theta_lim");
+  HDF5NonUniformTableLoader(filename.c_str(), &table_, NVAR_OUT, var_names, "time", "theta");
 
   table_.GetX1lim(theta_min, theta_max);
   table_.GetX2lim(time_min, time_max);
@@ -75,6 +76,118 @@ OutflowBoundaryData::OutflowBoundaryData(const std::string &filename){
   H5Dread(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &tmp);
   H5Dclose(dset);
   h_min_global_ = static_cast<Real>(tmp);
+  
+  // Useful variable to be kept in this class
+  time_.NewAthenaArray(ntime);
+  theta_c_.NewAthenaArray(ntheta);
+  theta_d_.NewAthenaArray(ntheta);
+  theta_u_.NewAthenaArray(ntheta);
+
+  dset = H5Dopen2(file, "time", H5P_DEFAULT);
+  H5Dread(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, time_.data());
+  H5Dclose(dset);
+
+  dset = H5Dopen2(file, "theta", H5P_DEFAULT);
+  H5Dread(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, theta_c_.data());
+  H5Dclose(dset);
+  
+  auto fail = [](const std::string &message) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in OutflowBoundaryData\n" << message;
+    ATHENA_ERROR(msg);
+  };
+  
+  const htri_t has_d = H5Lexists(file, "theta_d", H5P_DEFAULT);
+  const htri_t has_u = H5Lexists(file, "theta_u", H5P_DEFAULT);
+  
+  if (has_d < 0 || has_u < 0) {
+    fail("Could not check angular boundary datasets.");
+  }
+  if ((has_d > 0) != (has_u > 0)) {
+    fail("theta_d and theta_u must either both exist or both be absent.");
+  }
+
+
+  if (has_d > 0) {
+    auto read_edge = [&](const char *name, AthenaArray<Real> &array) {
+      hid_t ds = H5Dopen2(file, name, H5P_DEFAULT);
+      if (ds < 0) {
+	fail(std::string("Cannot open dataset: ") + name);
+      }
+      
+      hid_t space = H5Dget_space(ds);
+      hsize_t dims[1] = {0};
+      bool valid = false;
+      if (space >= 0 && H5Sget_simple_extent_ndims(space) == 1) {
+	valid = H5Sget_simple_extent_dims(space, dims, nullptr) >= 0
+	  && dims[0] == static_cast<hsize_t>(ntheta);
+      }
+      if (space >= 0) H5Sclose(space);
+      
+      if (!valid) {
+	H5Dclose(ds);
+	fail(std::string(name) + " must be 1D with length ntheta.");
+      }
+      
+#if SINGLE_PRECISION_ENABLED
+      hid_t memory_type = H5T_NATIVE_FLOAT;
+#else
+      hid_t memory_type = H5T_NATIVE_DOUBLE;
+#endif
+      herr_t status = H5Dread(ds, memory_type, H5S_ALL, H5S_ALL,
+			      H5P_DEFAULT, array.data());
+      H5Dclose(ds);
+      if (status < 0) {
+	fail(std::string("Cannot read dataset: ") + name);
+      }
+    };
+    
+    
+    read_edge("theta_d", theta_d_);
+    read_edge("theta_u", theta_u_);
+    
+  } else {
+    
+    // Legacy format: uniform midpoint samples covering [0, pi/2].
+    if (ntheta < 2) {
+      fail("At least two angular samples are required.");
+    }
+    
+    const Real half_pi = 0.5 * std::acos(-1.0);
+    const Real dtheta = half_pi / static_cast<Real>(ntheta);
+    
+    // Allow rounding in the original ASCII output and in Real.
+#if SINGLE_PRECISION_ENABLED
+    const Real tolerance = 1.0e-6;
+#else
+    const Real tolerance = 1.0e-10;
+#endif
+    
+    for (int j = 0; j < ntheta; ++j) {
+      const Real expected = (static_cast<Real>(j) + 0.5) * dtheta;
+      if (!std::isfinite(theta_c_(j))
+	  || std::abs(theta_c_(j) - expected) > tolerance) {
+	fail("Missing angular boundaries: theta is not a uniform "
+	     "midpoint grid covering [0, pi/2].");
+      }
+      theta_d_(j) = static_cast<Real>(j) * dtheta;
+      theta_u_(j) = static_cast<Real>(j + 1) * dtheta;
+    }
+  }
+  
+  if (Globals::my_rank == 0) {
+    std::cout << (has_d > 0
+		  ? "Angular boundaries read from HDF5."
+		  : "Angular boundaries reconstructed from uniform midpoint samples.")
+	      << std::endl;
+  }
+  // dset = H5Dopen2(file, "theta_d", H5P_DEFAULT);
+  // H5Dread(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, theta_d_.data());
+  // H5Dclose(dset);
+
+  // dset = H5Dopen2(file, "theta_u", H5P_DEFAULT);
+  // H5Dread(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, theta_u_.data());
+  // H5Dclose(dset);
 
   H5Fclose(file);
 
@@ -158,9 +271,9 @@ Real OutflowBoundaryData::GetExtractionRadius() const {
 }
 
 void OutflowBoundaryData::Analyze(Real gamma_ad) const {
-  const Real dtheta = 0.5*M_PI/(Real)ntheta;
-  const Real dt = (time_max - time_min)/(Real)(ntime-1);
-  const Real dt_cgs = dt*time_unit_table_;
+  //const Real dtheta = 0.5*M_PI/(Real)ntheta;
+  //const Real dt = (time_max - time_min)/(Real)(ntime-1);
+  //const Real dt_cgs = dt*time_unit_table_;
   const Real c2 = c_table_*c_table_;
 
   std::ofstream ofs("outflow_analysis.dat");
@@ -207,9 +320,13 @@ void OutflowBoundaryData::Analyze(Real gamma_ad) const {
   Real Eej_geom = 0.0;
   Real Eej_bern = 0.0;
   Real Eej_bind = 0.0;
+  Real Mdot_in_prev = 0.0, Mdot_out_prev = 0.0;
+  Real Mdot_geom_prev = 0.0, Mdot_bern_prev = 0.0, Mdot_bind_prev = 0.0;
+  Real Edot_geom_prev = 0.0, Edot_bern_prev = 0.0, Edot_bind_prev = 0.0;
   for(int it=0; it<ntime; ++it){
-    Real t = time_min + dt*(Real)it;
-
+    // Real t = time_min + dt*(Real)it;
+    Real t = time_(it);
+    
     Real alpha_av = 0.0;
     Real alpha_min= 1.0e99;
     Real alpha_max= 0.0;
@@ -230,9 +347,13 @@ void OutflowBoundaryData::Analyze(Real gamma_ad) const {
     Real dhAth_av = 0.0;
     
     for(int j=0; j<ntheta; ++j){
-      Real theta_c = 0.5*dtheta + dtheta * (Real)j;
-      Real theta_d = theta_c - 0.5*dtheta;
-      Real theta_u = theta_c + 0.5*dtheta;
+      // Real theta_c = 0.5*dtheta + dtheta * (Real)j;
+      // Real theta_d = theta_c - 0.5*dtheta;
+      // Real theta_u = theta_c + 0.5*dtheta;
+
+      Real theta_c = theta_c_(j);
+      Real theta_d = theta_d_(j);
+      Real theta_u = theta_u_(j);
       
       OutflowState state = GetState(it, j);
       Real dOmega = 2.0*M_PI * (std::cos(theta_d) - std::cos(theta_u))*2.0;
@@ -285,15 +406,26 @@ void OutflowBoundaryData::Analyze(Real gamma_ad) const {
     alpha_av /= (4.0*M_PI);
     psi_av /= (4.0*M_PI);
 
-    Mass_in += Mdot_in * dt_cgs;
-    Mass_out+= Mdot_out* dt_cgs;
+    if (it > 0) {
+      const Real dt_cgs = (time_(it) - time_(it-1)) * time_unit_table_;
+      Mass_in += 0.5 * (Mdot_in_prev + Mdot_in) * dt_cgs;
+      Mass_out += 0.5 * (Mdot_out_prev + Mdot_out) * dt_cgs;
 
-    Mej_geom += Mdot_geom * dt_cgs;
-    Mej_bern += Mdot_bern * dt_cgs;
-    Mej_bind += Mdot_bind * dt_cgs;
-    Eej_geom += Edot_geom * dt_cgs;
-    Eej_bern += Edot_bern * dt_cgs;
-    Eej_bind += Edot_bind * dt_cgs;
+      Mej_geom += 0.5 * (Mdot_geom_prev + Mdot_geom) * dt_cgs;
+      Mej_bern += 0.5 * (Mdot_bern_prev + Mdot_bern) * dt_cgs;
+      Mej_bind += 0.5 * (Mdot_bind_prev + Mdot_bind) * dt_cgs;
+      Eej_geom += 0.5 * (Edot_geom_prev + Edot_geom) * dt_cgs;
+      Eej_bern += 0.5 * (Edot_bern_prev + Edot_bern) * dt_cgs;
+      Eej_bind += 0.5 * (Edot_bind_prev + Edot_bind) * dt_cgs;
+    }
+    Mdot_in_prev = Mdot_in;
+    Mdot_out_prev = Mdot_out;
+    Mdot_geom_prev = Mdot_geom;
+    Mdot_bern_prev = Mdot_bern;
+    Mdot_bind_prev = Mdot_bind;
+    Edot_geom_prev = Edot_geom;
+    Edot_bern_prev = Edot_bern;
+    Edot_bind_prev = Edot_bind;
 
     if(Mdot_bind > 0.0){
       dhNR_av /= Mdot_bind;
