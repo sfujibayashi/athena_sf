@@ -251,7 +251,10 @@ void HDF5NonUniformTableLoader(const char *filename, InterpTableNonUniform2D* pt
           << "Inconsistent data field shape in file '" << filename << "'." << std::endl;
       ATHENA_ERROR(msg);
     }
+    H5Sclose(dspace);
+    H5Dclose(dataset);
   }
+  H5Pclose(property_list_file);
   H5Fclose(file);
   ptable->SetSize(nvar, count_file[0], count_file[1]);
   int start_file[2];
@@ -326,7 +329,10 @@ void HDF5Table3DLoader(const char *filename, InterpTable3D* ptable, const int nv
           << "Inconsistent data field shape in file '" << filename << "'." << std::endl;
       ATHENA_ERROR(msg);
     }
+    H5Sclose(dspace);
+    H5Dclose(dataset);
   }
+  H5Pclose(property_list_file);
   H5Fclose(file);
   ptable->SetSize(nvar, count_file[0], count_file[1], count_file[2]);
   int start_file[3];
