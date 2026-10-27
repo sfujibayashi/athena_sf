@@ -33,6 +33,16 @@ struct AveragedOutflowState {
   Real ye;
 };
 
+enum{
+  IRHO_AVE = 0,
+  IPRESS_AVE,
+  IU1HAT_AVE,
+  IU2HAT_AVE,
+  IU3HAT_AVE,
+  IYE_AVE,
+  NVAR_AVE
+};
+
 
 enum {
   IRHO_OUT = 0,
@@ -77,6 +87,7 @@ public:
 
   AveragedOutflowState GetAveragedData(int it, Real theta1, Real theta2) const;
   AveragedOutflowState GetPointData(int it, Real theta) const;
+  Real GetTimeCGS(int it) const;
 
 private:
   int ntime, ntheta;
@@ -88,6 +99,21 @@ private:
 
   InterpTableNonUniform2D table_;
   AthenaArray<Real> time_, theta_c_, theta_d_, theta_u_;
+};
+
+
+
+class OutflowBoundaryTable {
+public:
+  OutflowBoundaryTable(const OutflowBoundaryData &source,
+                       const AthenaArray<Real> &theta_faces,
+		       const int js, const int je);
+  
+  AveragedOutflowState Interpolate(Real time_cgs, int j) const;
+  
+private:
+  AthenaArray<Real> time_;
+  AthenaArray<Real> data_;
 };
 
 #endif

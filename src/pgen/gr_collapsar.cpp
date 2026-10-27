@@ -1487,6 +1487,12 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
+  
+  // boundary data
+  if (pbval->block_bcs[BoundaryFace::inner_x1] == BoundaryFlag::user
+      && pmy_mesh->poutflow != nullptr){
+    pbtable = new OutflowBoundaryTable(*pmy_mesh->poutflow, pcoord->x2f, js, je);
+  }
   // model-specific output fields
   auto *pdrv = pmy_mesh->pmetric_driver;
   const int n_output = pdrv->NumModelOutputVariables();

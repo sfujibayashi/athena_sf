@@ -69,6 +69,7 @@ class TurbulenceDriver;
 class Metric;
 class DynamicMetricDriver;
 class OutflowBoundaryData;
+class OutflowBoundaryTable;
 
 FluidFormulation GetFluidFormulation(const std::string& input_string);
 
@@ -143,6 +144,8 @@ class MeshBlock {
 
   // metric
   Metric *pmetric;
+  // boundatydata
+  OutflowBoundaryTable *pbtable;
 
   // functions
   std::size_t GetBlockSizeInBytes();

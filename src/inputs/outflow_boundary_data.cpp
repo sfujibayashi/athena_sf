@@ -640,6 +640,57 @@ void OutflowBoundaryData::Analyze(Real gamma_ad) const {
 
 }
 
+Real OutflowBoundaryData::GetTimeCGS(int it) const {
+  if(it<0 || ntime<=it){
+    std::stringstream msg;
+    msg << "### FATAL ERROR in OutflowBoundaryData\n"
+	<< "it out of bound: it=" << it
+	<< "ntime = " << ntime;
+    ATHENA_ERROR(msg);
+  }
+  return time_(it)*time_unit_table_;
+}
+
+
+// OutflowBoundaryTable
+// constructor
+OutflowBoundaryTable::OutflowBoundaryTable(const OutflowBoundaryData &source,
+					   const AthenaArray<Real> &theta_faces,
+					   const int js, const int je){
+  
+  // allocate data
+  const int ntheta = theta_faces.GetSize() - 1;
+  const int ntime = source.GetNTime();
+  data_.NewAthenaArray(ntime,ntheta,NVAR_AVE);
+  time_.NewAthenaArray(ntime);
+  // input time
+  for(int it=0; it<ntime; ++it){
+    time_(it) = source.GetTimeCGS(it);
+  }
+  // average between theta faces
+  for(int it=0; it<ntime; ++it){
+    for(int j=js; j<=je; ++j){
+      AveragedOutflowState ave_state = source.GetAveragedData(it, theta_faces(j), theta_faces(j+1));
+      data_(it,j,IRHO_AVE) = ave_state.rho;
+      data_(it,j,IPRESS_AVE) = ave_state.press;
+      data_(it,j,IU1HAT_AVE) = ave_state.u1hat;
+      data_(it,j,IU2HAT_AVE) = ave_state.u2hat;
+      data_(it,j,IU3HAT_AVE) = ave_state.u3hat;
+      data_(it,j,IYE_AVE) = ave_state.ye;
+    }
+  }
+}
+
+AveragedOutflowState OutflowBoundaryTable::Interpolate(Real time_cgs, int j) const {
+  // find time index
+  
+  // interpolate rho*u and rho
+  // u = interpolated (rho*u)/rho
+  AveragedOutflowState ave_state;
+  return ave_state;
+}
+
+
 #else
 
 namespace {

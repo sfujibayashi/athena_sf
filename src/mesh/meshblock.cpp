@@ -47,6 +47,7 @@
 #include "mesh_refinement.hpp"
 #include "meshblock_tree.hpp"
 #include "../metric/metric.hpp"
+#include "../inputs/outflow_boundary_data.hpp"
 
 //----------------------------------------------------------------------------------------
 //! MeshBlock constructor: constructs coordinate, boundary condition, hydro, field
@@ -117,7 +118,8 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
   // Dynamical metric
   pmetric = new Metric(this, pin);
-
+  // boundary data
+  pbtable = nullptr;
 //=================================================================
 //set the total number of frequency x angles
 
@@ -326,6 +328,8 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
 
   // Dynamical metric
   pmetric = new Metric(this, pin);
+  // boundary data
+  pbtable = nullptr;
 
   //======================================================================
   // radiation constructor needs to be done before reconstruction
@@ -557,6 +561,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
 //! MeshBlock destructor
 
 MeshBlock::~MeshBlock() {
+  delete pbtable;
   delete pmetric;
   delete pcoord;
   delete precon;
