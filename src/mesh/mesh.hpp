@@ -320,6 +320,7 @@ class Mesh {
   // defined in either the prob file or default_pgen.cpp in ../pgen/
   void UserWorkAfterLoop(ParameterInput *pin);   // called in main loop
   void UserWorkInLoop(); // called in main after each cycle
+  void UserWorkAfterInitialization(ParameterInput *pin);   // called in the end of Mesh::Initialize
 
   Real GetFullSphereFactor() const;
   

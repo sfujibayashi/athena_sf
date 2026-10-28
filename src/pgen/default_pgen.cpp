@@ -56,6 +56,16 @@ void __attribute__((weak)) Mesh::UserWorkInLoop() {
 }
 
 //========================================================================================
+//! \fn void Mesh::UserWorkAfterInitialization()
+//! \brief Function called in the end of Mesh::Initialize(). not called in restart run.
+//========================================================================================
+
+void __attribute__((weak)) Mesh::UserWorkAfterInitialization(ParameterInput *pin) {
+  // do nothing
+  return;
+}
+
+//========================================================================================
 //! \fn void Mesh::UserWorkAfterLoop(ParameterInput *pin)
 //! \brief Function called after main loop is finished for user-defined work.
 //========================================================================================

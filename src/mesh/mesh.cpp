@@ -2096,6 +2096,10 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
     }
   } while (!iflag);
 
+  if (!res_flag) {
+    UserWorkAfterInitialization(pin);
+  }
+  
   // calculate the first time step
 #pragma omp parallel for num_threads(nthreads)
   for (int i=0; i<nblocal; ++i) {
