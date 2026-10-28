@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <iomanip>
+#include <fstream>
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -1583,6 +1584,209 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
 
 }
 
+void Mesh::UserWorkAfterInitialization(ParameterInput *pin) {
+  AthenaArray<Real> vars;
+  int ntime=0;
+  for (int b=0; b<nblocal; ++b) {
+    MeshBlock *pmb = my_blocks(b);
+    if(pmb->pbtable != nullptr){
+      ntime = std::max(ntime, pmb->pbtable->GetNTime());
+    }
+  }
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE,
+		&ntime,
+		1,
+		MPI_INT,
+		MPI_MAX,
+		MPI_COMM_WORLD);
+#endif
+  vars.NewAthenaArray(ntime,NVAR_ANA);
+  vars.ZeroClear();
+  for (int it=0; it<ntime; ++it) {
+    vars(it, IALPHA_MIN) = std::numeric_limits<Real>::infinity();
+    vars(it, IPSI_MIN)   = std::numeric_limits<Real>::infinity();
+    vars(it, IALPHA_MAX) = -std::numeric_limits<Real>::infinity();
+    vars(it, IPSI_MAX)   = -std::numeric_limits<Real>::infinity();
+  }
+
+  for (int b=0; b<nblocal; ++b) {
+    MeshBlock *pmb = my_blocks(b);
+    if(pmb->pbtable != nullptr){
+      pmb->pbtable->Analyze(gamma_gas,
+			    pmb->pcoord->x2v,
+			    pmb->pcoord->x2f,
+			    pmb->js, pmb->je,
+			    vars);
+    }
+  }
+  
+#ifdef MPI_PARALLEL
+  AthenaArray<Real> column;
+  column.NewAthenaArray(ntime);
+  
+  for (int n=0; n<NVAR_ANA; ++n) {
+    MPI_Op op = MPI_SUM;
+    if (n == IALPHA_MIN || n == IPSI_MIN) op = MPI_MIN;
+    if (n == IALPHA_MAX || n == IPSI_MAX) op = MPI_MAX;
+    
+    for (int it=0; it<ntime; ++it)
+      column(it) = vars(it,n);
+    
+    MPI_Allreduce(MPI_IN_PLACE, column.data(), ntime,
+		  MPI_ATHENA_REAL, op, MPI_COMM_WORLD);
+    
+    for (int it=0; it<ntime; ++it)
+      vars(it,n) = column(it);
+  }
+#endif
+  
+  const OutflowBoundaryTable *local_table = nullptr;
+  for (int b=0; b<nblocal; ++b) {
+    if (my_blocks(b)->pbtable != nullptr) {
+      local_table = my_blocks(b)->pbtable;
+      break;
+    }
+  }
+
+  int writer = local_table != nullptr
+    ? Globals::my_rank
+    : std::numeric_limits<int>::max();
+
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, &writer, 1,
+		MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+#endif
+  if (ntime == 0) return;
+  if (Globals::my_rank != writer) return;
+
+  std::ofstream ofs("averaged_outflow_analysis.dat");
+  ofs << "#";
+  for (int i=1; i<=25; ++i){
+    ofs << std::setw(16) << i;
+  }
+  ofs << "\n";
+  ofs << std::scientific << std::setprecision(8)
+      << "#"
+      << std::setw(16) << "time"
+      << std::setw(16) << "Mdot_geom"
+      << std::setw(16) << "Mej_geom"
+      << std::setw(16) << "Edot_geom"
+      << std::setw(16) << "Eej_geom"
+      << std::setw(16) << "Mdot_bern"
+      << std::setw(16) << "Mej_bern"
+      << std::setw(16) << "Edot_bern"
+      << std::setw(16) << "Eej_bern"
+      << std::setw(16) << "Mdot_bind"
+      << std::setw(16) << "Mej_bind"
+      << std::setw(16) << "Edot_bind"
+      << std::setw(16) << "Eej_bind"
+      << std::setw(16) << "alpha_av"
+      << std::setw(16) << "alpha_min"
+      << std::setw(16) << "alpha_max"
+      << std::setw(16) << "psi_av"
+      << std::setw(16) << "psi_min"
+      << std::setw(16) << "psi_max"
+      << std::setw(16) << "<h(NR)-h_min>"
+      << std::setw(16) << "<h-1>"
+      << std::setw(16) << "Mdot_in"
+      << std::setw(16) << "Mdot_out"
+      << std::setw(16) << "Mass_in"
+      << std::setw(16) << "Mass_out"
+      << "\n";
+
+  for(int it=0; it<ntime; ++it){
+    const Real Mass_in  = vars(it,IMASS_IN);
+    const Real Mass_out = vars(it,IMASS_OUT);
+    const Real Mej_geom = vars(it,IMEJ_GEOM);
+    const Real Mej_bern = vars(it,IMEJ_BERN);
+    const Real Mej_bind = vars(it,IMEJ_BIND);
+    const Real Eej_geom = vars(it,IEEJ_GEOM);
+    const Real Eej_bern = vars(it,IEEJ_BERN);
+    const Real Eej_bind = vars(it,IEEJ_BIND);
+    const Real alpha_av = vars(it,IALPHA_AV)/(4.0*M_PI);
+    const Real alpha_min= vars(it,IALPHA_MIN);
+    const Real alpha_max= vars(it,IALPHA_MAX);
+    const Real psi_av   = vars(it,IPSI_AV)/(4.0*M_PI);
+    const Real psi_min  = vars(it,IPSI_MIN);
+    const Real psi_max  = vars(it,IPSI_MAX);
+    const Real Mdot_in  = vars(it,IMDOT_IN);
+    const Real Mdot_out = vars(it,IMDOT_OUT);
+    const Real Mdot_geom= vars(it,IMDOT_GEOM);
+    const Real Mdot_bern= vars(it,IMDOT_BERN); 
+    const Real Mdot_bind= vars(it,IMDOT_BIND);
+    const Real Edot_geom= vars(it,IEDOT_GEOM);
+    const Real Edot_bern= vars(it,IEDOT_BERN);
+    const Real Edot_bind= vars(it,IEDOT_BIND);
+    const Real dhNR_av  = vars(it,IHNR_AV)/Mdot_bind;
+    const Real dhAth_av = vars(it,IHATH_AV)/Mdot_bind;
+    
+    ofs << std::scientific << std::setprecision(8)
+	<< " "
+	<< std::setw(16) << local_table->GetTime(it)
+	<< std::setw(16) << Mdot_geom
+	<< std::setw(16) << Mej_geom
+	<< std::setw(16) << Edot_geom 
+	<< std::setw(16) << Eej_geom 
+	<< std::setw(16) << Mdot_bern
+	<< std::setw(16) << Mej_bern
+	<< std::setw(16) << Edot_bern 
+	<< std::setw(16) << Eej_bern 
+	<< std::setw(16) << Mdot_bind
+	<< std::setw(16) << Mej_bind
+	<< std::setw(16) << Edot_bind 
+	<< std::setw(16) << Eej_bind 
+	<< std::setw(16) << alpha_av
+	<< std::setw(16) << alpha_min
+	<< std::setw(16) << alpha_max
+	<< std::setw(16) << psi_av
+	<< std::setw(16) << psi_min
+	<< std::setw(16) << psi_max
+	<< std::setw(16) << dhNR_av
+	<< std::setw(16) << dhAth_av
+	<< std::setw(16) << Mdot_in
+	<< std::setw(16) << Mdot_out
+	<< std::setw(16) << Mass_in
+	<< std::setw(16) << Mass_out
+	<< "\n";
+  }
+  int it = ntime-1;
+  const Real Mass_in  = vars(it,IMASS_IN);
+  const Real Mass_out = vars(it,IMASS_OUT);
+  const Real Mej_geom = vars(it,IMEJ_GEOM);
+  const Real Mej_bern = vars(it,IMEJ_BERN);
+  const Real Mej_bind = vars(it,IMEJ_BIND);
+  const Real Eej_geom = vars(it,IEEJ_GEOM);
+  const Real Eej_bern = vars(it,IEEJ_BERN);
+  const Real Eej_bind = vars(it,IEEJ_BIND);
+  const Real alpha_av = vars(it,IALPHA_AV)/(4.0*M_PI);
+  const Real alpha_min= vars(it,IALPHA_MIN);
+  const Real alpha_max= vars(it,IALPHA_MAX);
+  const Real psi_av   = vars(it,IPSI_AV)/(4.0*M_PI);
+  const Real psi_min  = vars(it,IPSI_MIN);
+  const Real psi_max  = vars(it,IPSI_MAX);
+  const Real Mdot_in  = vars(it,IMDOT_IN);
+  const Real Mdot_out = vars(it,IMDOT_OUT);
+  const Real Mdot_geom= vars(it,IMDOT_GEOM);
+  const Real Mdot_bern= vars(it,IMDOT_BERN); 
+  const Real Mdot_bind= vars(it,IMDOT_BIND);
+  const Real Edot_geom= vars(it,IEDOT_GEOM);
+  const Real Edot_bern= vars(it,IEDOT_BERN);
+  const Real Edot_bind= vars(it,IEDOT_BIND);
+  const Real dhNR_av  = vars(it,IHNR_AV)/Mdot_bind;
+  const Real dhAth_av = vars(it,IHATH_AV)/Mdot_bind;
+  
+  std::cout << std::setprecision(5)
+	    << " Mej(geom) = " << Mej_geom << " Msun"
+	    << " Mej(bern) = " << Mej_bern << " Msun"
+	    << " Mej(bind) = " << Mej_bind << " Msun" << std::endl;
+
+  std::cout << std::setprecision(5)
+	    << " E(geom) = " << Eej_geom << " erg"
+	    << " E(bern) = " << Eej_bern << " erg"
+	    << " E(bind) = " << Eej_bind << " erg" << std::endl;
+
+}
 
 void MeshBlock::UserWorkInLoop(void) {
 }

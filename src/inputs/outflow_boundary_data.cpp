@@ -269,6 +269,10 @@ Real OutflowBoundaryData::GetExtractionRadius() const {
   return r_ext_;
 }
 
+Real OutflowBoundaryData::GetHMin() const {
+  return h_min_global_;
+}
+
 AveragedOutflowState OutflowBoundaryData::GetAveragedData(int it, Real theta1, Real theta2) const {
 
   if(it < 0 || ntime <= it){
@@ -320,7 +324,10 @@ AveragedOutflowState OutflowBoundaryData::GetAveragedData(int it, Real theta1, R
   Real ave_rho_star = 0.0;
   Real ave_ye = 0.0;
   Real ave_entropy = 0.0;
-  Real ave_press= 0.0;
+  Real ave_press= 0.0; // <P>
+  Real ave_E = 0.0;  // <rho*h*W^2 - P>
+  Real ave_alpha = 0.0;
+  Real ave_psi = 0.0;
   for(int i=i1; i<=i2; ++i){
     Real lo = std::max(theta1, theta_d_(i));
     Real hi = std::min(theta2, theta_u_(i));
@@ -357,6 +364,10 @@ AveragedOutflowState OutflowBoundaryData::GetAveragedData(int it, Real theta1, R
     ave_ye  += dOmega*rho_star*state.ye;
     ave_entropy += dOmega*rho_star*state.entropy;
     ave_press += dOmega*state.press;
+
+    ave_E   += dOmega*state.qe*state.rho*state.w;
+    ave_alpha += dOmega*state.alpha;
+    ave_psi += dOmega*state.psi;
   }
   
   Real dOmega_cell = std::cos(theta1)-std::cos(theta2);
@@ -368,15 +379,21 @@ AveragedOutflowState OutflowBoundaryData::GetAveragedData(int it, Real theta1, R
   ave_ye  /= ave_rho_star*dOmega_cell;
   ave_entropy /= ave_rho_star*dOmega_cell;
   ave_press /= dOmega_cell;
+  ave_E     /= dOmega_cell;
+  ave_alpha /= dOmega_cell;
+  ave_psi   /= dOmega_cell;
   
   AveragedOutflowState ave_state;
+  // primitive
   ave_state.rho = ave_rho;
   ave_state.press = ave_press;
   ave_state.u1hat = ave_uu1;
   ave_state.u2hat = ave_uu2;
   ave_state.u3hat = ave_uu3;
   ave_state.ye = ave_ye;
-  
+  ave_state.E = ave_E*SQR(c_table_);
+  ave_state.alpha = ave_alpha;
+  ave_state.psi = ave_psi;
   return ave_state;
 }
 
@@ -433,6 +450,9 @@ AveragedOutflowState OutflowBoundaryData::GetPointData(int it, Real theta) const
   ave_state.u2hat = uu2;
   ave_state.u3hat = uu3;
   ave_state.ye = state.ye;
+  ave_state.E = state.qe*state.rho*state.w*SQR(c_table_);
+  ave_state.alpha = state.alpha;
+  ave_state.psi = state.psi;
   
   return ave_state;
 }
@@ -657,17 +677,22 @@ Real OutflowBoundaryData::GetTimeCGS(int it) const {
 OutflowBoundaryTable::OutflowBoundaryTable(const OutflowBoundaryData &source,
 					   const AthenaArray<Real> &theta_faces,
 					   const int js, const int je){
-  
+  //
+  r_ext_ = source.GetExtractionRadius();
+  h_min_global_ = source.GetHMin();
+
   // allocate data
   const int ntheta = theta_faces.GetSize() - 1;
   const int ntime = source.GetNTime();
   ntime_=ntime;
   data_.NewAthenaArray(ntime,ntheta,NVAR_AVE);
   time_.NewAthenaArray(ntime_);
+
   // input time
   for(int it=0; it<ntime_; ++it){
     time_(it) = source.GetTimeCGS(it);
   }
+  
   // average between theta faces
   for(int it=0; it<ntime_; ++it){
     for(int j=js; j<=je; ++j){
@@ -678,8 +703,187 @@ OutflowBoundaryTable::OutflowBoundaryTable(const OutflowBoundaryData &source,
       data_(it,j,IU2HAT_AVE) = ave_state.u2hat;
       data_(it,j,IU3HAT_AVE) = ave_state.u3hat;
       data_(it,j,IYE_AVE) = ave_state.ye;
+      data_(it,j,IE_AVE) = ave_state.E;
+      data_(it,j,IALPHA_AVE) = ave_state.alpha;
+      data_(it,j,IPSI_AVE) = ave_state.psi;
     }
   }
+}
+
+void OutflowBoundaryTable::Analyze(Real gamma_ad,
+				   const AthenaArray<Real> &theta,
+				   const AthenaArray<Real> &theta_faces,
+				   const int js, const int je,
+				   AthenaArray<Real> &out) const {
+
+  const Real c2 = c_table_*c_table_;
+
+  Real Mass_in = 0.0;
+  Real Mass_out= 0.0;
+
+  Real Mej_geom = 0.0;
+  Real Mej_bern = 0.0;
+  Real Mej_bind = 0.0;
+  Real Eej_geom = 0.0;
+  Real Eej_bern = 0.0;
+  Real Eej_bind = 0.0;
+  Real Mdot_in_prev = 0.0, Mdot_out_prev = 0.0;
+  Real Mdot_geom_prev = 0.0, Mdot_bern_prev = 0.0, Mdot_bind_prev = 0.0;
+  Real Edot_geom_prev = 0.0, Edot_bern_prev = 0.0, Edot_bind_prev = 0.0;
+  for(int it=0; it<ntime_; ++it){
+
+    Real t = time_(it);
+    
+    Real alpha_av = 0.0;
+    Real alpha_min= 1.0e99;
+    Real alpha_max= 0.0;
+    Real psi_av = 0.0;
+    Real psi_min= 1.0e99;
+    Real psi_max= 0.0;
+
+    Real Mdot_in = 0.0;
+    Real Mdot_out = 0.0;
+    Real Mdot_geom = 0.0;
+    Real Mdot_bern = 0.0;
+    Real Mdot_bind = 0.0;
+    Real Edot_geom = 0.0;
+    Real Edot_bern = 0.0;
+    Real Edot_bind = 0.0;
+
+    Real dhNR_av = 0.0;
+    Real dhAth_av = 0.0;
+    
+    for(int j=js; j<=je; ++j){
+
+      Real theta_c = theta(j);
+      Real theta_d = theta_faces(j);
+      Real theta_u = theta_faces(j+1);
+
+      const Real rho   = data_(it,j,IRHO_AVE);
+      const Real press = data_(it,j,IPRESS_AVE);      
+      const Real u1hat = data_(it,j,IU1HAT_AVE);
+      const Real u2hat = data_(it,j,IU2HAT_AVE);
+      const Real u3hat = data_(it,j,IU3HAT_AVE);
+      const Real E     = data_(it,j,IE_AVE);
+      const Real alpha = data_(it,j,IALPHA_AVE);
+      const Real psi   = data_(it,j,IPSI_AVE);
+
+      const Real psi2 = psi*psi;
+      const Real psi6 = psi2*psi2*psi2;
+      const Real ur = u1hat/psi2;
+      const Real W = std::sqrt(1.0 + SQR(u1hat) + SQR(u2hat) + SQR(u3hat));
+      const Real qe = E/(rho*W*c2);
+      
+      Real dOmega = 2.0*M_PI * (std::cos(theta_d) - std::cos(theta_u))*2.0;
+      Real dS = r_ext_*r_ext_ * dOmega;
+      Real dM_dt_face = dS * psi6*alpha * rho * ur*c_table_;
+      Real ut = -alpha*W;
+      Real h = (E+press)/(rho*SQR(W)*c2);
+      
+      Real egeom = (-ut-1.0)*c2;
+      Real ebern = (-h*ut-h_min_global_)*c2;
+      Real ebind = (alpha*qe - h_min_global_)*c2;
+
+      if( ur>0.0){
+	Mdot_in += dM_dt_face;
+      }else{
+	Mdot_out-= dM_dt_face;
+      }
+      
+      if( egeom > 0.0 and ur>0.0){
+	Mdot_geom += dM_dt_face;
+	Edot_geom += dM_dt_face*egeom;
+      }
+      if( ebern > 0.0 and ur>0.0){
+	Mdot_bern += dM_dt_face;
+	Edot_bern += dM_dt_face*ebern;
+      }
+
+      if( ebind > 0.0 and ur>0.0){
+	Mdot_bind += dM_dt_face;
+	Edot_bind += dM_dt_face*ebind;
+
+	Real dhNR  = h - h_min_global_;
+	dhNR_av += dhNR*dM_dt_face;
+	
+	Real dhAth = gamma_ad/(gamma_ad-1.0) * press/(rho*c2);
+	dhAth_av += dhAth*dM_dt_face;
+      }
+      
+      alpha_av += dOmega * alpha;
+      alpha_min = std::min(alpha_min, alpha);
+      alpha_max = std::max(alpha_max, alpha);
+
+      psi_av += dOmega * psi;
+      psi_min = std::min(psi_min, psi);
+      psi_max = std::max(psi_max, psi);
+
+
+    }
+    alpha_av /= (4.0*M_PI);
+    psi_av /= (4.0*M_PI);
+
+    if (it > 0) {
+      const Real dt_cgs = time_(it) - time_(it-1);
+      Mass_in += 0.5 * (Mdot_in_prev + Mdot_in) * dt_cgs;
+      Mass_out += 0.5 * (Mdot_out_prev + Mdot_out) * dt_cgs;
+
+      Mej_geom += 0.5 * (Mdot_geom_prev + Mdot_geom) * dt_cgs;
+      Mej_bern += 0.5 * (Mdot_bern_prev + Mdot_bern) * dt_cgs;
+      Mej_bind += 0.5 * (Mdot_bind_prev + Mdot_bind) * dt_cgs;
+      Eej_geom += 0.5 * (Edot_geom_prev + Edot_geom) * dt_cgs;
+      Eej_bern += 0.5 * (Edot_bern_prev + Edot_bern) * dt_cgs;
+      Eej_bind += 0.5 * (Edot_bind_prev + Edot_bind) * dt_cgs;
+    }
+    Mdot_in_prev = Mdot_in;
+    Mdot_out_prev = Mdot_out;
+    Mdot_geom_prev = Mdot_geom;
+    Mdot_bern_prev = Mdot_bern;
+    Mdot_bind_prev = Mdot_bind;
+    Edot_geom_prev = Edot_geom;
+    Edot_bern_prev = Edot_bern;
+    Edot_bind_prev = Edot_bind;
+
+    if(Mdot_bind > 0.0){
+      dhNR_av /= Mdot_bind;
+      dhAth_av /= Mdot_bind;
+    }
+
+    // store in array
+    out(it,IMASS_IN)  += Mass_in  /Msun_table_;
+    out(it,IMASS_OUT) += Mass_out /Msun_table_;
+    out(it,IMEJ_GEOM) += Mej_geom /Msun_table_;
+    out(it,IMEJ_BERN) += Mej_bern /Msun_table_;
+    out(it,IMEJ_BIND) += Mej_bind /Msun_table_;
+    out(it,IEEJ_GEOM) += Eej_geom;
+    out(it,IEEJ_BERN) += Eej_bern;
+    out(it,IEEJ_BIND) += Eej_bind;
+    out(it,IALPHA_AV) += alpha_av*4.0*M_PI;
+    out(it,IALPHA_MIN) = std::min(out(it,IALPHA_MIN), alpha_min);
+    out(it,IALPHA_MAX) = std::max(out(it,IALPHA_MAX), alpha_max);
+    out(it,IPSI_AV) += psi_av*4.0*M_PI;
+    out(it,IPSI_MIN) = std::min(out(it,IPSI_MIN), psi_min);
+    out(it,IPSI_MAX) = std::max(out(it,IPSI_MAX), psi_max);
+    out(it,IMDOT_IN) += Mdot_in /Msun_table_;
+    out(it,IMDOT_OUT) += Mdot_out /Msun_table_;
+    out(it,IMDOT_GEOM) += Mdot_geom /Msun_table_;
+    out(it,IMDOT_BERN) += Mdot_bern /Msun_table_;
+    out(it,IMDOT_BIND) += Mdot_bind /Msun_table_;
+    out(it,IEDOT_GEOM) += Edot_geom;
+    out(it,IEDOT_BERN) += Edot_bern;
+    out(it,IEDOT_BIND) += Edot_bind;
+    out(it,IHNR_AV)  += dhNR_av * (Mdot_bind/Msun_table_);
+    out(it,IHATH_AV) += dhAth_av * (Mdot_bind/Msun_table_);
+
+  }
+}
+
+int OutflowBoundaryTable::GetNTime() const {
+  return ntime_;
+}
+
+Real OutflowBoundaryTable::GetTime(const int it) const {
+  return time_(it);
 }
 
 Real OutflowBoundaryTable::GetTimeMax() const {

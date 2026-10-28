@@ -28,9 +28,14 @@ struct OutflowState {
 };
 
 struct AveragedOutflowState {
+  // Used for primitives
   Real rho, press;       // cgs
   Real u1hat, u2hat, u3hat;  // local orthonormal frame u^(hat i)
+  // Used for pscalar primitives
   Real ye;
+  // Used for analysis
+  Real E;
+  Real alpha, psi;
 };
 
 enum{
@@ -40,6 +45,9 @@ enum{
   IU2HAT_AVE,
   IU3HAT_AVE,
   IYE_AVE,
+  IE_AVE,
+  IALPHA_AVE,
+  IPSI_AVE,
   NVAR_AVE
 };
 
@@ -64,6 +72,35 @@ enum {
   NVAR_OUT
 };
 
+enum{
+  IMASS_IN = 0,
+  IMASS_OUT,
+  IMEJ_GEOM,
+  IMEJ_BERN,
+  IMEJ_BIND,
+  IEEJ_GEOM,
+  IEEJ_BERN,
+  IEEJ_BIND,
+  IALPHA_AV,
+  IALPHA_MIN,
+  IALPHA_MAX,
+  IPSI_AV,
+  IPSI_MIN,
+  IPSI_MAX,
+  IMDOT_IN,
+  IMDOT_OUT,
+  IMDOT_GEOM,
+  IMDOT_BERN,
+  IMDOT_BIND,
+  IEDOT_GEOM,
+  IEDOT_BERN,
+  IEDOT_BIND,
+  IHNR_AV,
+  IHATH_AV,
+  NVAR_ANA
+};
+
+
 class OutflowBoundaryData {
 
 public:
@@ -84,6 +121,7 @@ public:
   int GetNTime() const;
   
   Real GetExtractionRadius() const;
+  Real GetHMin() const;
 
   AveragedOutflowState GetAveragedData(int it, Real theta1, Real theta2) const;
   AveragedOutflowState GetPointData(int it, Real theta) const;
@@ -111,12 +149,22 @@ public:
   
   void Interpolate(Real time_cgs, int js, int je, AthenaArray<Real> &out) const;
   AveragedOutflowState InterpolatePoint(Real time_cgs, int j) const;
+  Real GetTime(const int it) const;
   Real GetTimeMax() const;
+  int GetNTime() const;
+  void Analyze(Real gamma_ad,
+	       const AthenaArray<Real> &theta,
+	       const AthenaArray<Real> &theta_faces,
+	       const int js, const int je,
+	       AthenaArray<Real> &out) const;
   
 private:
   int ntime_;
   AthenaArray<Real> time_;
   AthenaArray<Real> data_;
+
+  Real r_ext_;
+  Real h_min_global_;
 };
 
 #endif
