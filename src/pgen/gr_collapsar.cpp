@@ -1507,7 +1507,12 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
 	if (pbval->block_bcs[BoundaryFace::outer_x2] == BoundaryFlag::block)
 	  ju += NGHOST;
       }
-      pbtable = new OutflowBoundaryTable(*pmy_mesh->poutflow, pcoord->x2f, jl, ju);
+      const Real smoothing_fwhm = pin->GetOrAddReal(
+          "problem", "outflow_smoothing_fwhm_deg", 0.0);
+      const int smoothing_quadrature = pin->GetOrAddInteger(
+          "problem", "outflow_smoothing_quadrature", 8);
+      pbtable = new OutflowBoundaryTable(*pmy_mesh->poutflow, pcoord->x2f,
+          pcoord->x2v, jl, ju, smoothing_fwhm, smoothing_quadrature);
       
       delete pmy_mesh->poutflow;
       pmy_mesh->poutflow = nullptr;

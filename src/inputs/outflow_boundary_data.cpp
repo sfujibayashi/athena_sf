@@ -13,12 +13,15 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <algorithm>
+#include <limits>
 
 #include "../athena.hpp"
 #include "../defs.hpp"
 #include "outflow_boundary_data.hpp"
 #include "hdf5_reader.hpp"
 #include "../globals.hpp"
+#include "../utils/utils.hpp"
 
 #ifdef HDF5OUTPUT
 
@@ -42,6 +45,153 @@ namespace {
 
   static constexpr Real press_unit_table_ = 
     rho_unit_table_*c_table_*c_table_;
+
+void GaussianError(const std::string &message) {
+  std::stringstream msg;
+  msg << "### FATAL ERROR in outflow Gaussian smoothing\n" << message;
+  ATHENA_ERROR(msg);
+}
+
+void GaussianLegendreRule(int n, std::vector<Real> &x,
+                          std::vector<Real> &w) {
+  if (n < 4 || n > 32) GaussianError("Quadrature order must be between 4 and 32.");
+  AthenaArray<Real> nodes, weights;
+  nodes.NewAthenaArray(n);
+  weights.NewAthenaArray(n);
+  Gauleg(n, -1.0, 1.0, nodes, weights);
+  x.assign(nodes.data(), nodes.data()+n);
+  w.assign(weights.data(), weights.data()+n);
+}
+
+// P_l(cos(theta)) and B_l = sin(theta) P_l'(cos(theta)). The associated
+// Legendre recurrence avoids dividing by sin(theta) near the polar axis.
+void GaussianBasis(Real theta, int lmax, std::vector<Real> &p,
+                    std::vector<Real> &b) {
+  const Real half_pi = 0.5*std::acos(-1.0);
+  const Real mu = theta == half_pi ? 0.0 : std::cos(theta);
+  const Real st = std::sin(theta);
+  p.resize(lmax+1);
+  b.resize(lmax+1);
+  p[0] = 1.0;
+  b[0] = 0.0;
+  p[1] = mu;
+  b[1] = st;
+  for (int l = 2; l <= lmax; ++l) {
+    p[l] = ((2*l-1)*mu*p[l-1]-(l-1)*p[l-2])/l;
+    b[l] = ((2*l-1)*mu*b[l-1]-l*b[l-2])/(l-1);
+  }
+}
+
+struct GaussianAngularWeights {
+  std::vector<Real> scalar, polar, azimuthal;
+};
+
+GaussianAngularWeights MakeGaussianWeights(
+    const AthenaArray<Real> &lower, const AthenaArray<Real> &upper,
+    int nsource, const AthenaArray<Real> &centers, int js, int je,
+    Real fwhm_deg, int order) {
+
+  const Real pi = std::acos(-1.0), half_pi = pi/2.0;
+
+  if (!std::isfinite(fwhm_deg) || fwhm_deg <= 0.0 || fwhm_deg > 180.0)
+    GaussianError("FWHM must be finite and in (0, 180] degrees.");
+  if (js < 0 || je < js || je >= centers.GetSize())
+    GaussianError("Target angular index is out of bounds.");
+
+  const Real sigma = fwhm_deg*pi/180.0/std::sqrt(8.0*std::log(2.0));
+  // Bound the discarded heat-kernel tail, including its mode multiplicity.
+  const Real required = std::sqrt(-2.0*std::log(1.0e-14*sigma*sigma))/sigma;
+  if (!std::isfinite(required) || required > 8190.0)
+    GaussianError("FWHM is too small for the spectral cutoff (8192 modes).");
+
+  const int lmax = static_cast<int>(std::ceil(required))+2;
+  const int ns = lmax/2+1, nj = je-js+1;
+  const Real angle_tol = 128.0*std::numeric_limits<Real>::epsilon()*half_pi;
+  std::vector<Real> nodes, quad;
+
+  GaussianLegendreRule(order, nodes, quad);
+  std::vector<Real> scalar_integral(static_cast<std::size_t>(ns)*nsource, 0.0);
+  std::vector<Real> vector_integral(static_cast<std::size_t>(lmax+1)*nsource, 0.0);
+  std::vector<Real> p, b, si(lmax+1), vi(lmax+1);
+  if (nsource < 2 || std::abs(lower(0)) > angle_tol
+      || std::abs(upper(nsource-1)-half_pi) > angle_tol)
+    GaussianError("Source angular intervals must cover [0, pi/2].");
+  for (int i = 0; i < nsource; ++i) {
+    if (!std::isfinite(lower(i)) || !std::isfinite(upper(i))
+        || upper(i) <= lower(i)
+        || (i > 0 && std::abs(lower(i)-upper(i-1)) > angle_tol))
+      GaussianError("Source angular intervals must be contiguous and ordered.");
+    const Real lo = std::max(0.0, static_cast<Real>(lower(i)));
+    const Real hi = std::min(half_pi, static_cast<Real>(upper(i)));
+    std::fill(si.begin(), si.end(), 0.0);
+    std::fill(vi.begin(), vi.end(), 0.0);
+    // Subdivide unusually wide source intervals, not the target Athena grid.
+    const int pieces = std::max(1, static_cast<int>(std::ceil((hi-lo)/sigma)));
+    for (int piece = 0; piece < pieces; ++piece) {
+      const Real a = lo+(hi-lo)*piece/pieces;
+      const Real c = lo+(hi-lo)*(piece+1)/pieces;
+      const Real middle = 0.5*(a+c), half = 0.5*(c-a);
+      for (int k = 0; k < order; ++k) {
+        const Real theta = middle+half*nodes[k];
+        GaussianBasis(theta, lmax, p, b);
+        const Real weight = half*quad[k]*std::sin(theta);
+        for (int l = 0; l <= lmax; l += 2) si[l] += weight*p[l];
+        for (int l = 1; l <= lmax; ++l) vi[l] += weight*b[l];
+      }
+    }
+    for (int l = 0; l <= lmax; ++l) {
+      const Real damping = std::exp(-0.5*l*(l+1)*sigma*sigma);
+      if (l%2 == 0)
+        scalar_integral[static_cast<std::size_t>(l/2)*nsource+i]
+            = (2*l+1)*damping*si[l];
+      if (l > 0)
+        vector_integral[static_cast<std::size_t>(l)*nsource+i]
+            = (2*l+1)*damping*vi[l]/(l*(l+1));
+    }
+  }
+  GaussianAngularWeights result;
+  const std::size_t size = static_cast<std::size_t>(nj)*nsource;
+  result.scalar.assign(size, 0.0);
+  result.polar.assign(size, 0.0);
+  result.azimuthal.assign(size, 0.0);
+  for (int j = js; j <= je; ++j) {
+    const Real theta = centers(j);
+    if (!std::isfinite(theta) || theta < -angle_tol || theta > half_pi+angle_tol)
+      GaussianError("Target angle must lie in [0, pi/2].");
+    GaussianBasis(std::max(0.0, std::min(half_pi, theta)), lmax, p, b);
+    const std::size_t offset = static_cast<std::size_t>(j-js)*nsource;
+    for (int l = 0; l <= lmax; ++l) {
+      if (l%2 == 0) {
+        const std::size_t row = static_cast<std::size_t>(l/2)*nsource;
+        for (int i = 0; i < nsource; ++i)
+          result.scalar[offset+i] += p[l]*scalar_integral[row+i];
+      }
+      if (l > 0) {
+        const std::size_t row = static_cast<std::size_t>(l)*nsource;
+        std::vector<Real> &weights = l%2 == 0 ? result.polar : result.azimuthal;
+        for (int i = 0; i < nsource; ++i)
+          weights[offset+i] += b[l]*vector_integral[row+i];
+      }
+    }
+    Real sum = 0.0;
+    for (int i = 0; i < nsource; ++i) {
+      const std::size_t index = offset+i;
+      if (result.scalar[index] < -1.0e-10 || result.polar[index] < -1.0e-10
+          || result.azimuthal[index] < -1.0e-10)
+        GaussianError("Kernel quadrature is inaccurate; increase quadrature order.");
+      // The exact heat kernels are nonnegative. Remove spectral roundoff tails.
+      result.scalar[index] = std::max(0.0, result.scalar[index]);
+      result.polar[index] = std::max(0.0, result.polar[index]);
+      result.azimuthal[index] = std::max(0.0, result.azimuthal[index]);
+      sum += result.scalar[index];
+    }
+    if (!std::isfinite(sum) || std::abs(sum-1.0) > 1.0e-8)
+      GaussianError("Scalar kernel normalization failed; increase quadrature order.");
+    for (int i = 0; i < nsource; ++i) result.scalar[offset+i] /= sum;
+    // Do not normalize vector kernels: axis/equator parity attenuates them.
+  }
+  return result;
+}
 }
 
 OutflowBoundaryData::OutflowBoundaryData(const std::string &filename){
@@ -65,7 +215,7 @@ OutflowBoundaryData::OutflowBoundaryData(const std::string &filename){
   // Read metadata
   hid_t file = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
 
-  double tmp;
+  Real tmp;
 
   hid_t dset = H5Dopen2(file, "r_ext", H5P_DEFAULT);
   H5Dread(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &tmp);
@@ -673,10 +823,75 @@ Real OutflowBoundaryData::GetTimeCGS(int it) const {
 
 
 // OutflowBoundaryTable
+void OutflowBoundaryData::FillGaussianTable(
+    const AthenaArray<Real> &theta_centers, int js, int je,
+    Real fwhm_deg, int quadrature_order, AthenaArray<Real> &out) const {
+  const auto weights = MakeGaussianWeights(theta_d_, theta_u_, ntheta,
+      theta_centers, js, je, fwhm_deg, quadrature_order);
+  
+  // Source values are assumed to be piecewise constant in their original angular intervals.
+  // Transform at the original sample angle, exactly as in GetAveragedData.
+  std::vector<Real> q(static_cast<std::size_t>(ntheta)*10);
+  for (int it = 0; it < ntime; ++it) {
+    for (int i = 0; i < ntheta; ++i) {
+      const OutflowState s = GetState(it, i);
+      const Real st = std::sin(theta_c_(i)), ct = std::cos(theta_c_(i));
+      const Real factor = s.psi*s.psi*s.w/s.alpha;
+      Real *v = &q[static_cast<std::size_t>(i)*10];
+      v[0] = s.rho;
+      v[1] = s.press;
+      v[2] = s.rho*(s.vx*st+s.vz*ct)*factor;
+      v[3] = s.rho*(s.vx*ct-s.vz*st)*factor;
+      v[4] = s.rho*s.vy*factor;
+      v[5] = s.rho_star*s.ye;
+      v[6] = s.rho_star;
+      v[7] = s.qe*s.rho*s.w*c_table_*c_table_;
+      v[8] = s.alpha;
+      v[9] = s.psi;
+    }
+    for (int j = js; j <= je; ++j) {
+      Real v[10] = {};
+      const std::size_t offset = static_cast<std::size_t>(j-js)*ntheta;
+      for (int i = 0; i < ntheta; ++i) {
+        const Real ws = weights.scalar[offset+i];
+        const Real wt = weights.polar[offset+i];
+        const Real wp = weights.azimuthal[offset+i];
+        const Real *s = &q[static_cast<std::size_t>(i)*10];
+        v[0] += ws*s[0];
+        v[1] += ws*s[1];
+        v[2] += ws*s[2];
+        v[3] += wt*s[3];
+        v[4] += wp*s[4];
+        for (int k = 5; k < 10; ++k) v[k] += ws*s[k];
+      }
+      if (!(v[0] > 0.0) || !(v[6] > 0.0))
+        GaussianError("Smoothed rho and rho_star must be positive.");
+      out(it,j,IRHO_AVE) = v[0];
+      out(it,j,IPRESS_AVE) = v[1];
+      out(it,j,IU1HAT_AVE) = v[2]/v[0];
+      out(it,j,IU2HAT_AVE) = v[3]/v[0];
+      out(it,j,IU3HAT_AVE) = v[4]/v[0];
+      out(it,j,IYE_AVE) = v[5]/v[6];
+      out(it,j,IE_AVE) = v[7];
+      out(it,j,IALPHA_AVE) = v[8];
+      out(it,j,IPSI_AVE) = v[9];
+    }
+  }
+}
+
 // constructor
 OutflowBoundaryTable::OutflowBoundaryTable(const OutflowBoundaryData &source,
 					   const AthenaArray<Real> &theta_faces,
-					   const int js, const int je){
+					   const int js, const int je)
+    : OutflowBoundaryTable(source, theta_faces, theta_faces, js, je, 0.0, 8) {
+}
+
+OutflowBoundaryTable::OutflowBoundaryTable(const OutflowBoundaryData &source,
+    const AthenaArray<Real> &theta_faces,
+    const AthenaArray<Real> &theta_centers, int js, int je,
+    Real smoothing_fwhm_deg, int smoothing_quadrature_order) {
+  if (!std::isfinite(smoothing_fwhm_deg) || smoothing_fwhm_deg < 0.0)
+    GaussianError("Smoothing FWHM must be finite and nonnegative.");
   //
   r_ext_ = source.GetExtractionRadius();
   h_min_global_ = source.GetHMin();
@@ -691,6 +906,12 @@ OutflowBoundaryTable::OutflowBoundaryTable(const OutflowBoundaryData &source,
   // input time
   for(int it=0; it<ntime_; ++it){
     time_(it) = source.GetTimeCGS(it);
+  }
+
+  if (smoothing_fwhm_deg > 0.0) {
+    source.FillGaussianTable(theta_centers, js, je, smoothing_fwhm_deg,
+                             smoothing_quadrature_order, data_);
+    return;
   }
   
   // average between theta faces

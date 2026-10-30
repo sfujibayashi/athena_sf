@@ -127,6 +127,12 @@ public:
   AveragedOutflowState GetPointData(int it, Real theta) const;
   Real GetTimeCGS(int it) const;
 
+  // Evaluate the spherical Gaussian-smoothed continuous source at the supplied
+  // points. The smoothing width is a physical angle, independent of this grid.
+  void FillGaussianTable(const AthenaArray<Real> &theta_centers,
+                         int js, int je, Real fwhm_deg, int quadrature_order,
+                         AthenaArray<Real> &out) const;
+
 private:
   int ntime, ntheta;
   Real time_min, time_max;
@@ -139,15 +145,35 @@ private:
   AthenaArray<Real> time_, theta_c_, theta_d_, theta_u_;
 };
 
+class OutflowBoundarySource {
+ public:
+  virtual ~OutflowBoundarySource() = default;
+
+  virtual void Evaluate(Real time_cgs, int js, int je,
+                        AthenaArray<Real> &out) const = 0;
+};
 
 
-class OutflowBoundaryTable {
+class OutflowBoundaryTable : public OutflowBoundarySource {
 public:
   OutflowBoundaryTable(const OutflowBoundaryData &source,
                        const AthenaArray<Real> &theta_faces,
 		       const int js, const int je);
+
+  // override if gaussian smoothing is switched on.
+  OutflowBoundaryTable(const OutflowBoundaryData &source,
+                       const AthenaArray<Real> &theta_faces,
+                       const AthenaArray<Real> &theta_centers,
+                       int js, int je, Real smoothing_fwhm_deg,
+                       int smoothing_quadrature_order = 8);
   
+  void Evaluate(Real time_cgs, int js, int je,
+                AthenaArray<Real> &out) const override {
+    Interpolate(time_cgs, js, je, out);
+  }
+
   void Interpolate(Real time_cgs, int js, int je, AthenaArray<Real> &out) const;
+
   AveragedOutflowState InterpolatePoint(Real time_cgs, int j) const;
   Real GetTime(const int it) const;
   Real GetTimeMax() const;
@@ -165,6 +191,11 @@ private:
 
   Real r_ext_;
   Real h_min_global_;
+};
+
+class AnalyticOutflowSource : public OutflowBoundarySource {
+public:
+  void Evaluate(Real time_cgs, int js, int je, AthenaArray<Real> &out) const override;
 };
 
 #endif
